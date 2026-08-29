@@ -9,24 +9,23 @@ Backend del proyecto anual Practica Profesionalizante 2. Node.js + Express + MyS
 ```
 backend/
 ├── scripts/
-│   ├── 
+│   ├── aTuPuerta.sql
 ├── postman/
-│   ├── 
-│   ├── 
-│   └── 
 ├── src/
 │   ├── controllers/
 │   │   ├── 
 │   ├── database/
-│   │   └── 
+│   │   └── database.js
 │   ├── middlewares/
-│   │   └── 
+│   │   └── autenticacion.middleware.js
 │   ├── routes/
 │   │   ├── 
 │   ├── app.js
 │   └── index.js
+├── .env
 ├── .env.example
 ├── .gitignore
+├── package-lock.json
 └── package.json
 ```
 
@@ -65,17 +64,13 @@ Servidor en `http://localhost:4000`
 ---
 
 ## Endpoints
-
-### Semana 1 — Autenticación
-
-
     
 ### Formato de respuesta uniforme
 
 ```json
 {
   "codigo": 200,
-  "estado": "ok",
+  "estado": "mensaje de respuesta",
   "datos": { }
 }
 ```
