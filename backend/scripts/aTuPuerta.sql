@@ -20,11 +20,14 @@ CREATE TABLE usuarios (
   email       VARCHAR(150) NOT NULL,
   contrasena  VARCHAR(255) NOT NULL,
   telefono    VARCHAR(20)  NOT NULL,
-  rol         ENUM('cliente','comercio','repartidor','administrador') NOT NULL,
   activo      BOOLEAN DEFAULT TRUE,
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_usuarios_email (email)
 ) ENGINE=InnoDB;
+
+ALTER TABLE usuarios
+  ADD COLUMN rol ENUM('cliente','comercio','repartidor','administrador')
+  DEFAULT NULL AFTER telefono;
 
 -- =====================================================================
 -- 2. CLIENTES
@@ -253,14 +256,12 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- ---------- USUARIOS (uno o más de cada rol) ----------
 INSERT INTO usuarios (id, nombre, email, contrasena, telefono, rol, activo) VALUES
-(1, 'Juan Pérez',              'juan.perez@test.com',        '$2b$10$IjS9PsaA32pUmshGR6S16OuyIMVBcpzskeOYzXfCyjCqV/9cnahWm', '3421000001', 'cliente',       TRUE),
-(2, 'María Gómez',             'maria.gomez@test.com',       '$2b$10$IjS9PsaA32pUmshGR6S16OuyIMVBcpzskeOYzXfCyjCqV/9cnahWm', '3421000002', 'cliente',       TRUE),
-(3, 'Ferretería Central',      'ferreteria.central@test.com','$2b$10$IjS9PsaA32pUmshGR6S16OuyIMVBcpzskeOYzXfCyjCqV/9cnahWm', '3421000003', 'comercio',      TRUE),
-(4, 'Librería del Sur',        'libreria.sur@test.com',      '$2b$10$IjS9PsaA32pUmshGR6S16OuyIMVBcpzskeOYzXfCyjCqV/9cnahWm', '3421000004', 'comercio',      TRUE),
-(5, 'Carlos Rodríguez',        'carlos.repartidor@test.com', '$2b$10$IjS9PsaA32pUmshGR6S16OuyIMVBcpzskeOYzXfCyjCqV/9cnahWm', '3421000005', 'repartidor',    TRUE),
-(6, 'Lucía Fernández',         'lucia.repartidor@test.com',  '$2b$10$IjS9PsaA32pUmshGR6S16OuyIMVBcpzskeOYzXfCyjCqV/9cnahWm', '3421000006', 'repartidor',    TRUE),
-(7, 'Admin ATuPuerta',         'admin@atupuerta.com',        '$2b$10$IjS9PsaA32pUmshGR6S16OuyIMVBcpzskeOYzXfCyjCqV/9cnahWm', '3421000007', 'administrador', TRUE);
-
+(1, 'Juan Pérez',              'juan.perez@test.com',        'Test1234', '3421000001', 'cliente',       TRUE),
+(2, 'María Gómez',             'maria.gomez@test.com',       'Test1234', '3421000002', 'cliente',       TRUE),
+(3, 'Ferretería Central',      'ferreteria.central@test.com','Test1234', '3421000003', 'comercio',      TRUE),
+(4, 'Librería del Sur',        'libreria.sur@test.com',      'Test1234', '3421000004', 'comercio',      TRUE),
+(5, 'Carlos Rodríguez',        'carlos.repartidor@test.com', 'Test1234', '3421000005', 'repartidor',    TRUE),
+(6, 'Lucía Fernández',         'lucia.repartidor@test.com',  'Test1234', '3421000006', 'repartidor',    TRUE);
 -- ---------- CLIENTES ----------
 INSERT INTO clientes (id, usuario_id, direccion_entrega) VALUES
 (1, 1, 'San Martín 1234, Santo Tomé, Santa Fe'),
@@ -275,10 +276,6 @@ INSERT INTO comercios (id, usuario_id, nombre, cuit_cuil, categoria, direccion, 
 INSERT INTO repartidores (id, usuario_id, dni, tipo_vehiculo, patente, numero_licencia, disponible, latitud_actual, longitud_actual) VALUES
 (1, 5, '35123456', 'moto',    'A123BCD', 'LIC-000111', TRUE,  -31.6730, -60.7830),
 (2, 6, '36987654', 'bicicleta','SINPAT1', 'LIC-000222', FALSE, -31.6710, -60.7810);
-
--- ---------- ADMINISTRADORES ----------
-INSERT INTO administradores (id, usuario_id) VALUES
-(1, 7);
 
 -- ---------- PRODUCTOS ----------
 INSERT INTO productos (id, comercio_id, nombre, descripcion, categoria, precio, stock, activo) VALUES
@@ -314,18 +311,12 @@ INSERT INTO ubicaciones_repartidor (id, repartidor_id, pedido_id, latitud, longi
 (2, 1, 1, -31.6720, -60.7818);
 
 -- ---------- RECLAMOS ----------
+-- ---------- RECLAMOS ----------
 INSERT INTO reclamos (id, usuario_id, pedido_id, descripcion, estado, admin_asignado_id, resolucion) VALUES
-(1, 2, 2, 'El pedido figura como pendiente de pago pero ya se descontó dinero de la tarjeta.', 'en_revision', 1, NULL);
+(1, 2, 2, 'El pedido figura como pendiente de pago pero ya se descontó dinero de la tarjeta.', 'en_revision', NULL, NULL);
 
 -- ---------- NOTIFICACIONES ----------
 INSERT INTO notificaciones (id, usuario_id, tipo, mensaje, leida) VALUES
 (1, 1, 'pedido_en_camino', 'Tu pedido #1 salió de Ferretería Central y está en camino.', FALSE),
 (2, 1, 'pago_aprobado',    'Tu pago del pedido #1 fue aprobado.',                        TRUE),
 (3, 2, 'pedido_creado',    'Creaste el pedido #2, falta confirmar el pago.',            FALSE);
-
--- ---------- AUDITORIA_PRODUCTOS / AUDITORIA_PEDIDOS (ejemplo) ----------
-INSERT INTO auditoria_productos (id, producto_id, administrador_id, accion, fecha, hora) VALUES
-(1, 2, 1, 'UPDATE', '2026-08-20', '11:30:00');
-
-INSERT INTO auditoria_pedidos (id, pedido_id, administrador_id, accion, fecha, hora) VALUES
-(1, 1, 1, 'UPDATE', '2026-08-27', '10:16:00');
