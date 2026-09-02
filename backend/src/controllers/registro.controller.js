@@ -101,11 +101,13 @@ const inicioSesion = async (req, res) => {
 
         const [usuario] = existentes;
 
-        // Validacion de datos correctos
-        if (req.correo !== usuario.correo || req.contrasena !== usuario.contrasena) {
+        // Comparación de contraseñas
+        // Va antes del chequeo de usuario activo para no revelarle a un usuario
+        // no autenticado si la cuenta existe o en qué estado está
+        const contrasenaValida = await bcrypt.compare(contrasena, usuario.contrasena);
+        if (!contrasenaValida) {
             return res.status(401).json({
-                codigo: 401,
-                estado: "error",
+                codigo: 401, estado: "error",
                 datos: { mensaje: "Correo o contraseña incorrectos" }
             });
         }
@@ -119,18 +121,22 @@ const inicioSesion = async (req, res) => {
             });
         }
 
-        // Comparación de contraseñas
-        const contrasenaValida = await bcrypt.compare(contrasena, usuario.contrasena);
-        if (!contrasenaValida) {
-            return res.status(401).json({
-                codigo: 401, estado: "error",
-                datos: { mensaje: "Credenciales inválidas" }
-            });
+        // Si el usuario es un comercio, el token lleva tambien su comercio_id para
+        // que el frontend lo tenga a mano y el token sea igual al de inicioSesionComercio
+        const datosToken = { id: usuario.id, rol: usuario.rol };
+        if (usuario.rol === 'comercio') {
+            const [comercios] = await database.query(
+                `SELECT id FROM comercios WHERE usuario_id = ?`,
+                [usuario.id]
+            );
+            if (comercios.length > 0) {
+                datosToken.comercioId = comercios[0].id;
+            }
         }
 
         // Token expira en 8 horas
         const token = jwt.sign(
-            { id: usuario.id, rol: usuario.rol },
+            datosToken,
             process.env.JWT_SECRET,
             { expiresIn: '8h' }
         );
@@ -139,7 +145,16 @@ const inicioSesion = async (req, res) => {
         // Inicio correcto, generacion de token
         return res.status(200).json({
             codigo: 200, estado: "exito",
-            datos: { token, usuario: { id: usuario.id, nombre: usuario.nombre, correo: usuario.email, rol: usuario.rol } }
+            datos: {
+                token,
+                usuario: {
+                    id: usuario.id,
+                    nombre: usuario.nombre,
+                    correo: usuario.email,
+                    rol: usuario.rol,
+                    comercioId: datosToken.comercioId
+                }
+            }
         });
 
     } catch (error) {

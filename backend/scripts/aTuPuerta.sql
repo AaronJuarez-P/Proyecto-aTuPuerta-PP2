@@ -216,6 +216,14 @@ CREATE TABLE auditoria_productos (
     REFERENCES administradores(id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
+-- Los productos los gestiona el propio comercio (CU13-CU16), no solo un administrador.
+-- administrador_id se conserva para el panel de administracion (semana 13); usuario_id
+-- guarda al actor real de cada cambio, sea comercio o administrador.
+ALTER TABLE auditoria_productos
+  ADD COLUMN usuario_id INT NULL AFTER producto_id,
+  ADD CONSTRAINT fk_auditoria_productos_usuario FOREIGN KEY (usuario_id)
+    REFERENCES usuarios(id) ON DELETE SET NULL ON UPDATE CASCADE;
+
 -- =====================================================================
 -- 13. AUDITORIA_PEDIDOS
 -- =====================================================================
@@ -251,17 +259,19 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- =====================================================================
 -- DATOS DE PRUEBA
 -- Contraseña en texto plano para TODOS los usuarios de prueba: Test1234!
--- (hash bcrypt ya generado con costo 10, funciona directo con bcrypt.compare)
+-- El valor almacenado es el hash bcrypt (costo 10) de esa contraseña, para que
+-- bcrypt.compare funcione y se pueda obtener un token con los datos semilla.
+-- Para regenerarlo: node -e "console.log(require('bcryptjs').hashSync('Test1234!', 10))"
 -- =====================================================================
 
 -- ---------- USUARIOS (uno o más de cada rol) ----------
 INSERT INTO usuarios (id, nombre, email, contrasena, telefono, rol, activo) VALUES
-(1, 'Juan Pérez',              'juan.perez@test.com',        'Test1234', '3421000001', 'cliente',       TRUE),
-(2, 'María Gómez',             'maria.gomez@test.com',       'Test1234', '3421000002', 'cliente',       TRUE),
-(3, 'Ferretería Central',      'ferreteria.central@test.com','Test1234', '3421000003', 'comercio',      TRUE),
-(4, 'Librería del Sur',        'libreria.sur@test.com',      'Test1234', '3421000004', 'comercio',      TRUE),
-(5, 'Carlos Rodríguez',        'carlos.repartidor@test.com', 'Test1234', '3421000005', 'repartidor',    TRUE),
-(6, 'Lucía Fernández',         'lucia.repartidor@test.com',  'Test1234', '3421000006', 'repartidor',    TRUE);
+(1, 'Juan Pérez',              'juan.perez@test.com',        '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000001', 'cliente',       TRUE),
+(2, 'María Gómez',             'maria.gomez@test.com',       '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000002', 'cliente',       TRUE),
+(3, 'Ferretería Central',      'ferreteria.central@test.com','$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000003', 'comercio',      TRUE),
+(4, 'Librería del Sur',        'libreria.sur@test.com',      '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000004', 'comercio',      TRUE),
+(5, 'Carlos Rodríguez',        'carlos.repartidor@test.com', '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000005', 'repartidor',    TRUE),
+(6, 'Lucía Fernández',         'lucia.repartidor@test.com',  '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000006', 'repartidor',    TRUE);
 -- ---------- CLIENTES ----------
 INSERT INTO clientes (id, usuario_id, direccion_entrega) VALUES
 (1, 1, 'San Martín 1234, Santo Tomé, Santa Fe'),

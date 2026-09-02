@@ -4,7 +4,9 @@ const express                 = require("express");
 const morgan                  = require("morgan");
 const cors                    = require("cors");
 const registroRoutes          = require("./routes/registro.routes");
-const registroComercioRoutes        = require("./routes/registroComercio.routes"); 
+const registroComercioRoutes        = require("./routes/registroComercio.routes");
+const comercioRoutes          = require("./routes/comercio.routes");
+const productoRoutes          = require("./routes/producto.routes");
 
 const app = express();
 
@@ -17,6 +19,8 @@ const pool = require("./database/database");
 
 app.use("/api", registroRoutes);
 app.use("/api", registroComercioRoutes);
+app.use("/api", comercioRoutes);
+app.use("/api", productoRoutes);
 app.get("/health", (req, res) => {
   res.json({ codigo: 200, estado: "ok", datos: { mensaje: "Servidor activo" } });
 });

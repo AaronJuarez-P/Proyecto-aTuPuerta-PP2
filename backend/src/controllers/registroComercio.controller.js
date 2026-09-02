@@ -13,7 +13,6 @@ const registroComercio = async (req, res) => {
 
         // Validar que todos los campos requeridos estén presentes
         if (!nombreComercio || !cuil || !categoria || !direccion || !horarioAtencion || !email || !contrasena || !nombreResponsable || !telefono) {
-            connection.release();
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -23,7 +22,6 @@ const registroComercio = async (req, res) => {
 
         // Validar cadenas de texto vacias
         if (nombreComercio.trim() === "" || categoria.trim() === "" || direccion.trim() === "" || horarioAtencion.trim() === "" || email.trim() === "" || contrasena.trim() === "" || nombreResponsable.trim() === "" || telefono.trim() === "") {
-            connection.release();
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -33,7 +31,6 @@ const registroComercio = async (req, res) => {
 
         // Validar que el CUIL tenga el formato correcto (11 dígitos) y sea string
         if (typeof cuil !== "string" || !/^\d{11}$/.test(cuil)) {
-            connection.release();
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -43,7 +40,6 @@ const registroComercio = async (req, res) => {
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (typeof email !== "string" || !emailRegex.test(email)) {
-            connection.release();
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -56,7 +52,6 @@ const registroComercio = async (req, res) => {
             [email]
         );
         if (usuarioExistente.length > 0) {
-            connection.release();
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -71,7 +66,6 @@ const registroComercio = async (req, res) => {
         );
         // Si el comercio ya existe devolver error
         if (comercioExistente.length > 0) {
-            connection.release();
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -102,8 +96,8 @@ const registroComercio = async (req, res) => {
             [resultadoComercio.insertId]
         );
 
-        return res.status(200).json({
-            codigo: 200,
+        return res.status(201).json({
+            codigo: 201,
             estado: "exito",
             datos: { mensaje: `Comercio registrado exitosamente`,
                      comercio: comercioCreado[0]
@@ -194,8 +188,14 @@ const iniciarSesionComercio = async (req, res) => {
 
         const { usuario_contrasena, ...comercioSinContrasena } = comercioExistente[0];
 
+        // El payload tiene que ser igual al de inicioSesion para que verificarRol
+        // y los middlewares que leen req.usuario.id funcionen con este token
         const token = jwt.sign(
-            { usuarioId: comercioSinContrasena.usuario_id, comercioId: comercioSinContrasena.id },
+            {
+                id: comercioSinContrasena.usuario_id,
+                rol: 'comercio',
+                comercioId: comercioSinContrasena.id
+            },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
         );
