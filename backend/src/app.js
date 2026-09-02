@@ -4,6 +4,7 @@ const express                 = require("express");
 const morgan                  = require("morgan");
 const cors                    = require("cors");
 const registroRoutes          = require("./routes/registro.routes");
+const registroComercioRoutes        = require("./routes/registroComercio.routes"); 
 
 const app = express();
 
@@ -15,13 +16,23 @@ app.use(express.json());
 const pool = require("./database/database");
 
 app.use("/api", registroRoutes);
-
+app.use("/api", registroComercioRoutes);
 app.get("/health", (req, res) => {
   res.json({ codigo: 200, estado: "ok", datos: { mensaje: "Servidor activo" } });
 });
 
 app.use((req, res) => {
   res.status(404).json({ codigo: 404, estado: "Ruta no encontrada", datos: null });
+});
+
+// Manejador de errores centralizado
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({
+    codigo: 500,
+    estado: "error",
+    datos: { mensaje: "Error interno del servidor" }
+  });
 });
 
 module.exports = app;

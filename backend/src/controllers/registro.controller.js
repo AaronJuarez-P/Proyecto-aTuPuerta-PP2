@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const database = require('../database');
+const database = require('../database/database');
 
 const registro = async (req, res) => {
     try {
