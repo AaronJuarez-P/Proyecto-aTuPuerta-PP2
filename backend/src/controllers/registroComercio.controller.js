@@ -9,10 +9,10 @@ const registroComercio = async (req, res) => {
 
     try {
 
-        const { nombreComercio, cuil, categoria, direccion, horarioAtencion, email, contrasena, nombreResponsable, telefono } = req.body;
+        const { nombreComercio, cuil, categoria, direccion, horarioAtencion, email, contrasena, telefono } = req.body;
 
         // Validar que todos los campos requeridos estén presentes
-        if (!nombreComercio || !cuil || !categoria || !direccion || !horarioAtencion || !email || !contrasena || !nombreResponsable || !telefono) {
+        if (!nombreComercio || !cuil || !categoria || !direccion || !horarioAtencion || !email || !contrasena || !telefono) {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -21,7 +21,7 @@ const registroComercio = async (req, res) => {
         }
 
         // Validar cadenas de texto vacias
-        if (nombreComercio.trim() === "" || categoria.trim() === "" || direccion.trim() === "" || horarioAtencion.trim() === "" || email.trim() === "" || contrasena.trim() === "" || nombreResponsable.trim() === "" || telefono.trim() === "") {
+        if (nombreComercio.trim() === "" || categoria.trim() === "" || direccion.trim() === "" || horarioAtencion.trim() === "" || email.trim() === "" || contrasena.trim() === "" || telefono.trim() === "") {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -47,24 +47,46 @@ const registroComercio = async (req, res) => {
             });
         }
 
-        const [usuarioExistente] = await connection.query(
-            'SELECT id FROM usuarios WHERE email = ?',
+        // Buscar el usuario existente por email (ya NO se crea un usuario nuevo)
+        const [usuariosExistentes] = await connection.query(
+            'SELECT id, contrasena, rol FROM usuarios WHERE email = ?',
             [email]
         );
-        if (usuarioExistente.length > 0) {
-            return res.status(400).json({
-                codigo: 400,
+
+        if (usuariosExistentes.length === 0) {
+            return res.status(404).json({
+                codigo: 404,
                 estado: "error",
-                datos: { mensaje: "El email ya está registrado" }
+                datos: { mensaje: "No existe una cuenta con ese email. Registrate primero como usuario" }
+            });
+        }
+
+        const usuarioExistente = usuariosExistentes[0];
+
+        // Validar que la contraseña coincida con la cuenta existente
+        const contrasenaValida = await bcrypt.compare(contrasena, usuarioExistente.contrasena);
+        if (!contrasenaValida) {
+            return res.status(401).json({
+                codigo: 401,
+                estado: "error",
+                datos: { mensaje: "Contraseña incorrecta" }
+            });
+        }
+
+        // Validar que el usuario todavía sea 'cliente' (no ya comercio, no admin, etc.)
+        if (usuarioExistente.rol !== 'cliente') {
+            return res.status(403).json({
+                codigo: 403,
+                estado: "error",
+                datos: { mensaje: "Esta cuenta no puede registrar un comercio" }
             });
         }
 
         // Validar que el comercio no esté registrado previamente
         const [comercioExistente] = await connection.query(
-            'SELECT * FROM comercios WHERE cuit_cuil = ?',
+            'SELECT id FROM comercios WHERE cuit_cuil = ?',
             [cuil]
         );
-        // Si el comercio ya existe devolver error
         if (comercioExistente.length > 0) {
             return res.status(400).json({
                 codigo: 400,
@@ -75,13 +97,13 @@ const registroComercio = async (req, res) => {
 
         await connection.beginTransaction();
 
-        const contrasenaHash = await bcrypt.hash(contrasena, 10);
+        const usuarioId = usuarioExistente.id;
 
-        const [resultadoUsuario] = await connection.query(
-            'INSERT INTO usuarios (nombre, email, contrasena, telefono, rol) VALUES (?, ?, ?, ?, ?)',
-            [nombreResponsable, email, contrasenaHash, telefono, 'comercio']
+        // Actualiza el usuario existente a rol 'comercio' en vez de crear uno nuevo
+        await connection.query(
+            'UPDATE usuarios SET rol = ?, telefono = ? WHERE id = ?',
+            ['comercio', telefono, usuarioId]
         );
-        const usuarioId = resultadoUsuario.insertId;
 
         const [resultadoComercio] = await connection.query(
             `INSERT INTO comercios (nombre, cuit_cuil, categoria, direccion, horario_atencion, usuario_id)
@@ -99,9 +121,10 @@ const registroComercio = async (req, res) => {
         return res.status(201).json({
             codigo: 201,
             estado: "exito",
-            datos: { mensaje: `Comercio registrado exitosamente`,
-                     comercio: comercioCreado[0]
-                   }
+            datos: {
+                mensaje: `Comercio registrado exitosamente`,
+                comercio: comercioCreado[0]
+            }
         });
 
     } catch (error) {
@@ -155,7 +178,7 @@ const iniciarSesionComercio = async (req, res) => {
 
         // Validar que el comercio esté registrado previamente
         const [comercioExistente] = await database.query(
-            `SELECT c.*, u.email, u.contrasena AS usuario_contrasena FROM comercios c
+            `SELECT c.*, u.email, u.contrasena AS usuario_contrasena, u.activo AS usuario_activo FROM comercios c
             INNER JOIN usuarios u ON
             c.usuario_id = u.id
             WHERE c.cuit_cuil = ? AND u.email = ?`,
@@ -186,10 +209,23 @@ const iniciarSesionComercio = async (req, res) => {
             });
         }
 
-        const { usuario_contrasena, ...comercioSinContrasena } = comercioExistente[0];
+        // Validacion de usuario activo
+        // Va despues del chequeo de contraseña para no revelarle a un usuario
+        // no autenticado si la cuenta existe o en qué estado está
+        if (!comercioExistente[0].usuario_activo) {
+            return res.status(403).json({
+                codigo: 403,
+                estado: "error",
+                datos: { mensaje: "Usuario inactivo" }
+            });
+        }
+
+        const { usuario_contrasena, usuario_activo, ...comercioSinContrasena } = comercioExistente[0];
 
         // El payload tiene que ser igual al de inicioSesion para que verificarRol
         // y los middlewares que leen req.usuario.id funcionen con este token
+        // Token expira en 8 horas, igual que inicioSesion, para que el comportamiento
+        // de sesión sea consistente entre clientes y comercios
         const token = jwt.sign(
             {
                 id: comercioSinContrasena.usuario_id,
@@ -197,7 +233,7 @@ const iniciarSesionComercio = async (req, res) => {
                 comercioId: comercioSinContrasena.id
             },
             process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
+            { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
         );
 
         return res.status(200).json({
@@ -217,5 +253,4 @@ const iniciarSesionComercio = async (req, res) => {
         });
     }
 };
-
 module.exports = { registroComercio, iniciarSesionComercio };

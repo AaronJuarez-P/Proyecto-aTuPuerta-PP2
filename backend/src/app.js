@@ -4,7 +4,7 @@ const express                 = require("express");
 const morgan                  = require("morgan");
 const cors                    = require("cors");
 const registroRoutes          = require("./routes/registro.routes");
-const registroComercioRoutes        = require("./routes/registroComercio.routes");
+const registroComercioRoutes  = require("./routes/registroComercio.routes");
 const comercioRoutes          = require("./routes/comercio.routes");
 const productoRoutes          = require("./routes/producto.routes");
 

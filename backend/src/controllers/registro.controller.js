@@ -6,7 +6,7 @@ const registro = async (req, res) => {
     try {
         const { nombre, correo, contrasena, telefono } = req.body;
 
-        // 1. Validación de campos vacíos
+        // Validación de campos vacíos
         if (!nombre || !correo || !contrasena || !telefono) {
             return res.status(400).json({
                 codigo: 400,
@@ -95,7 +95,7 @@ const inicioSesion = async (req, res) => {
             return res.status(401).json({
                 codigo: 401,
                 estado: "error",
-                datos: { mensaje: "Correo o contraseña incorrectos" }
+                datos: { mensaje: "Correo incorrecto" }
             });
         }
 
@@ -108,7 +108,7 @@ const inicioSesion = async (req, res) => {
         if (!contrasenaValida) {
             return res.status(401).json({
                 codigo: 401, estado: "error",
-                datos: { mensaje: "Correo o contraseña incorrectos" }
+                datos: { mensaje: "Contraseña incorrecta" }
             });
         }
 
