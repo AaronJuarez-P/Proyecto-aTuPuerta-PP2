@@ -1,0 +1,20 @@
+{
+  "name": "proyecto-aTuPuerta-PP2",
+  "version": "1.0.0",
+  "description": "Sistema de delivery — Juarez, Weidmann, Silva, Ocampo",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "mysql2": "^3.9.7"
+  }
+}
