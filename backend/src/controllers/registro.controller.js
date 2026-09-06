@@ -14,7 +14,7 @@ const registro = async (req, res) => {
                 datos: { mensaje: "Todos los campos son obligatorios" }
             });
         }
-        
+
         // Validacion de espacios en blanco
         if (!nombre.trim() || !correo.trim() || !contrasena.trim() || !telefono.trim()) {
             return res.status(400).json({
@@ -42,7 +42,10 @@ const registro = async (req, res) => {
         const contrasenaHash = await bcrypt.hash(contrasena, salt);
 
         // Inserción de usuario en la base de datos
-        const [usuarios] = await database.query(
+        // Nota: si "email" tiene un índice UNIQUE en la base (recomendado),
+        // una condición de carrera entre dos registros simultáneos con el
+        // mismo correo termina acá con un error de duplicado, capturado abajo.
+        await database.query(
             `INSERT INTO usuarios (nombre, email, contrasena, telefono) VALUES (?, ?, ?, ?)`,
             [nombre, correo, contrasenaHash, telefono]
         );
@@ -54,12 +57,20 @@ const registro = async (req, res) => {
         });
 
     } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "Usuario ya registrado" }
+            });
+        }
+
         return res.status(500).json({
             codigo: 500,
             estado: "error",
             datos: { mensaje: "Error interno del servidor" }
         });
-    };
+    }
 };
 
 
@@ -87,7 +98,7 @@ const inicioSesion = async (req, res) => {
         }
 
         // Validacion de usuario existente
-        const [existentes]  = await database.query(
+        const [existentes] = await database.query(
             `SELECT * FROM usuarios WHERE email = ?`,
             [correo]
         );
@@ -95,7 +106,7 @@ const inicioSesion = async (req, res) => {
             return res.status(401).json({
                 codigo: 401,
                 estado: "error",
-                datos: { mensaje: "Correo incorrecto" }
+                datos: { mensaje: "Usuario no encontrado" }
             });
         }
 
@@ -134,11 +145,12 @@ const inicioSesion = async (req, res) => {
             }
         }
 
-        // Token expira en 8 horas
+        // Token expira segun JWT_EXPIRES_IN (default 8h), igual que inicioSesionComercio,
+        // para que el comportamiento de sesión sea consistente entre clientes y comercios
         const token = jwt.sign(
             datosToken,
             process.env.JWT_SECRET,
-            { expiresIn: '8h' }
+            { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
         );
 
 
