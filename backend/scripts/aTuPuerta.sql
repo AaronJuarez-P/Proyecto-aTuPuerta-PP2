@@ -26,7 +26,7 @@ CREATE TABLE usuarios (
 ) ENGINE=InnoDB;
 
 ALTER TABLE usuarios
-  MODIFY COLUMN rol ENUM('cliente','comercio','repartidor','administrador')
+  ADD COLUMN rol ENUM('cliente','comercio','repartidor','administrador')
   NOT NULL DEFAULT 'cliente';
 
 -- =====================================================================

@@ -6,8 +6,9 @@ const registro = async (req, res) => {
     try {
         const { nombre, correo, contrasena, telefono } = req.body;
 
-        // Validación de campos vacíos
-        if (!nombre || !correo || !contrasena || !telefono) {
+        if (typeof nombre !== "string" || typeof correo !== "string" ||
+            typeof contrasena !== "string" || typeof telefono !== "string" ||
+            !nombre || !correo || !contrasena || !telefono) {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -15,7 +16,6 @@ const registro = async (req, res) => {
             });
         }
 
-        // Validacion de espacios en blanco
         if (!nombre.trim() || !correo.trim() || !contrasena.trim() || !telefono.trim()) {
             return res.status(400).json({
                 codigo: 400,
@@ -24,7 +24,6 @@ const registro = async (req, res) => {
             });
         }
 
-        // Validacion para usuario ya registrado
         const [existentes] = await database.query(
             `SELECT id FROM usuarios WHERE email = ?`,
             [correo]
@@ -37,17 +36,12 @@ const registro = async (req, res) => {
             });
         }
 
-        // Hash de contraseña
         const salt = await bcrypt.genSalt(10);
         const contrasenaHash = await bcrypt.hash(contrasena, salt);
 
-        // Inserción de usuario en la base de datos
-        // Nota: si "email" tiene un índice UNIQUE en la base (recomendado),
-        // una condición de carrera entre dos registros simultáneos con el
-        // mismo correo termina acá con un error de duplicado, capturado abajo.
         await database.query(
-            `INSERT INTO usuarios (nombre, email, contrasena, telefono) VALUES (?, ?, ?, ?)`,
-            [nombre, correo, contrasenaHash, telefono]
+            `INSERT INTO usuarios (nombre, email, contrasena, telefono, rol) VALUES (?, ?, ?, ?, ?)`,
+            [nombre, correo, contrasenaHash, telefono, 'cliente']
         );
 
         return res.status(201).json({
@@ -79,8 +73,8 @@ const inicioSesion = async (req, res) => {
 
         const { correo, contrasena } = req.body;
 
-        // Validacion de campos vacios
-        if (!correo || !contrasena) {
+        if (typeof correo !== "string" || typeof contrasena !== "string" ||
+            !correo || !contrasena) {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -88,7 +82,6 @@ const inicioSesion = async (req, res) => {
             });
         }
 
-        // Validacion de espacios en blanco
         if (!correo.trim() || !contrasena.trim()) {
             return res.status(400).json({
                 codigo: 400,
@@ -97,7 +90,6 @@ const inicioSesion = async (req, res) => {
             });
         }
 
-        // Validacion de usuario existente
         const [existentes] = await database.query(
             `SELECT * FROM usuarios WHERE email = ?`,
             [correo]
@@ -112,9 +104,6 @@ const inicioSesion = async (req, res) => {
 
         const [usuario] = existentes;
 
-        // Comparación de contraseñas
-        // Va antes del chequeo de usuario activo para no revelarle a un usuario
-        // no autenticado si la cuenta existe o en qué estado está
         const contrasenaValida = await bcrypt.compare(contrasena, usuario.contrasena);
         if (!contrasenaValida) {
             return res.status(401).json({
@@ -123,7 +112,6 @@ const inicioSesion = async (req, res) => {
             });
         }
 
-        // Validacion de usuario activo
         if (!usuario.activo) {
             return res.status(403).json({
                 codigo: 403,
@@ -132,29 +120,17 @@ const inicioSesion = async (req, res) => {
             });
         }
 
-        // Si el usuario es un comercio, el token lleva tambien su comercio_id para
-        // que el frontend lo tenga a mano y el token sea igual al de inicioSesionComercio
-        const datosToken = { id: usuario.id, rol: usuario.rol };
-        if (usuario.rol === 'comercio') {
-            const [comercios] = await database.query(
-                `SELECT id FROM comercios WHERE usuario_id = ?`,
-                [usuario.id]
-            );
-            if (comercios.length > 0) {
-                datosToken.comercioId = comercios[0].id;
-            }
-        }
+        await database.query(
+            `UPDATE usuarios SET rol = 'cliente' WHERE id = ?`,
+            [usuario.id]
+        );
 
-        // Token expira segun JWT_EXPIRES_IN (default 8h), igual que inicioSesionComercio,
-        // para que el comportamiento de sesión sea consistente entre clientes y comercios
         const token = jwt.sign(
-            datosToken,
+            { id: usuario.id, rol: 'cliente' },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
         );
 
-
-        // Inicio correcto, generacion de token
         return res.status(200).json({
             codigo: 200, estado: "exito",
             datos: {
@@ -163,8 +139,7 @@ const inicioSesion = async (req, res) => {
                     id: usuario.id,
                     nombre: usuario.nombre,
                     correo: usuario.email,
-                    rol: usuario.rol,
-                    comercioId: datosToken.comercioId
+                    rol: 'cliente'
                 }
             }
         });

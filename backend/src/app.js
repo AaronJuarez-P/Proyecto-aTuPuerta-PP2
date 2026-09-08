@@ -5,6 +5,7 @@ const morgan                  = require("morgan");
 const cors                    = require("cors");
 const registroRoutes          = require("./routes/registro.routes");
 const registroComercioRoutes  = require("./routes/registroComercio.routes");
+const registroRepartidorRoutes = require("./routes/registroRepartidor.routes");
 const comercioRoutes          = require("./routes/comercio.routes");
 const productoRoutes          = require("./routes/producto.routes");
 
@@ -19,6 +20,7 @@ const pool = require("./database/database");
 
 app.use("/api", registroRoutes);
 app.use("/api", registroComercioRoutes);
+app.use("/api", registroRepartidorRoutes);
 app.use("/api", comercioRoutes);
 app.use("/api", productoRoutes);
 app.get("/health", (req, res) => {
