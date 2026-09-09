@@ -6,7 +6,7 @@ const {
     eliminarProductoCarrito,
     confirmarCarrito
 } = require('../controllers/carrito.controller');
-const { verificarToken } = require('../middlewares/auth.middleware');
+const { verificarToken } = require('../middlewares/autenticacion.middleware');
 
 // El carrito es siempre del cliente autenticado (se resuelve por req.usuario.id),
 // por eso todas las rutas pasan primero por verificarToken.

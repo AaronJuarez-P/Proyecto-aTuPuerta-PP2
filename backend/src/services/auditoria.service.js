@@ -16,4 +16,20 @@ const registrarAuditoriaProducto = async (conexion, { productoId, usuarioId, adm
     );
 };
 
-module.exports = { registrarAuditoriaProducto };
+// Registra un cambio de pedido en auditoria_pedidos (semana 6, CU07).
+//
+// Misma idea que la de productos: recibe la CONEXION para que quede en la misma
+// transaccion que el UPDATE sobre pedidos.
+//
+// OJO: auditoria_pedidos NO tiene columna usuario_id, a diferencia de
+// auditoria_productos. Solo guarda administrador_id, que queda en null cuando el
+// cambio lo dispara el flujo normal (un pago aprobado, por ejemplo) y no una persona.
+const registrarAuditoriaPedido = async (conexion, { pedidoId, administradorId = null, accion }) => {
+    await conexion.query(
+        `INSERT INTO auditoria_pedidos (pedido_id, administrador_id, accion, fecha, hora)
+        VALUES (?, ?, ?, CURDATE(), CURTIME())`,
+        [pedidoId, administradorId, accion]
+    );
+};
+
+module.exports = { registrarAuditoriaProducto, registrarAuditoriaPedido };
