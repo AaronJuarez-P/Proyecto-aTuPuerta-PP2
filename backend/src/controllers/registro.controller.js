@@ -3,12 +3,14 @@ const jwt = require('jsonwebtoken');
 const database = require('../database/database');
 
 const registro = async (req, res) => {
+    let connection;
     try {
-        const { nombre, correo, contrasena, telefono } = req.body;
+        const { nombre, correo, contrasena, telefono, direccion_entrega } = req.body;
 
         if (typeof nombre !== "string" || typeof correo !== "string" ||
             typeof contrasena !== "string" || typeof telefono !== "string" ||
-            !nombre || !correo || !contrasena || !telefono) {
+            typeof direccion_entrega !== "string" ||
+            !nombre || !correo || !contrasena || !telefono || !direccion_entrega) {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -16,7 +18,8 @@ const registro = async (req, res) => {
             });
         }
 
-        if (!nombre.trim() || !correo.trim() || !contrasena.trim() || !telefono.trim()) {
+        if (!nombre.trim() || !correo.trim() || !contrasena.trim() ||
+            !telefono.trim() || !direccion_entrega.trim()) {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -24,11 +27,15 @@ const registro = async (req, res) => {
             });
         }
 
-        const [existentes] = await database.query(
-            `SELECT id FROM usuarios WHERE email = ?`,
+        connection = await database.getConnection();
+        await connection.beginTransaction();
+
+        const [existentes] = await connection.query(
+            `SELECT id FROM usuarios WHERE email = ? FOR UPDATE`,
             [correo]
         );
         if (existentes.length > 0) {
+            await connection.rollback();
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -39,10 +46,20 @@ const registro = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const contrasenaHash = await bcrypt.hash(contrasena, salt);
 
-        await database.query(
+        const [resultado] = await connection.query(
             `INSERT INTO usuarios (nombre, email, contrasena, telefono, rol) VALUES (?, ?, ?, ?, ?)`,
             [nombre, correo, contrasenaHash, telefono, 'cliente']
         );
+        const usuarioId = resultado.insertId;
+
+        // FIX: crear también el perfil de cliente, sin esto el usuario
+        // nunca puede usar el carrito ni crear pedidos.
+        await connection.query(
+            `INSERT INTO clientes (usuario_id, direccion_entrega) VALUES (?, ?)`,
+            [usuarioId, direccion_entrega]
+        );
+
+        await connection.commit();
 
         return res.status(201).json({
             codigo: 201,
@@ -51,6 +68,7 @@ const registro = async (req, res) => {
         });
 
     } catch (error) {
+        if (connection) await connection.rollback();
         if (error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({
                 codigo: 400,
@@ -58,12 +76,13 @@ const registro = async (req, res) => {
                 datos: { mensaje: "Usuario ya registrado" }
             });
         }
-
         return res.status(500).json({
             codigo: 500,
             estado: "error",
             datos: { mensaje: "Error interno del servidor" }
         });
+    } finally {
+        if (connection) connection.release();
     }
 };
 

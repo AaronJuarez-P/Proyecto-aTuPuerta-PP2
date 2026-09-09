@@ -8,6 +8,7 @@ const registroComercioRoutes  = require("./routes/registroComercio.routes");
 const registroRepartidorRoutes = require("./routes/registroRepartidor.routes");
 const comercioRoutes          = require("./routes/comercio.routes");
 const productoRoutes          = require("./routes/producto.routes");
+const carritoRoutes           = require("./routes/carrito.routes");
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use("/api", registroComercioRoutes);
 app.use("/api", registroRepartidorRoutes);
 app.use("/api", comercioRoutes);
 app.use("/api", productoRoutes);
+app.use("/api", carritoRoutes);
 app.get("/health", (req, res) => {
   res.json({ codigo: 200, estado: "ok", datos: { mensaje: "Servidor activo" } });
 });

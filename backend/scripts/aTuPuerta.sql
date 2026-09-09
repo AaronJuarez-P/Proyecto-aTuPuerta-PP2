@@ -109,7 +109,43 @@ CREATE TABLE productos (
 ) ENGINE=InnoDB;
 
 -- =====================================================================
--- 7. PEDIDOS
+-- 7. CARRITOS
+-- Carrito general: 1 por cliente, sin comercio_id, porque puede acumular
+-- productos de varios comercios distintos antes de confirmar.
+-- =====================================================================
+CREATE TABLE carritos (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  cliente_id  INT NOT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_carritos_cliente (cliente_id),
+  CONSTRAINT fk_carritos_cliente FOREIGN KEY (cliente_id)
+    REFERENCES clientes(id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- =====================================================================
+-- 8. ITEMS_CARRITO
+-- Sin comercio_id: cada item lo trae de por sí a través de producto_id.
+-- =====================================================================
+CREATE TABLE items_carrito (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  carrito_id   INT NOT NULL,
+  producto_id  INT NOT NULL,
+  cantidad     INT NOT NULL,
+  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_items_carrito (carrito_id, producto_id),
+  CONSTRAINT fk_items_carrito_carrito FOREIGN KEY (carrito_id)
+    REFERENCES carritos(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_items_carrito_producto FOREIGN KEY (producto_id)
+    REFERENCES productos(id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- =====================================================================
+-- 9. PEDIDOS
+-- Ya NO incluye estado 'carrito': el carrito vive en su propia tabla,
+-- separada del ciclo de vida operativo. Un pedido nace directamente
+-- en 'pendiente_pago' cuando se confirma el carrito, y sigue siendo
+-- 1 pedido = 1 comercio (necesario para repartidor/estado/pago).
 -- =====================================================================
 CREATE TABLE pedidos (
   id                 INT AUTO_INCREMENT PRIMARY KEY,
@@ -131,7 +167,7 @@ CREATE TABLE pedidos (
 ) ENGINE=InnoDB;
 
 -- =====================================================================
--- 8. ITEMS_PEDIDO
+-- 10. ITEMS_PEDIDO
 -- =====================================================================
 CREATE TABLE items_pedido (
   id            INT AUTO_INCREMENT PRIMARY KEY,
@@ -147,7 +183,7 @@ CREATE TABLE items_pedido (
 ) ENGINE=InnoDB;
 
 -- =====================================================================
--- 9. PAGOS
+-- 11. PAGOS
 -- =====================================================================
 CREATE TABLE pagos (
   id                  INT AUTO_INCREMENT PRIMARY KEY,
@@ -164,7 +200,7 @@ CREATE TABLE pagos (
 ) ENGINE=InnoDB;
 
 -- =====================================================================
--- 10. UBICACIONES_REPARTIDOR
+-- 12. UBICACIONES_REPARTIDOR
 -- =====================================================================
 CREATE TABLE ubicaciones_repartidor (
   id             INT AUTO_INCREMENT PRIMARY KEY,
@@ -180,7 +216,7 @@ CREATE TABLE ubicaciones_repartidor (
 ) ENGINE=InnoDB;
 
 -- =====================================================================
--- 11. RECLAMOS
+-- 13. RECLAMOS
 -- =====================================================================
 CREATE TABLE reclamos (
   id                  INT AUTO_INCREMENT PRIMARY KEY,
@@ -201,7 +237,7 @@ CREATE TABLE reclamos (
 ) ENGINE=InnoDB;
 
 -- =====================================================================
--- 12. AUDITORIA_PRODUCTOS
+-- 14. AUDITORIA_PRODUCTOS
 -- =====================================================================
 CREATE TABLE auditoria_productos (
   id                INT AUTO_INCREMENT PRIMARY KEY,
@@ -225,7 +261,7 @@ ALTER TABLE auditoria_productos
     REFERENCES usuarios(id) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- =====================================================================
--- 13. AUDITORIA_PEDIDOS
+-- 15. AUDITORIA_PEDIDOS
 -- =====================================================================
 CREATE TABLE auditoria_pedidos (
   id                INT AUTO_INCREMENT PRIMARY KEY,
@@ -241,7 +277,7 @@ CREATE TABLE auditoria_pedidos (
 ) ENGINE=InnoDB;
 
 -- =====================================================================
--- 14. NOTIFICACIONES
+-- 16. NOTIFICACIONES
 -- =====================================================================
 CREATE TABLE notificaciones (
   id          INT AUTO_INCREMENT PRIMARY KEY,
@@ -272,6 +308,7 @@ INSERT INTO usuarios (id, nombre, email, contrasena, telefono, rol, activo) VALU
 (4, 'Librería del Sur',        'libreria.sur@test.com',      '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000004', 'comercio',      TRUE),
 (5, 'Carlos Rodríguez',        'carlos.repartidor@test.com', '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000005', 'repartidor',    TRUE),
 (6, 'Lucía Fernández',         'lucia.repartidor@test.com',  '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000006', 'repartidor',    TRUE);
+
 -- ---------- CLIENTES ----------
 INSERT INTO clientes (id, usuario_id, direccion_entrega) VALUES
 (1, 1, 'San Martín 1234, Santo Tomé, Santa Fe'),
@@ -294,6 +331,10 @@ INSERT INTO productos (id, comercio_id, nombre, descripcion, categoria, precio, 
 (3, 1, 'Caja de tornillos (100u)',   'Tornillos autorroscantes 3/4 pulgada',        'Ferretería',   1200.00, 60, TRUE),
 (4, 2, 'Cuaderno A4 tapa dura',      'Cuaderno rayado 100 hojas',                   'Papelería',    2100.00, 40, TRUE),
 (5, 2, 'Cartuchera triple',         'Cartuchera de tela con 3 compartimentos',      'Papelería',    5300.00, 15, TRUE);
+
+-- Nota: no se insertan carritos/items_carrito de prueba a propósito.
+-- Son datos transitorios (se crean y se borran en el uso normal de la app),
+-- no tiene sentido dejarlos precargados como al resto de las tablas.
 
 -- ---------- PEDIDOS ----------
 -- Pedido 1: cliente 1 le compra a la ferretería, ya asignado a un repartidor, en camino
@@ -320,7 +361,6 @@ INSERT INTO ubicaciones_repartidor (id, repartidor_id, pedido_id, latitud, longi
 (1, 1, 1, -31.6725, -60.7825),
 (2, 1, 1, -31.6720, -60.7818);
 
--- ---------- RECLAMOS ----------
 -- ---------- RECLAMOS ----------
 INSERT INTO reclamos (id, usuario_id, pedido_id, descripcion, estado, admin_asignado_id, resolucion) VALUES
 (1, 2, 2, 'El pedido figura como pendiente de pago pero ya se descontó dinero de la tarjeta.', 'en_revision', NULL, NULL);
