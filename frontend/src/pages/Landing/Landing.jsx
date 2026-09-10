@@ -34,7 +34,8 @@ export default function Landing() {
             <h1 id="hero-title">Delivery justo,<br /><em>a tu puerta</em></h1>
             <p className="hero-description">Pedí de supermercados, ferreterías, librerías y más — sin el sobrecosto de las apps tradicionales.</p>
             <div className="hero-actions">
-              <a className="button button-primary" href="#comercios"><span aria-hidden="true">🛒</span> Explorá los rubros</a>
+            <a className="button button-primary" href="/comercios">
+            <span aria-hidden="true">🛒</span> Explorá los rubros</a>
               <a className="button button-outline" href="#como-funciona">¿Cómo funciona? <span aria-hidden="true">↓</span></a>
             </div>
           </div>
