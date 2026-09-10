@@ -3,6 +3,7 @@ import Footer from '../../components/Footer/Footer'
 import './Landing.css'
 
 const categories = [
+
   { icon: '🛒', title: 'Supermercados', description: 'Lo que necesitás para todos los días.', color: 'super' },
   { icon: '📚', title: 'Librerías', description: 'Para estudiar, trabajar y crear.', color: 'books' },
   { icon: '🔧', title: 'Ferreterías', description: 'Todo para ese próximo proyecto.', color: 'hardware' },

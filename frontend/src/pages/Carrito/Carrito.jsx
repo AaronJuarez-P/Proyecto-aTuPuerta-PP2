@@ -175,7 +175,7 @@ export default function Carrito() {
                                     className="seguir-comprando"
                                     href="/comercios"
                                 >
-                                    ← Seguir comprando
+                                    🡰 Seguir comprando
                                 </a>
                             </aside>
 

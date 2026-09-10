@@ -1,38 +1,26 @@
 import { useState } from 'react'
+import Header from '../../components/Header/Header'
+import Footer from '../../components/Footer/Footer'
 import './Checkout.css'
 
 export default function Checkout() {
-  const carritoGuardado = localStorage.getItem('carrito')
-  const carrito = carritoGuardado ? JSON.parse(carritoGuardado) : []
+  const carrito = JSON.parse(localStorage.getItem('carrito')) || []
 
   const [direccion, setDireccion] = useState('')
   const [telefono, setTelefono] = useState('')
-  const [metodoPago, setMetodoPago] = useState('mercado_pago')
-  const [error, setError] = useState('')
+  const [metodoPago, setMetodoPago] = useState('efectivo')
   const [pedidoConfirmado, setPedidoConfirmado] = useState(false)
 
   const total = carrito.reduce(
-    (acumulado, producto) =>
-      acumulado + producto.precio * producto.cantidad,
+    (suma, producto) => suma + producto.precio * producto.cantidad,
     0
   )
 
   function confirmarPedido(e) {
     e.preventDefault()
-    setError('')
 
-    if (!direccion.trim()) {
-      setError('Ingresá una dirección de entrega.')
-      return
-    }
-
-    if (!telefono.trim()) {
-      setError('Ingresá un teléfono de contacto.')
-      return
-    }
-
-    if (carrito.length === 0) {
-      setError('No hay productos en el carrito.')
+    if (!direccion.trim() || !telefono.trim()) {
+      alert('Completá la dirección y el teléfono.')
       return
     }
 
@@ -47,185 +35,361 @@ export default function Checkout() {
       total,
     }
 
-    // Obtener pedidos anteriores
-    const pedidosGuardados = localStorage.getItem('pedidos')
-    const pedidos = pedidosGuardados
-      ? JSON.parse(pedidosGuardados)
-      : []
+    const pedidosGuardados =
+      JSON.parse(localStorage.getItem('pedidos')) || []
 
-    // Agregar el nuevo pedido al historial
-    pedidos.push(pedido)
+    pedidosGuardados.push(pedido)
 
-    localStorage.setItem('pedidos', JSON.stringify(pedidos))
+    localStorage.setItem(
+      'pedidos',
+      JSON.stringify(pedidosGuardados)
+    )
 
-    // Lo dejamos también como pedido actual
-    localStorage.setItem('pedidoActual', JSON.stringify(pedido))
+    localStorage.setItem(
+      'pedidoActual',
+      JSON.stringify(pedido)
+    )
 
-    // Vaciar carrito
     localStorage.removeItem('carrito')
 
     setPedidoConfirmado(true)
   }
 
+  if (carrito.length === 0 && !pedidoConfirmado) {
+    return (
+      <>
+        <Header />
+
+        <main className="checkout-page">
+          <section className="checkout-empty">
+
+            <div className="checkout-empty-icon" aria-hidden="true">
+              🛒
+            </div>
+
+            <p className="eyebrow">CHECKOUT</p>
+
+            <h1>Tu carrito está vacío</h1>
+
+            <p>
+              Agregá algunos productos antes de continuar con tu pedido.
+            </p>
+
+            <a href="/comercios">
+              Explorar comercios
+            </a>
+
+          </section>
+        </main>
+
+        <Footer />
+      </>
+    )
+  }
+
   if (pedidoConfirmado) {
     return (
-      <main className="checkout-page">
-        <section className="checkout-success">
-          <div className="success-icon">✓</div>
+      <>
+        <Header />
 
-          <h1>¡Pedido creado!</h1>
+        <main className="checkout-page">
+          <section className="order-success">
 
-          <p>
-            Tu pedido fue creado correctamente y está
-            esperando el pago.
-          </p>
+            <div className="success-icon" aria-hidden="true">
+              ✓
+            </div>
 
-          <div className="success-actions">
-            <a href="/pedidos" className="checkout-button">
-              Ver mis pedidos
-            </a>
+            <p className="eyebrow">PEDIDO CONFIRMADO</p>
 
-            <a
-              href="/comercios"
-              className="checkout-button secondary"
-            >
-              Seguir comprando
-            </a>
-          </div>
-        </section>
-      </main>
+            <h1>¡Listo! Tu pedido está en camino.</h1>
+
+            <p>
+              Recibimos tu pedido correctamente. Podés consultar su estado
+              desde la sección de pedidos.
+            </p>
+
+            <div className="success-status">
+              <small>ESTADO ACTUAL</small>
+              <span>Esperando pago</span>
+            </div>
+
+            <div className="success-actions">
+              <a href="/pedidos">
+                Ver mis pedidos
+              </a>
+
+              <a
+                href="/comercios"
+                className="secondary-action"
+              >
+                Seguir comprando
+              </a>
+            </div>
+
+          </section>
+        </main>
+
+        <Footer />
+      </>
     )
   }
 
   return (
-    <main className="checkout-page">
-      <section className="checkout-container">
+    <>
+      <Header />
 
-        <div className="checkout-header">
-          <a href="/carrito" className="back-link">
-            ← Volver al carrito
-          </a>
+      <main className="checkout-page">
 
-          <h1>Confirmar pedido</h1>
-          <p>Completá tus datos para realizar el pedido.</p>
-        </div>
+        <div className="checkout-container">
 
-        <div className="checkout-content">
+          <div className="checkout-title">
 
-          <form
-            className="checkout-form"
-            onSubmit={confirmarPedido}
-          >
-            <div className="form-section">
-              <h2>Datos de entrega</h2>
+            <a href="/carrito" className="back-link">
+              <span aria-hidden="true">🡰</span>
+              Volver al carrito
+            </a>
 
-              <label>
-                Dirección
-                <input
-                  type="text"
-                  value={direccion}
-                  onChange={(e) => setDireccion(e.target.value)}
-                  placeholder="Ej: Av. Santa Fe 1234"
-                />
-              </label>
+            <p className="eyebrow">CHECKOUT</p>
 
-              <label>
-                Teléfono
-                <input
-                  type="tel"
-                  value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
-                  placeholder="Ej: 342 1234567"
-                />
-              </label>
-            </div>
+            <h1>Finalizá tu pedido</h1>
 
-            <div className="form-section">
-              <h2>Método de pago</h2>
+            <p>
+              Completá tus datos de entrega y elegí cómo querés pagar.
+            </p>
 
-              <label className="payment-option">
-                <input
-                  type="radio"
-                  name="metodoPago"
-                  value="mercado_pago"
-                  checked={metodoPago === 'mercado_pago'}
-                  onChange={(e) => setMetodoPago(e.target.value)}
-                />
+          </div>
 
-                <span>
-                  <strong>Mercado Pago</strong>
-                  <small>Pago online</small>
-                </span>
-              </label>
+          <div className="checkout-layout">
 
-              <label className="payment-option">
-                <input
-                  type="radio"
-                  name="metodoPago"
-                  value="efectivo"
-                  checked={metodoPago === 'efectivo'}
-                  onChange={(e) => setMetodoPago(e.target.value)}
-                />
-
-                <span>
-                  <strong>Efectivo</strong>
-                  <small>Pagás al recibir</small>
-                </span>
-              </label>
-            </div>
-
-            {error && (
-              <p className="checkout-error">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              className="checkout-submit"
+            <form
+              className="checkout-form"
+              onSubmit={confirmarPedido}
             >
-              Confirmar pedido
-            </button>
-          </form>
 
-          <aside className="checkout-summary">
-            <h2>Resumen</h2>
+              {/* DATOS DE ENTREGA */}
 
-            <div className="summary-products">
-              {carrito.map((producto) => (
-                <div
-                  className="summary-product"
-                  key={producto.id}
-                >
+              <section className="checkout-card">
+
+                <div className="card-heading">
+                  <span className="card-number">01</span>
+
                   <div>
-                    <strong>{producto.nombre}</strong>
-                    <span>
-                      {producto.cantidad} × $
-                      {producto.precio.toLocaleString('es-AR')}
-                    </span>
+                    <h2>Datos de entrega</h2>
+                    <p>
+                      ¿Dónde querés recibir tu pedido?
+                    </p>
+                  </div>
+                </div>
+
+                <div className="form-fields">
+
+                  <div className="form-group">
+
+                    <label htmlFor="direccion">
+                      Dirección de entrega
+                    </label>
+
+                    <div className="input-wrapper">
+
+                      <span
+                        className="input-icon"
+                        aria-hidden="true"
+                      >
+                        📍
+                      </span>
+
+                      <input
+                        id="direccion"
+                        type="text"
+                        value={direccion}
+                        onChange={(e) => setDireccion(e.target.value)}
+                        placeholder="Ej. Av. Siempre Viva 123"
+                        autoComplete="street-address"
+                      />
+
+                    </div>
+
                   </div>
 
-                  <strong>
-                    $
-                    {(
-                      producto.precio * producto.cantidad
-                    ).toLocaleString('es-AR')}
-                  </strong>
+                  <div className="form-group">
+
+                    <label htmlFor="telefono">
+                      Teléfono de contacto
+                    </label>
+
+                    <div className="input-wrapper">
+
+                      <span
+                        className="input-icon"
+                        aria-hidden="true"
+                      >
+                        ☎
+                      </span>
+
+                      <input
+                        id="telefono"
+                        type="tel"
+                        value={telefono}
+                        onChange={(e) => setTelefono(e.target.value)}
+                        placeholder="Ej. 342 555 1234"
+                        autoComplete="tel"
+                      />
+
+                    </div>
+
+                    <small className="input-help">
+                      El repartidor podrá contactarte si es necesario.
+                    </small>
+
+                  </div>
+
                 </div>
-              ))}
-            </div>
 
-            <div className="summary-total">
-              <span>Total</span>
+              </section>
 
-              <strong>
-                ${total.toLocaleString('es-AR')}
-              </strong>
-            </div>
-          </aside>
+              {/* MÉTODO DE PAGO */}
+
+              <section className="checkout-card">
+
+                <div className="card-heading">
+                  <span className="card-number">02</span>
+
+                  <div>
+                    <h2>Método de pago</h2>
+                    <p>
+                      Elegí cómo vas a pagar tu pedido.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="payment-options">
+
+                  <label className="payment-option">
+
+                    <input
+                      type="radio"
+                      name="metodoPago"
+                      value="efectivo"
+                      checked={metodoPago === 'efectivo'}
+                      onChange={(e) => setMetodoPago(e.target.value)}
+                    />
+
+                    <span className="payment-icon">
+                      💵
+                    </span>
+
+                    <span className="payment-content">
+                      <strong>Efectivo</strong>
+                      <small>Pagás al recibir tu pedido.</small>
+                    </span>
+
+                  </label>
+
+                  <label className="payment-option">
+
+                    <input
+                      type="radio"
+                      name="metodoPago"
+                      value="transferencia"
+                      checked={metodoPago === 'transferencia'}
+                      onChange={(e) => setMetodoPago(e.target.value)}
+                    />
+
+                    <span className="payment-icon">
+                      💳
+                    </span>
+
+                    <span className="payment-content">
+                      <strong>Transferencia</strong>
+                      <small>Transferí antes de recibir el pedido.</small>
+                    </span>
+
+                  </label>
+
+                </div>
+
+              </section>
+
+              <button
+                type="submit"
+                className="confirm-order-button"
+              >
+                Confirmar pedido
+                <span aria-hidden="true">→</span>
+              </button>
+
+            </form>
+
+            {/* RESUMEN */}
+
+            <aside className="checkout-summary">
+
+              <div className="summary-heading">
+                <p className="eyebrow">TU PEDIDO</p>
+                <h2>Resumen</h2>
+              </div>
+
+              <div className="summary-products">
+
+                {carrito.map((producto) => (
+
+                  <div
+                    className="summary-product"
+                    key={producto.id}
+                  >
+
+                    <div className="summary-product-info">
+
+                      <strong>
+                        {producto.nombre}
+                      </strong>
+
+                      <small>
+                        {producto.cantidad} × $
+                        {producto.precio.toLocaleString('es-AR')}
+                      </small>
+
+                    </div>
+
+                    <strong>
+                      $
+                      {(producto.precio * producto.cantidad)
+                        .toLocaleString('es-AR')}
+                    </strong>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+              <div className="summary-total">
+
+                <span>Total</span>
+
+                <strong>
+                  ${total.toLocaleString('es-AR')}
+                </strong>
+
+              </div>
+
+              <div className="summary-note">
+                <span aria-hidden="true">🔒</span>
+                <p>
+                  Tu información se utiliza únicamente para procesar
+                  la entrega.
+                </p>
+              </div>
+
+            </aside>
+
+          </div>
 
         </div>
-      </section>
-    </main>
+
+      </main>
+
+      <Footer />
+    </>
   )
 }
