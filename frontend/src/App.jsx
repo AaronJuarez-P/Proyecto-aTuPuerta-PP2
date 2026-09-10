@@ -10,6 +10,7 @@ import Perfil from './pages/Perfil/Perfil'
 import Pedido from './pages/Pedido/Pedido'
 import ComercioAdmin from './pages/ComercioAdmin/ComercioAdmin'
 import RepartidorAdmin from './pages/RepartidorAdmin/RepartidorAdmin'
+import Admin from './pages/Admin/Admin'
 
 export default function App() {
   const ruta = window.location.pathname
@@ -25,6 +26,7 @@ export default function App() {
   if (ruta === '/pedido') return <Pedido />
   if (ruta === '/comercio-admin') return <ComercioAdmin />
   if (ruta === '/repartidor-admin') return <RepartidorAdmin />
+  if (ruta === '/admin') return <Admin />
 
   return <Landing />
 }

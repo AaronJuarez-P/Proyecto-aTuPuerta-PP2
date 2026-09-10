@@ -104,24 +104,34 @@ export default function Header() {
     </span>
 
     {usuario.rol === 'comercio' && (
-  <a
-    href="/comercio-admin"
-    className="profile-button"
-    onClick={() => setMenuOpen(false)}
-  >
-    Panel de comercio
-  </a>
-)}
+      <a
+        href="/comercio-admin"
+        className="profile-button"
+        onClick={() => setMenuOpen(false)}
+      >
+        Panel de comercio
+      </a>
+    )}
 
-{usuario.rol === 'repartidor' && (
-  <a
-    href="/repartidor-admin"
-    className="profile-button"
-    onClick={() => setMenuOpen(false)}
-  >
-    Panel de repartidor
-  </a>
-)}
+    {usuario.rol === 'repartidor' && (
+      <a
+        href="/repartidor-admin"
+        className="profile-button"
+        onClick={() => setMenuOpen(false)}
+      >
+        Panel de repartidor
+      </a>
+    )}
+
+    {usuario.rol === 'administrador' && (
+      <a
+        href="/admin"
+        className="profile-button"
+        onClick={() => setMenuOpen(false)}
+      >
+        Panel de administrador
+      </a>
+    )}
 
     <a
       href="/perfil"

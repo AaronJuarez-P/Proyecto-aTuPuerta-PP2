@@ -50,12 +50,28 @@ export default function Registro() {
                 telefono: telefono.trim(),
                 rol: 'cliente',
             }
-
+        
+            // Obtener los usuarios existentes
+            const usuariosGuardados = localStorage.getItem('usuarios')
+            const usuarios = usuariosGuardados
+                ? JSON.parse(usuariosGuardados)
+                : []
+        
+            // Agregar el nuevo usuario
+            usuarios.push(usuario)
+        
+            // Guardar la lista actualizada
+            localStorage.setItem('usuarios', JSON.stringify(usuarios))
+        
+            // Guardar también el usuario actual
             localStorage.setItem('usuario', JSON.stringify(usuario))
-
+        
+            // Token temporal
+            localStorage.setItem('token', 'token-prueba')
+        
             setCargando(false)
             setMensaje('Cuenta creada correctamente.')
-
+        
             setTimeout(() => {
                 window.location.href = '/'
             }, 1000)
