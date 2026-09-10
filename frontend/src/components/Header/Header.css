@@ -65,3 +65,15 @@
   font-size: 11px;
   font-weight: 700;
 }
+
+.profile-button {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.profile-button:hover {
+  color: var(--brand);
+}

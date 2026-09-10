@@ -1,164 +1,144 @@
-import { useState } from 'react'
 import Header from '../../components/Header/Header'
 import Footer from '../../components/Footer/Footer'
 import './Pedidos.css'
 
 export default function Pedidos() {
-    const [pedido] = useState(() => {
-        const guardado = localStorage.getItem('pedidoActual')
-        return guardado ? JSON.parse(guardado) : null
-    })
+  const pedidosGuardados = localStorage.getItem('pedidos')
 
-    function obtenerTextoEstado(estado) {
-        const estados = {
-            pendiente_pago: 'Esperando pago',
-            confirmado: 'Confirmado',
-            preparando: 'En preparación',
-            listo: 'Listo para retirar',
-            en_camino: 'En camino',
-            entregado: 'Entregado',
-            cancelado: 'Cancelado',
-        }
+  const pedidos = pedidosGuardados
+    ? JSON.parse(pedidosGuardados)
+    : []
 
-        return estados[estado] || 'Estado desconocido'
-    }
+  const estados = {
+    pendiente_pago: 'Esperando pago',
+    confirmado: 'Confirmado',
+    preparando: 'En preparación',
+    listo: 'Listo para retirar',
+    en_camino: 'En camino',
+    entregado: 'Entregado',
+    cancelado: 'Cancelado',
+  }
 
-    return (
-        <>
-            <Header />
+  return (
+    <>
+      <Header />
 
-            <main className="pedidos-page">
-                <section className="pedidos-container">
+      <main className="pedidos-page">
+        <section className="pedidos-container">
 
-                    <div className="pedidos-title">
-                        <p className="eyebrow">ATUPUERTA</p>
-                        <h1>Mis pedidos</h1>
-                        <p>
-                            Consultá el estado y los detalles de tus pedidos.
-                        </p>
+          <div className="pedidos-header">
+            <p className="pedidos-label">
+              Mi cuenta
+            </p>
+
+            <h1>Mis pedidos</h1>
+
+            <p>
+              Consultá el estado y los detalles de tus pedidos.
+            </p>
+          </div>
+
+          {pedidos.length === 0 ? (
+            <div className="pedidos-empty">
+              <div className="empty-icon">📦</div>
+
+              <h2>Todavía no tenés pedidos</h2>
+
+              <p>
+                Cuando realices una compra, tus pedidos
+                aparecerán acá.
+              </p>
+
+              <a
+                href="/comercios"
+                className="pedidos-button"
+              >
+                Ver comercios
+              </a>
+            </div>
+          ) : (
+            <div className="pedidos-list">
+
+              {[...pedidos].reverse().map((pedido) => (
+                <article
+                  className="pedido-card"
+                  key={pedido.id}
+                >
+                  <div className="pedido-top">
+
+                    <div>
+                      <span className="pedido-label">
+                        Pedido #{pedido.id}
+                      </span>
+
+                      <p className="pedido-fecha">
+                        {pedido.fecha}
+                      </p>
                     </div>
 
-                    {!pedido ? (
-                        <div className="pedidos-vacio">
-                            <span>📋</span>
+                    <span className="pedido-estado">
+                      {estados[pedido.estado] || pedido.estado}
+                    </span>
 
-                            <h2>No tenés pedidos todavía</h2>
+                  </div>
 
-                            <p>
-                                Cuando realices un pedido, vas a poder
-                                consultar su estado desde esta sección.
-                            </p>
+                  <div className="pedido-info">
 
-                            <a href="/comercios">
-                                Explorar comercios →
-                            </a>
-                        </div>
-                    ) : (
-                        <article className="pedido-card">
+                    <div>
+                      <span>Productos</span>
 
-                            <div className="pedido-header">
-                                <div>
-                                    <p className="pedido-label">
-                                        PEDIDO #{pedido.id}
-                                    </p>
+                      <strong>
+                        {pedido.productos.reduce(
+                          (total, producto) =>
+                            total + producto.cantidad,
+                          0
+                        )}
+                      </strong>
+                    </div>
 
-                                    <h2>Detalle del pedido</h2>
+                    <div>
+                      <span>Pago</span>
 
-                                    <span className="pedido-fecha">
-                                        {pedido.fecha}
-                                    </span>
-                                </div>
+                      <strong>
+                        {pedido.metodoPago === 'mercado_pago'
+                          ? 'Mercado Pago'
+                          : 'Efectivo'}
+                      </strong>
+                    </div>
 
-                                <span
-                                    className={`pedido-estado estado-${pedido.estado}`}
-                                >
-                                    {obtenerTextoEstado(pedido.estado)}
-                                </span>
-                            </div>
+                    <div>
+                      <span>Total</span>
 
-                            <div className="pedido-separador" />
+                      <strong>
+                        $
+                        {pedido.total.toLocaleString('es-AR')}
+                      </strong>
+                    </div>
 
-                            <div className="pedido-info">
+                  </div>
 
-                                <div>
-                                    <span>📍 Dirección</span>
-                                    <strong>{pedido.direccion}</strong>
-                                </div>
+                  <div className="pedido-bottom">
+                    <span>
+                      📍 {pedido.direccion}
+                    </span>
 
-                                <div>
-                                    <span>📞 Teléfono</span>
-                                    <strong>{pedido.telefono}</strong>
-                                </div>
+                    <a
+                      href={`/pedido?id=${pedido.id}`}
+                      className="pedido-detail-button"
+                    >
+                      Ver detalle →
+                    </a>
+                  </div>
+                </article>
+              ))}
 
-                                <div>
-                                    <span>💳 Método de pago</span>
-                                    <strong>
-                                        {pedido.metodoPago === 'mercado_pago'
-                                            ? 'Mercado Pago'
-                                            : 'Efectivo'}
-                                    </strong>
-                                </div>
+            </div>
+          )}
 
-                            </div>
+        </section>
+      </main>
 
-                            <div className="pedido-productos">
-
-                                <h3>Productos</h3>
-
-                                {pedido.productos.map((producto) => (
-                                    <div
-                                        className="pedido-producto"
-                                        key={producto.id}
-                                    >
-                                        <div className="pedido-producto-icon">
-                                            {producto.icono || '📦'}
-                                        </div>
-
-                                        <div className="pedido-producto-info">
-                                            <strong>{producto.nombre}</strong>
-
-                                            <span>
-                                                {producto.cantidad} × $
-                                                {producto.precio.toLocaleString(
-                                                    'es-AR'
-                                                )}
-                                            </span>
-                                        </div>
-
-                                        <strong className="pedido-producto-total">
-                                            $
-                                            {(
-                                                producto.precio *
-                                                producto.cantidad
-                                            ).toLocaleString('es-AR')}
-                                        </strong>
-                                    </div>
-                                ))}
-
-                            </div>
-
-                            <div className="pedido-total">
-                                <span>Total</span>
-
-                                <strong>
-                                    $
-                                    {pedido.total.toLocaleString('es-AR')}
-                                </strong>
-                            </div>
-
-                            <div className="pedido-acciones">
-                                <a href="/comercios">
-                                    Seguir comprando
-                                </a>
-                            </div>
-
-                        </article>
-                    )}
-
-                </section>
-            </main>
-
-            <Footer />
-        </>
-    )
+      <Footer />
+    </>
+  )
 }

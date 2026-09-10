@@ -32,6 +32,7 @@ export default function Header() {
   function cerrarSesion() {
     localStorage.removeItem('token')
     localStorage.removeItem('usuario')
+
     window.location.href = '/'
   }
 
@@ -39,7 +40,11 @@ export default function Header() {
     <header className="site-header">
       <div className="header-inner">
 
-        <a className="brand" href="/" aria-label="ATuPuerta, volver al inicio">
+        <a
+          className="brand"
+          href="/"
+          aria-label="ATuPuerta, volver al inicio"
+        >
           <span aria-hidden="true">🚪</span> ATuPuerta
         </a>
 
@@ -62,34 +67,49 @@ export default function Header() {
           aria-label="Navegación principal"
         >
 
-          <a href="/comercios" onClick={() => setMenuOpen(false)}>
+          <a
+            href="/comercios"
+            onClick={() => setMenuOpen(false)}
+          >
             Comercios
           </a>
 
-          <a href="/#como-funciona" onClick={() => setMenuOpen(false)}>
+          <a
+            href="/#como-funciona"
+            onClick={() => setMenuOpen(false)}
+          >
             Cómo funciona
           </a>
 
-          {/* CARRITO */}
-          <a
-            href="/carrito"
-            className="cart-link"
-            onClick={() => setMenuOpen(false)}
-          >
-            🛒 Carrito
+          {usuario && (
+  <a
+    href="/carrito"
+    className="cart-link"
+    onClick={() => setMenuOpen(false)}
+  >
+    🛒 Carrito
 
-            {cantidadCarrito > 0 && (
-              <span className="cart-counter">
-                {cantidadCarrito}
-              </span>
-            )}
-          </a>
+    {cantidadCarrito > 0 && (
+      <span className="cart-counter">
+        {cantidadCarrito}
+      </span>
+    )}
+  </a>
+)}
 
           {usuario ? (
             <>
               <span className="user-name">
                 👤 {usuario.nombre}
               </span>
+
+              <a
+                href="/perfil"
+                className="profile-button"
+                onClick={() => setMenuOpen(false)}
+              >
+                Mi perfil
+              </a>
 
               <button
                 className="logout-button"
@@ -104,7 +124,8 @@ export default function Header() {
               href="/login"
               onClick={() => setMenuOpen(false)}
             >
-              Iniciar sesión <span aria-hidden="true">↗</span>
+              Iniciar sesión
+              <span aria-hidden="true">↗</span>
             </a>
           )}
 
