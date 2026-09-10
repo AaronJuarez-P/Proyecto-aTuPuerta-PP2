@@ -97,28 +97,38 @@ export default function Header() {
   </a>
 )}
 
-          {usuario ? (
-            <>
-              <span className="user-name">
-                👤 {usuario.nombre}
-              </span>
+{usuario ? (
+  <>
+    <span className="user-name">
+      👤 {usuario.nombre}
+    </span>
 
-              <a
-                href="/perfil"
-                className="profile-button"
-                onClick={() => setMenuOpen(false)}
-              >
-                Mi perfil
-              </a>
+    {usuario.rol === 'comercio' && (
+      <a
+        href="/comercio-admin"
+        className="profile-button"
+        onClick={() => setMenuOpen(false)}
+      >
+        Panel de comercio
+      </a>
+    )}
 
-              <button
-                className="logout-button"
-                onClick={cerrarSesion}
-              >
-                Cerrar sesión
-              </button>
-            </>
-          ) : (
+    <a
+      href="/perfil"
+      className="profile-button"
+      onClick={() => setMenuOpen(false)}
+    >
+      Mi perfil
+    </a>
+
+    <button
+      className="logout-button"
+      onClick={cerrarSesion}
+    >
+      Cerrar sesión
+    </button>
+  </>
+) : (
             <a
               className="nav-cta"
               href="/login"
