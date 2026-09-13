@@ -5,11 +5,12 @@ const morgan                  = require("morgan");
 const cors                    = require("cors");
 const registroRoutes          = require("./routes/registro.routes");
 const registroComercioRoutes  = require("./routes/registroComercio.routes");
-const registroRepartidorRoutes = require("./routes/registroRepartidor.routes");
+const registroRepartidorRoutes= require("./routes/registroRepartidor.routes");
 const comercioRoutes          = require("./routes/comercio.routes");
 const productoRoutes          = require("./routes/producto.routes");
 const carritoRoutes           = require("./routes/carrito.routes");
 const pagoRoutes              = require("./routes/pago.routes");
+const pedidoRoutes            = require("./routes/pedido.routes")
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use("/api", comercioRoutes);
 app.use("/api", productoRoutes);
 app.use("/api", carritoRoutes);
 app.use("/api", pagoRoutes);
+app.use("/api", pedidoRoutes)
 app.get("/health", (req, res) => {
   res.json({ codigo: 200, estado: "ok", datos: { mensaje: "Servidor activo" } });
 });

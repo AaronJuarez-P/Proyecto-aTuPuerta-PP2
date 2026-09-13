@@ -516,9 +516,13 @@ const confirmarCarrito = async (req, res) => {
                     .toFixed(2)
             );
 
+            //Ingresa datos temporal
+            //===========
+            //En espera de la integracion de la API
+            //===========
             const [resultadoPedido] = await connection.query(
-                `INSERT INTO pedidos (cliente_id, comercio_id, estado, direccion_entrega, total)
-                 VALUES (?, ?, 'pendiente_pago', ?, ?)`,
+                `INSERT INTO pedidos (cliente_id, comercio_id, estado, direccion_entrega, total, distancia_km, tiempo_estimado, comision)
+                 VALUES (?, ?, 'pendiente_pago', ?, ?, 100.00, 25, 500.50)`,
                 [cliente.id, comercioId, direccionEntrega, totalComercio]
             );
             const pedidoId = resultadoPedido.insertId;

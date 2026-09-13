@@ -156,6 +156,7 @@ CREATE TABLE pedidos (
                        NOT NULL DEFAULT 'pendiente_pago',
   direccion_entrega  VARCHAR(200) NOT NULL,
   total              DECIMAL(10,2) NOT NULL,
+  codigo             VARCHAR(8) NULL,
   created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_pedidos_cliente FOREIGN KEY (cliente_id)
@@ -165,6 +166,16 @@ CREATE TABLE pedidos (
   CONSTRAINT fk_pedidos_repartidor FOREIGN KEY (repartidor_id)
     REFERENCES repartidores(id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
+
+-- distancia_km, tiempo_estimado y comision se calculan al CREAR el pedido
+-- (comercio -> cliente, vía API de Google Maps), NO al aceptar. Se guardan
+-- como una "foto fija" del momento del cálculo, no se recalculan después,
+-- para que el repartidor pueda ver y decidir con estos datos antes de
+-- tomar el pedido, y para que el pago no cambie según cuándo se consulte.
+ALTER TABLE pedidos
+  ADD COLUMN distancia_km     DECIMAL(4,1) NOT NULL,
+  ADD COLUMN tiempo_estimado  INT NOT NULL COMMENT 'minutos',
+  ADD COLUMN comision         DECIMAL(10,2) NOT NULL;
 
 -- =====================================================================
 -- 10. ITEMS_PEDIDO
@@ -338,12 +349,13 @@ INSERT INTO productos (id, comercio_id, nombre, descripcion, categoria, precio, 
 
 -- ---------- PEDIDOS ----------
 -- Pedido 1: cliente 1 le compra a la ferretería, ya asignado a un repartidor, en camino
-INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total) VALUES
-(1, 1, 1, 1, 'en_camino', 'San Martín 1234, Santo Tomé, Santa Fe', 36500.00);
+-- distancia_km/tiempo_estimado/comision quedan fijados desde que se creó el pedido
+INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total, distancia_km, tiempo_estimado, comision) VALUES
+(1, 1, 1, 1, 'en_camino', 'San Martín 1234, Santo Tomé, Santa Fe', 36500.00, 1.2, 8, 800.00);
 
 -- Pedido 2: cliente 2 le compra a la librería, recién creado, pendiente de pago
-INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total) VALUES
-(2, 2, 2, NULL, 'pendiente_pago', 'Belgrano 567, Santo Tomé, Santa Fe', 5300.00);
+INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total, distancia_km, tiempo_estimado, comision) VALUES
+(2, 2, 2, NULL, 'pendiente_pago', 'Belgrano 567, Santo Tomé, Santa Fe', 5300.00, 0.8, 6, 700.00);
 
 -- ---------- ITEMS_PEDIDO ----------
 INSERT INTO items_pedido (id, pedido_id, producto_id, cantidad, precio_unit, subtotal) VALUES
