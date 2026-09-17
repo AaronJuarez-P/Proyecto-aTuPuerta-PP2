@@ -237,7 +237,7 @@ Protegidos por la cadena `verificarToken` → `verificarRol('repartidor')` → `
 ### Base de datos
 
 Los cambios de esquema (`auditoria_pedidos.usuario_id` y el índice `idx_pedidos_disponibles`)
-y los datos de prueba nuevos están en `backend/scripts/aTuPuerta.sql`. Para aplicarlos sobre
-una base ya cargada sin borrarla, correr una sola vez `backend/scripts/migracion-semana8.sql`.
+y los datos de prueba nuevos están en `backend/scripts/aTuPuerta.sql`, que hay que volver a
+importar entero para tenerlos.
 
 Los casos de prueba están en `backend/postman/backend-repartidores.js`.

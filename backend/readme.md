@@ -73,9 +73,7 @@ backend/
 
 > El script arranca con `DROP DATABASE IF EXISTS aTuPuerta`, así que re-importarlo
 > borra los datos locales. Los usuarios de prueba quedan con la contraseña `Test1234!`.
-
-> Si ya tenías la base cargada de antes de la semana 8 y no querés perder los datos,
-> en vez de reimportar corré **una sola vez** `scripts/migracion-semana8.sql`.
+> Cada vez que el script cambia hay que volver a importarlo entero.
 
 ### 2 — Variables de entorno
 

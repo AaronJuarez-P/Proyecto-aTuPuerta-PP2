@@ -18,13 +18,8 @@
 //
 //## Precondición: datos de la semana 8
 //
-//Hay dos formas de tener la base lista:
-//
-//- **Base nueva:** importar `scripts/aTuPuerta.sql`. Ojo que arranca con `DROP DATABASE` y
-//  borra todo lo que haya.
-//- **Base ya cargada:** correr `scripts/migracion-semana8.sql` **una sola vez**. Al final
-//  muestra el id del pedido en preparación que creó. Si no es `3`, usar ese id donde esta
-//  guía dice "pedido 3".
+//Importar `scripts/aTuPuerta.sql` entero, que ya trae los cambios de la semana 8. Ojo que
+//arranca con `DROP DATABASE` y borra todo lo que haya cargado.
 //
 //Estado de partida:
 //
@@ -488,8 +483,7 @@
 //## Checklist rápido antes de correr esta guía
 //
 //- [ ] XAMPP con MySQL prendido
-//- [ ] Base con los datos de la semana 8: `aTuPuerta.sql` recién importado o
-//      `migracion-semana8.sql` corrida una vez
+//- [ ] Base con los datos de la semana 8: `aTuPuerta.sql` recién importado
 //- [ ] Servidor levantado con `npm run dev` sin errores
 //- [ ] Tokens de Lucía, Carlos y María, cada uno en el header `Authorization`, **sin** `Bearer`
 //- [ ] Correr los casos en orden (cada uno deja la base lista para el siguiente)
