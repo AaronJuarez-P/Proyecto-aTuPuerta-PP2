@@ -4,10 +4,17 @@ const database = require('../database/database');
 // Se usa despues de verificarToken y verificarRol('comercio').
 // Resuelve siempre contra la base y no contra el comercioId del token: la base es
 // la fuente de verdad, asi un token viejo o de un comercio dado de baja no sirve.
+//
+// Por eso tambien exige u.rol = 'comercio' y no alcanza con el rol del token:
+// cerrarSesionComercio deja al usuario en 'cliente', y el JWT ya emitido sigue
+// diciendo 'comercio' hasta que expira. Sin este filtro, cerrar sesion no haria nada.
 const resolverComercio = async (req, res, next) => {
     try {
         const [comercios] = await database.query(
-            `SELECT id FROM comercios WHERE usuario_id = ? AND activo = TRUE`,
+            `SELECT c.id
+             FROM comercios c
+             INNER JOIN usuarios u ON u.id = c.usuario_id
+             WHERE c.usuario_id = ? AND c.activo = TRUE AND u.rol = 'comercio'`,
             [req.usuario.id]
         );
 

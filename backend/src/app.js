@@ -10,7 +10,9 @@ const comercioRoutes          = require("./routes/comercio.routes");
 const productoRoutes          = require("./routes/producto.routes");
 const carritoRoutes           = require("./routes/carrito.routes");
 const pagoRoutes              = require("./routes/pago.routes");
-const pedidoRoutes            = require("./routes/pedido.routes")
+const pedidoRoutes            = require("./routes/pedido.routes");
+const repartidorRoutes        = require("./routes/repartidor.routes");
+const notificacionRoutes      = require("./routes/notificacion.routes");
 
 const app = express();
 
@@ -28,13 +30,19 @@ app.use("/api", comercioRoutes);
 app.use("/api", productoRoutes);
 app.use("/api", carritoRoutes);
 app.use("/api", pagoRoutes);
-app.use("/api", pedidoRoutes)
+app.use("/api", pedidoRoutes);
+app.use("/api", repartidorRoutes);
+app.use("/api", notificacionRoutes);
 app.get("/health", (req, res) => {
   res.json({ codigo: 200, estado: "ok", datos: { mensaje: "Servidor activo" } });
 });
 
 app.use((req, res) => {
-  res.status(404).json({ codigo: 404, estado: "Ruta no encontrada", datos: null });
+  res.status(404).json({
+    codigo: 404,
+    estado: "error",
+    datos: { mensaje: "Ruta no encontrada" }
+  });
 });
 
 // Manejador de errores centralizado

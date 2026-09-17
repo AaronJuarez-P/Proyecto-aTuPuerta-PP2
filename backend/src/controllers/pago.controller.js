@@ -1,6 +1,7 @@
 const database = require('../database/database');
 const { esModoMock, crearPreferencia, consultarPago, validarFirmaWebhook } = require('../services/pago.service');
 const { cambiarEstadoPedido, restaurarStockPedido } = require('../services/pedido.service');
+const { obtenerIdValido } = require('../utils/validacion');
 
 // Estados de pagos.estado de los que ya no se vuelve. Si el pago esta en uno de estos,
 // una notificacion repetida no tiene que volver a tocar nada.
@@ -12,12 +13,6 @@ const LARGO_MAXIMO_MOTIVO = 255;
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-// Valida el :id de la ruta. Devuelve el numero o null si no sirve
-const obtenerIdValido = (valor) => {
-    const id = parseInt(valor, 10);
-    return (isNaN(id) || id < 1) ? null : id;
-};
 
 // Devuelve { clienteId } o { error: { codigo, mensaje } }
 const resolverClienteId = async (conexion, usuarioId) => {
@@ -87,6 +82,8 @@ const recortarMotivo = (motivo) => {
 // Toma los locks en un orden fijo (pagos -> pedidos -> productos) porque el carrito
 // tambien lockea productos: si cada uno los pidiera en distinto orden, dos operaciones
 // simultaneas sobre el mismo producto se deadlockearian.
+// El orden completo del proyecto es repartidores -> pagos -> pedidos -> productos: los
+// flujos del repartidor (semana 8) lockean su fila en repartidores antes que el pedido.
 // ---------------------------------------------------------------------------
 const aplicarResultadoPago = async (connection, { pedidoId, estadoExterno, motivo, referenciaExterna, monto }) => {
     const [pagos] = await connection.query(
@@ -458,10 +455,11 @@ const consultarPagoPedido = async (req, res) => {
 const simularPago = async (req, res) => {
 
     if (!esModoMock()) {
+        // Tiene que ser identico al 404 de app.js, si no se nota que la ruta existe.
         return res.status(404).json({
             codigo: 404,
-            estado: "Ruta no encontrada",
-            datos: null
+            estado: "error",
+            datos: { mensaje: "Ruta no encontrada" }
         });
     }
 

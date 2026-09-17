@@ -4,7 +4,11 @@ const verificarToken = (req, res, next) => {
   const token = req.headers.authorization;
 
   if (!token) {
-    return res.status(401).json({ codigo: 401, estado: "Token no proporcionado", datos: null });
+    return res.status(401).json({
+      codigo: 401,
+      estado: "error",
+      datos: { mensaje: "Token no proporcionado" }
+    });
   }
 
   try {
@@ -12,14 +16,22 @@ const verificarToken = (req, res, next) => {
     req.usuario   = payload;
     next();
   } catch (error) {
-    return res.status(401).json({ codigo: 401, estado: "Token inválido o expirado", datos: null });
+    return res.status(401).json({
+      codigo: 401,
+      estado: "error",
+      datos: { mensaje: "Token inválido o expirado" }
+    });
   }
 };
 
 const verificarRol = (...rolesPermitidos) => {
   return (req, res, next) => {
     if (!rolesPermitidos.includes(req.usuario.rol)) {
-      return res.status(403).json({ codigo: 403, estado: "No tenés permisos para acceder a este recurso", datos: null });
+      return res.status(403).json({
+        codigo: 403,
+        estado: "error",
+        datos: { mensaje: "No tenés permisos para acceder a este recurso" }
+      });
     }
     next();
   };

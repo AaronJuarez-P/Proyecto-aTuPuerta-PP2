@@ -301,6 +301,24 @@ CREATE TABLE notificaciones (
     REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
+-- =====================================================================
+-- SEMANA 8 - REPARTIDORES Y ASIGNACIÓN DE PEDIDOS (CU19, CU20)
+-- Sobre una base ya cargada, estos cambios se aplican sin perder datos con
+-- scripts/migracion-semana8.sql (este archivo arranca con DROP DATABASE).
+-- =====================================================================
+
+-- Los pedidos también los mueve el repartidor (CU20), no solo un administrador.
+-- Mismo criterio que auditoria_productos: administrador_id se conserva para el panel
+-- de administración (semana 13) y usuario_id guarda al actor real de cada cambio.
+ALTER TABLE auditoria_pedidos
+  ADD COLUMN usuario_id INT NULL AFTER pedido_id,
+  ADD CONSTRAINT fk_auditoria_pedidos_usuario FOREIGN KEY (usuario_id)
+    REFERENCES usuarios(id) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- CU19 busca siempre los pedidos en_preparacion que todavía no tienen repartidor.
+ALTER TABLE pedidos
+  ADD INDEX idx_pedidos_disponibles (estado, repartidor_id);
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- =====================================================================
@@ -331,8 +349,10 @@ INSERT INTO comercios (id, usuario_id, nombre, cuit_cuil, categoria, direccion, 
 (2, 4, 'Librería del Sur',   '20405060708', 'Librería',   'Mitre 450, Santo Tomé',        'Lun a Vie 09:00-19:00', TRUE);
 
 -- ---------- REPARTIDORES ----------
+-- disponible = puede tomar un pedido nuevo. Carlos arranca en FALSE porque tiene el
+-- pedido 1 en camino; Lucía está libre pero fuera de servicio.
 INSERT INTO repartidores (id, usuario_id, dni, tipo_vehiculo, patente, numero_licencia, disponible, latitud_actual, longitud_actual) VALUES
-(1, 5, '35123456', 'moto',    'A123BCD', 'LIC-000111', TRUE,  -31.6730, -60.7830),
+(1, 5, '35123456', 'moto',    'A123BCD', 'LIC-000111', FALSE, -31.6730, -60.7830),
 (2, 6, '36987654', 'bicicleta','SINPAT1', 'LIC-000222', FALSE, -31.6710, -60.7810);
 
 -- ---------- PRODUCTOS ----------
@@ -350,23 +370,32 @@ INSERT INTO productos (id, comercio_id, nombre, descripcion, categoria, precio, 
 -- ---------- PEDIDOS ----------
 -- Pedido 1: cliente 1 le compra a la ferretería, ya asignado a un repartidor, en camino
 -- distancia_km/tiempo_estimado/comision quedan fijados desde que se creó el pedido
-INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total, distancia_km, tiempo_estimado, comision) VALUES
-(1, 1, 1, 1, 'en_camino', 'San Martín 1234, Santo Tomé, Santa Fe', 36500.00, 1.2, 8, 800.00);
+-- codigo: el que el cliente le dicta al repartidor para confirmar la entrega (CU20).
+-- Fijo para poder probar PATCH /api/pedido/entrega/1 sin buscarlo en notificaciones.
+INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total, codigo, distancia_km, tiempo_estimado, comision) VALUES
+(1, 1, 1, 1, 'en_camino', 'San Martín 1234, Santo Tomé, Santa Fe', 36500.00, '12345678', 1.2, 8, 800.00);
 
 -- Pedido 2: cliente 2 le compra a la librería, recién creado, pendiente de pago
 INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total, distancia_km, tiempo_estimado, comision) VALUES
 (2, 2, 2, NULL, 'pendiente_pago', 'Belgrano 567, Santo Tomé, Santa Fe', 5300.00, 0.8, 6, 700.00);
 
+-- Pedido 3: cliente 2 le compra a la librería, ya pagado, en preparación y sin repartidor.
+-- Es el que aparece en GET /api/pedido/listar para probar CU19 y CU20.
+INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total, distancia_km, tiempo_estimado, comision) VALUES
+(3, 2, 2, NULL, 'en_preparacion', 'Belgrano 567, Santo Tomé, Santa Fe', 4200.00, 0.8, 6, 700.00);
+
 -- ---------- ITEMS_PEDIDO ----------
 INSERT INTO items_pedido (id, pedido_id, producto_id, cantidad, precio_unit, subtotal) VALUES
 (1, 1, 1, 1, 4500.00,  4500.00),
 (2, 1, 2, 1, 32000.00, 32000.00),
-(3, 2, 5, 1, 5300.00,  5300.00);
+(3, 2, 5, 1, 5300.00,  5300.00),
+(4, 3, 4, 2, 2100.00,  4200.00);
 
 -- ---------- PAGOS ----------
 INSERT INTO pagos (id, pedido_id, metodo, estado, monto, referencia_externa, motivo_rechazo, fecha_pago) VALUES
 (1, 1, 'mercadopago',     'aprobado',  36500.00, 'MP-REF-000123', NULL, '2026-08-27 10:15:00'),
-(2, 2, 'tarjeta_credito', 'pendiente', 5300.00,  NULL,            NULL, NULL);
+(2, 2, 'tarjeta_credito', 'pendiente', 5300.00,  NULL,            NULL, NULL),
+(3, 3, 'mercadopago',     'aprobado',  4200.00,  'MP-REF-000124', NULL, '2026-08-28 11:30:00');
 
 -- ---------- UBICACIONES_REPARTIDOR ----------
 INSERT INTO ubicaciones_repartidor (id, repartidor_id, pedido_id, latitud, longitud) VALUES

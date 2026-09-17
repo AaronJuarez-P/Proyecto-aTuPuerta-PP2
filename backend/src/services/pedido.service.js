@@ -1,4 +1,4 @@
-// Operaciones de dominio sobre el pedido (semana 6, CU07).
+// Operaciones de dominio sobre el pedido (semana 6 CU07, semana 8 CU20).
 //
 // El modulo de pagos necesita mover el estado del pedido y devolver stock, pero eso
 // es logica de PEDIDOS, no de pagos. Vive aca y no suelto en pago.controller.js para
@@ -60,4 +60,67 @@ const restaurarStockPedido = async (conexion, pedidoId) => {
     return items.length;
 };
 
-module.exports = { ESTADOS_PEDIDO, cambiarEstadoPedido, restaurarStockPedido };
+// ---------------------------------------------------------------------------
+// Asignacion y entrega (semana 8, CU20)
+//
+// No pasan por cambiarEstadoPedido a proposito: ese UPDATE es incondicional
+// (WHERE id = ?), y aca lo que importa es justamente la condicion. Con el WHERE
+// extendido, "verificar que el pedido sigue disponible" y "tomarlo" son una sola
+// operacion atomica en la base.
+// ---------------------------------------------------------------------------
+
+// Asigna el pedido al repartidor y lo pasa a en_camino con su codigo de entrega.
+//
+// Devuelve false si el pedido ya no estaba disponible. Es la defensa contra la doble
+// asignacion: si dos repartidores aceptan el mismo pedido a la vez, InnoDB hace esperar
+// al segundo UPDATE hasta que termine el primero, y cuando le toca evalua el WHERE
+// contra la fila ya asignada. Afecta 0 filas y no pisa al primero. Por eso no hace
+// falta un SELECT ... FOR UPDATE previo.
+const asignarPedidoARepartidor = async (conexion, { pedidoId, repartidorId, codigo, usuarioId }) => {
+    const [resultado] = await conexion.query(
+        `UPDATE pedidos
+         SET repartidor_id = ?, estado = 'en_camino', codigo = ?
+         WHERE id = ?
+           AND repartidor_id IS NULL
+           AND estado = 'en_preparacion'`,
+        [repartidorId, codigo, pedidoId]
+    );
+
+    if (resultado.affectedRows === 0) {
+        return false;
+    }
+
+    await registrarAuditoriaPedido(conexion, { pedidoId, usuarioId, accion: 'UPDATE' });
+    return true;
+};
+
+// Marca el pedido como entregado y borra el codigo, que ya no sirve para nada.
+//
+// Devuelve false si el pedido no es de ese repartidor, no esta en camino o el codigo
+// no coincide. El por que lo averigua quien llama, solo cuando hace falta.
+const confirmarEntregaPedido = async (conexion, { pedidoId, repartidorId, codigo, usuarioId }) => {
+    const [resultado] = await conexion.query(
+        `UPDATE pedidos
+         SET estado = 'entregado', codigo = NULL
+         WHERE id = ?
+           AND repartidor_id = ?
+           AND estado = 'en_camino'
+           AND codigo = ?`,
+        [pedidoId, repartidorId, codigo]
+    );
+
+    if (resultado.affectedRows === 0) {
+        return false;
+    }
+
+    await registrarAuditoriaPedido(conexion, { pedidoId, usuarioId, accion: 'UPDATE' });
+    return true;
+};
+
+module.exports = {
+    ESTADOS_PEDIDO,
+    cambiarEstadoPedido,
+    restaurarStockPedido,
+    asignarPedidoARepartidor,
+    confirmarEntregaPedido
+};

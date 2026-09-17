@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const {
-    listarPedidos,
-    asignarPedido,
-    entregaPedido
-} = require('../controllers/pedido.controller');
+    consultarDisponibilidad,
+    cambiarDisponibilidad
+} = require('../controllers/repartidor.controller');
 const { verificarToken, verificarRol } = require('../middlewares/autenticacion.middleware');
 const { resolverRepartidor } = require('../middlewares/repartidor.middleware');
 
@@ -12,11 +11,8 @@ const { resolverRepartidor } = require('../middlewares/repartidor.middleware');
 // contra la base
 const soloRepartidor = [verificarToken, verificarRol('repartidor'), resolverRepartidor];
 
-// CU19 - Ver pedidos disponibles para repartir
-router.get('/pedido/listar', soloRepartidor, listarPedidos);
-
-// CU20 - Aceptar un pedido y confirmar su entrega con el codigo del cliente
-router.patch('/pedido/asignar/:idPedido', soloRepartidor, asignarPedido);
-router.patch('/pedido/entrega/:idPedido', soloRepartidor, entregaPedido);
+// Disponibilidad del repartidor: si puede tomar pedidos nuevos (semana 8)
+router.get('/repartidor/disponibilidad', soloRepartidor, consultarDisponibilidad);
+router.patch('/repartidor/disponibilidad', soloRepartidor, cambiarDisponibilidad);
 
 module.exports = router;

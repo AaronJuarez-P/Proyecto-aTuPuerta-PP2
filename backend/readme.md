@@ -9,11 +9,12 @@ Backend del proyecto anual Practica Profesionalizante 2. Node.js + Express + MyS
 ```
 backend/
 ├── scripts/
-│   └── aTuPuerta.sql
+│   ├── aTuPuerta.sql
 ├── postman/
 │   ├── backend-registro.js         <- guía de pruebas: registro y login
 │   ├── backend-productos.js        <- guía de pruebas: catálogo y stock
-│   └── backend-pagos.js            <- guía de pruebas: pagos (CU07)
+│   ├── backend-pagos.js            <- guía de pruebas: pagos (CU07)
+│   └── backend-repartidores.js     <- guía de pruebas: repartidores (CU19, CU20)
 ├── src/
 │   ├── controllers/
 │   │   ├── registro.controller.js
@@ -22,12 +23,16 @@ backend/
 │   │   ├── comercio.controller.js
 │   │   ├── producto.controller.js
 │   │   ├── carrito.controller.js
-│   │   └── pago.controller.js
+│   │   ├── pago.controller.js
+│   │   ├── pedido.controller.js
+│   │   ├── repartidor.controller.js
+│   │   └── notificacion.controller.js
 │   ├── database/
 │   │   └── database.js
 │   ├── middlewares/
 │   │   ├── autenticacion.middleware.js
-│   │   └── comercio.middleware.js
+│   │   ├── comercio.middleware.js
+│   │   └── repartidor.middleware.js
 │   ├── routes/
 │   │   ├── registro.routes.js
 │   │   ├── registroComercio.routes.js
@@ -35,13 +40,19 @@ backend/
 │   │   ├── comercio.routes.js
 │   │   ├── producto.routes.js
 │   │   ├── carrito.routes.js
-│   │   └── pago.routes.js
+│   │   ├── pago.routes.js
+│   │   ├── pedido.routes.js
+│   │   ├── repartidor.routes.js
+│   │   └── notificacion.routes.js
 │   ├── services/
 │   │   ├── auditoria.service.js
-│   │   ├── pedido.service.js       <- estados del pedido + devolución de stock
-│   │   └── pago.service.js         <- adaptador de MercadoPago
+│   │   ├── pedido.service.js       <- estados del pedido, devolución de stock, asignación y entrega
+│   │   ├── pago.service.js         <- adaptador de MercadoPago
+│   │   ├── repartidor.service.js   <- disponibilidad del repartidor
+│   │   └── notificacion.service.js
 │   ├── utils/
-│   │   └── paginacion.js
+│   │   ├── paginacion.js
+│   │   └── validacion.js
 │   ├── app.js
 │   └── index.js
 ├── .env
@@ -62,6 +73,9 @@ backend/
 
 > El script arranca con `DROP DATABASE IF EXISTS aTuPuerta`, así que re-importarlo
 > borra los datos locales. Los usuarios de prueba quedan con la contraseña `Test1234!`.
+
+> Si ya tenías la base cargada de antes de la semana 8 y no querés perder los datos,
+> en vez de reimportar corré **una sola vez** `scripts/migracion-semana8.sql`.
 
 ### 2 — Variables de entorno
 
@@ -121,10 +135,14 @@ Servidor en `http://localhost:4000`
 ```json
 {
   "codigo": 200,
-  "estado": "mensaje de respuesta",
-  "datos": { }
+  "estado": "exito",
+  "datos": { "mensaje": "texto para mostrarle al usuario" }
 }
 ```
+
+`estado` es siempre `"exito"` o `"error"`, nunca un mensaje: el cliente decide con eso qué
+rama tomar y saca el texto de `datos.mensaje`. Vale también para los errores de
+`verificarToken`, `verificarRol` y el `404` de ruta desconocida.
 
 ### Autenticación y registro
 
@@ -134,9 +152,25 @@ Servidor en `http://localhost:4000`
 | `POST` | `/api/inicioSesion` | Login genérico. Devuelve JWT |
 | `POST` | `/api/registroComercio` | Alta de usuario + comercio en una transacción |
 | `POST` | `/api/inicioSesionComercio` | Login de comercio (email + contraseña + CUIL) |
+| `POST` | `/api/cerrarSesionComercio` | Cierra la sesión de comercio |
+| `POST` | `/api/registroRepartidor` | Alta del perfil de repartidor para un usuario ya registrado (pide su contraseña) |
+| `POST` | `/api/inicioSesionRepartidor` | Login de repartidor. Body: `{ email, contrasena }` |
+| `POST` | `/api/cerrarSesionRepartidor` | Cierra la sesión de repartidor |
 
 Los dos logins firman el mismo payload: `{ id, rol, comercioId }` (el `comercioId`
-solo aparece si el usuario es un comercio).
+solo aparece si el usuario es un comercio). El login de repartidor firma
+`{ id, rol: 'repartidor', repartidorId }`.
+
+`usuarios.rol` funciona como "qué sesión tenés abierta", una sola a la vez: cada login
+la escribe y cerrar sesión de comercio o de repartidor vuelve a dejarla en `cliente`.
+Por eso `resolverComercio` y `resolverRepartidor` filtran por `usuarios.rol` y no por el
+rol que viene adentro del token.
+
+> **Limitación conocida:** cerrar sesión no invalida el JWT, porque el token no tiene
+> estado del lado del servidor. Deja de servir para lo que pasa por `resolverComercio` o
+> `resolverRepartidor`, pero donde solo corre `verificarToken` (por ejemplo
+> `GET /api/notificaciones`) vale hasta que expira, a las 8 horas. La solución real es
+> expiración corta con refresh token, o una lista de tokens revocados.
 
 ### Catálogo — CU03, CU04 (públicos)
 
@@ -208,3 +242,53 @@ la notificación llega al webhook → el pedido avanza o se cancela.
   reintento actualiza la que ya existe.
 
 Los casos de prueba están en `postman/backend-pagos.js`.
+
+### Repartidores — CU19, CU20 (rol `repartidor`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/api/pedido/listar` | Pedidos disponibles: `en_preparacion` y sin repartidor. Filtros: `pagina`, `limite` |
+| `PATCH` | `/api/pedido/asignar/:idPedido` | Acepta el pedido: `repartidor_id`, `en_camino` y código de entrega |
+| `PATCH` | `/api/pedido/entrega/:idPedido` | Confirma la entrega. Body: `{ codigoPedido }` |
+| `GET` | `/api/repartidor/disponibilidad` | `{ disponible, pedido_en_curso }` |
+| `PATCH` | `/api/repartidor/disponibilidad` | Entrar o salir de servicio. Body: `{ disponible }` |
+
+Cadena de middlewares: `verificarToken` → `verificarRol('repartidor')` → `resolverRepartidor`
+(busca el repartidor en la base y exige que el usuario siga activo).
+
+Flujo: el pago aprobado deja el pedido en `en_preparacion` → el repartidor disponible lo
+ve en `/pedido/listar` y lo acepta → el cliente recibe el código por notificación → el
+repartidor confirma la entrega con ese código y vuelve a quedar disponible.
+
+- **Doble asignación.** Aceptar es un único `UPDATE ... WHERE repartidor_id IS NULL AND
+  estado = 'en_preparacion'`: si dos repartidores aceptan a la vez, el segundo afecta 0
+  filas y recibe `409`. Vive en `services/pedido.service.js`.
+- **`disponible` = puede tomar un pedido nuevo.** `FALSE` al aceptar, `TRUE` al entregar,
+  y además a mano. Sin estar disponible no se ve el listado (`403`) ni se acepta (`409`),
+  y con un pedido en camino no se puede volver a estar disponible (`409`).
+- **Orden de locks.** Aceptar, entregar y el cambio manual de disponibilidad lockean
+  primero la fila en `repartidores` (`bloquearRepartidor` en `services/repartidor.service.js`).
+  Así el mismo repartidor no acepta dos pedidos a la vez, y el orden del proyecto queda
+  `repartidores → pagos → pedidos → productos`.
+- **Código de entrega** de 8 dígitos con `crypto.randomInt`. Le llega al cliente por
+  notificación y nunca al repartidor en la respuesta. Al entregar se borra (`codigo = NULL`).
+- **Transacción completa.** Asignar, cambiar la disponibilidad, auditar en
+  `auditoria_pedidos` (con el `usuario_id` del repartidor) y notificar al cliente se
+  confirman juntos o se revierten juntos.
+- **Errores precisos en el camino de error.** Cuando el `UPDATE` condicional no afecta
+  filas, se consulta el pedido para responder `404` (no existe), `403` (es de otro
+  repartidor), `409` (estado que no corresponde) o `400` (código incorrecto). Para la
+  entrega, la pertenencia se verifica antes que el código: a quien no tiene el pedido
+  nunca se le confirma si un código es correcto.
+
+### Notificaciones (cualquier usuario logueado)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/api/notificaciones` | Notificaciones propias, las más recientes primero. Filtros: `pagina`, `limite` |
+
+Versión mínima de la semana 8: las notificaciones se guardan en la tabla `notificaciones`
+(`services/notificacion.service.js`, dentro de la transacción que las origina) y se leen
+con este endpoint. Marcarlas como leídas y el envío en tiempo real quedan para la semana 11.
+
+Los casos de prueba están en `postman/backend-repartidores.js`.

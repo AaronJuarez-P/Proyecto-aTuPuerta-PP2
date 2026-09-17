@@ -373,7 +373,7 @@
 //**Request:** el Caso 1 sin el header `Authorization`.
 //**Respuesta esperada:** `401 Unauthorized`
 //```json
-//{ "codigo": 401, "estado": "Token no proporcionado", "datos": null }
+//{ "codigo": 401, "estado": "error", "datos": { "mensaje": "Token no proporcionado" } }
 //```
 //
 //---
@@ -382,7 +382,7 @@
 //**Request:** header `Authorization: abc.def.ghi`
 //**Respuesta esperada:** `401 Unauthorized`
 //```json
-//{ "codigo": 401, "estado": "Token inválido o expirado", "datos": null }
+//{ "codigo": 401, "estado": "error", "datos": { "mensaje": "Token inválido o expirado" } }
 //```
 //
 //---
@@ -391,7 +391,7 @@
 //**Precondición:** loguearse con `juan.perez@test.com` (rol `cliente`) y usar ese token.
 //**Respuesta esperada:** `403 Forbidden`
 //```json
-//{ "codigo": 403, "estado": "No tenés permisos para acceder a este recurso", "datos": null }
+//{ "codigo": 403, "estado": "error", "datos": { "mensaje": "No tenés permisos para acceder a este recurso" } }
 //```
 //
 //---

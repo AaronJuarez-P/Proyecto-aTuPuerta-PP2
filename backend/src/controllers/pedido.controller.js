@@ -1,69 +1,129 @@
-const database = require("../database/database");
-const notificaciones = require("../services/PushService");
+const crypto = require('crypto');
+const database = require('../database/database');
+const { asignarPedidoARepartidor, confirmarEntregaPedido } = require('../services/pedido.service');
+const { bloquearRepartidor, actualizarDisponibilidad } = require('../services/repartidor.service');
+const { registrarNotificacion } = require('../services/notificacion.service');
+const { obtenerPaginacion } = require('../utils/paginacion');
+const { obtenerIdValido } = require('../utils/validacion');
 
-// Lista los pedidos disponibles para que un repartidor los tome.
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+// Codigo de entrega de 8 digitos (pedidos.codigo es VARCHAR(8)). Es lo que autoriza la
+// entrega, asi que sale de crypto y no de Math.random: no tiene que poder predecirse.
+const generarCodigo = () => {
+    return crypto.randomInt(10000000, 100000000).toString();
+};
+
+// Acepta el codigo como string o como numero y devuelve el string de 8 digitos listo
+// para comparar, o null si no sirve.
+const normalizarCodigo = (valor) => {
+    if (typeof valor !== "string" && typeof valor !== "number") {
+        return null;
+    }
+
+    const codigo = String(valor).trim();
+    return /^\d{8}$/.test(codigo) ? codigo : null;
+};
+
+// Detalle del pedido para el repartidor que lo tomo: recien aca aparece la
+// direccion_entrega, que el listado no muestra. Trae tambien el usuario del cliente
+// para notificarlo, pero ese dato no se devuelve en las respuestas.
+const buscarDetallePedido = async (conexion, pedidoId) => {
+    const [pedidos] = await conexion.query(
+        `SELECT pe.id,
+                pe.estado,
+                pe.direccion_entrega,
+                pe.distancia_km,
+                pe.tiempo_estimado,
+                pe.comision,
+                co.nombre AS comercio,
+                co.direccion AS direccion_comercio,
+                cl.usuario_id AS usuario_cliente
+         FROM pedidos pe
+         INNER JOIN comercios co ON co.id = pe.comercio_id
+         INNER JOIN clientes cl ON cl.id = pe.cliente_id
+         WHERE pe.id = ?`,
+        [pedidoId]
+    );
+
+    return pedidos[0];
+};
+
+// Los UPDATE condicionales de pedido.service.js solo dicen si pudieron o no. Cuando no
+// pudieron, estas funciones averiguan el motivo para contestar algo util. Corren
+// unicamente en el camino de error. Devuelven { codigo, mensaje }.
+const explicarAsignacionRechazada = async (conexion, pedidoId) => {
+    const [pedidos] = await conexion.query(
+        `SELECT repartidor_id, estado FROM pedidos WHERE id = ?`,
+        [pedidoId]
+    );
+
+    if (pedidos.length === 0) {
+        return { codigo: 404, mensaje: "Pedido no encontrado" };
+    }
+
+    if (pedidos[0].repartidor_id !== null) {
+        return { codigo: 409, mensaje: "El pedido ya no está disponible: lo tomó otro repartidor" };
+    }
+
+    return { codigo: 409, mensaje: `El pedido está en estado "${pedidos[0].estado}" y no se puede asignar` };
+};
+
+// Primero se fija si el pedido es suyo y recien al final el codigo: a un repartidor al
+// que no le toca el pedido nunca se le dice si el codigo que probo era el correcto.
+const explicarEntregaRechazada = async (conexion, pedidoId, repartidorId) => {
+    const [pedidos] = await conexion.query(
+        `SELECT repartidor_id, estado FROM pedidos WHERE id = ?`,
+        [pedidoId]
+    );
+
+    if (pedidos.length === 0) {
+        return { codigo: 404, mensaje: "Pedido no encontrado" };
+    }
+
+    if (pedidos[0].repartidor_id !== repartidorId) {
+        return { codigo: 403, mensaje: "Ese pedido no está asignado a vos" };
+    }
+
+    if (pedidos[0].estado !== 'en_camino') {
+        return { codigo: 409, mensaje: `El pedido está en estado "${pedidos[0].estado}" y no se puede entregar` };
+    }
+
+    return { codigo: 400, mensaje: "El código de entrega no es correcto" };
+};
+
+// ---------------------------------------------------------------------------
+// CU19 - Ver pedidos disponibles para repartir
+// ---------------------------------------------------------------------------
+
+// GET /api/pedido/listar?pagina=&limite=
+//
+// Disponible = pagado (en_preparacion) y sin repartidor. Muestra lo que el repartidor
+// necesita para decidir si le conviene (comercio, distancia, tiempo, comision), pero
+// NO la direccion_entrega del cliente: esa la ve solo quien toma el pedido.
 const listarPedidos = async (req, res) => {
-
-    let conection;
-
     try {
-
-        conection = await database.getConection();
-
-        const idUsuario = req.usuario;
-
-        if (idUsuario.rol !== 'repartidor') {
-            return res.status(401).json({
-                codigo: 401,
-                estado: "Rol de usuario no permitido",
-                datos: null
-            });
-        };
-
-        // Validacion usuario activo
-        const [usuarioActivo] = await conection.query(
-            `SELECT activo FROM usuarios
-             WHERE id = ?`,
-            [idUsuario.id]
-        );
-
-        if (usuarioActivo.length === 0) {
-            return res.status(404).json({
-                codigo: 404,
-                estado: "Usuario no registrado",
-                datos: null
-            });
-        };
-
-        const [{ activo }] = usuarioActivo;
-
-        if (!activo) {
+        if (!req.repartidorDisponible) {
             return res.status(403).json({
                 codigo: 403,
-                estado: "Usuario inactivo",
-                datos: null
+                estado: "error",
+                datos: { mensaje: "No estás disponible para tomar pedidos: tenés uno en curso o estás fuera de servicio" }
             });
-        };
+        }
 
-        // Validacion de que el usuario tenga perfil de repartidor
-        const [repartidor] = await conection.query(
-            `SELECT id FROM repartidores
-             WHERE usuario_id = ?`,
-            [idUsuario.id]
+        const { limite, pagina, offset } = obtenerPaginacion(req.query);
+
+        const [total] = await database.query(
+            `SELECT COUNT(*) AS cantidad
+             FROM pedidos
+             WHERE repartidor_id IS NULL
+               AND estado = 'en_preparacion'`
         );
 
-        if (repartidor.length === 0) {
-            return res.status(404).json({
-                codigo: 404,
-                estado: "Repartidor no registrado",
-                datos: null
-            });
-        };
-
-        // Pedidos disponibles para tomar (sin repartidor asignado),
-        // con datos del comercio (público) y cantidad de items,
-        // SIN la direccion_entrega del cliente.
-        const [datosPedido] = await conection.query(
+        // Los que esperan hace mas tiempo primero
+        const [pedidos] = await database.query(
             `SELECT pe.id,
                     pe.distancia_km,
                     pe.tiempo_estimado,
@@ -79,209 +139,219 @@ const listarPedidos = async (req, res) => {
              WHERE pe.repartidor_id IS NULL
                AND pe.estado = 'en_preparacion'
              GROUP BY pe.id, pe.distancia_km, pe.tiempo_estimado,
-                      pe.comision, co.nombre, co.direccion`
+                      pe.comision, co.nombre, co.direccion
+             ORDER BY pe.id ASC
+             LIMIT ? OFFSET ?`,
+            [limite, offset]
         );
 
-        if (datosPedido.length === 0) {
-            return res.status(404).json({
-                codigo: 404,
-                estado: "No hay pedidos disponibles",
-                datos: null
-            });
-        };
-
+        // Que no haya pedidos para repartir es una respuesta valida, no un 404: la lista
+        // existe, solo que ahora esta vacia.
         return res.status(200).json({
             codigo: 200,
-            estado: "Pedidos listados",
-            datos: datosPedido
+            estado: "exito",
+            datos: {
+                pedidos,
+                paginacion: { pagina, limite, total: total[0].cantidad }
+            }
         });
 
     } catch (error) {
         return res.status(500).json({
             codigo: 500,
-            estado: "Error interno del servidor",
-            datos: null
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    }
+};
+
+// ---------------------------------------------------------------------------
+// CU20 - Aceptar pedido y confirmar la entrega
+// ---------------------------------------------------------------------------
+
+// PATCH /api/pedido/asignar/:idPedido
+const asignarPedido = async (req, res) => {
+    let connection;
+    try {
+        const pedidoId = obtenerIdValido(req.params.idPedido);
+        if (pedidoId === null) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El id del pedido no es válido" }
+            });
+        }
+
+        connection = await database.getConnection();
+        await connection.beginTransaction();
+
+        // Se relee con lock: req.repartidorDisponible salio del middleware, fuera de esta
+        // transaccion, y no alcanza para frenar dos aceptaciones simultaneas.
+        const repartidor = await bloquearRepartidor(connection, req.repartidorId);
+
+        if (!repartidor || !repartidor.disponible) {
+            await connection.rollback();
+            return res.status(409).json({
+                codigo: 409,
+                estado: "error",
+                datos: { mensaje: "Ya tenés un pedido en curso o estás fuera de servicio" }
+            });
+        }
+
+        const codigo = generarCodigo();
+
+        const asignado = await asignarPedidoARepartidor(connection, {
+            pedidoId,
+            repartidorId: req.repartidorId,
+            codigo,
+            usuarioId: req.usuario.id
+        });
+
+        if (!asignado) {
+            await connection.rollback();
+
+            const error = await explicarAsignacionRechazada(connection, pedidoId);
+            return res.status(error.codigo).json({
+                codigo: error.codigo,
+                estado: "error",
+                datos: { mensaje: error.mensaje }
+            });
+        }
+
+        await actualizarDisponibilidad(connection, { repartidorId: req.repartidorId, disponible: false });
+
+        const { usuario_cliente, ...pedido } = await buscarDetallePedido(connection, pedidoId);
+
+        // Dentro de la transaccion a proposito: si no se puede avisar al cliente, el
+        // pedido no queda asignado con un codigo de entrega que nadie conoce.
+        await registrarNotificacion(connection, {
+            usuarioId: usuario_cliente,
+            tipo: 'pedido_en_camino',
+            mensaje: `Un repartidor tomó tu pedido #${pedidoId} de ${pedido.comercio}. Tu código de entrega es ${codigo}: dáselo cuando te lo entregue.`
+        });
+
+        await connection.commit();
+
+        // El codigo NO va en la respuesta: lo tiene que dictar el cliente. Si el
+        // repartidor lo recibiera aca, podria confirmar una entrega que nunca hizo.
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                mensaje: "Pedido asignado correctamente",
+                pedido
+            }
+        });
+
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+            }
+        }
+
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
         });
     } finally {
-        if (conection) conection.release();
-    };
-};
-
-const generarCodigo = async () => {
-  return Math.floor(10000000 + Math.random() * 90000000).toString();
-};
-
-const notificarClienteCodigo = async (usuarioId, codigo, pedidoId) => {
-  await notificaciones.enviar({
-    destinatario: usuarioId,
-    titulo: "Tu repartidor está en camino",
-    mensaje: `Tu código de entrega es: ${codigo}`,
-    data: { pedidoId }
-  });
-};
-
-const asignarPedido = async (req, res) => {
-
-  let conection;
-
-  try {
-
-    conection = await database.getConection();
-
-    const idUsuario = req.usuario;
-
-    if (idUsuario.rol != 'repartidor') {
-      return res.status(403).json({
-        codigo: 403,
-        estado: "Tipo de usuario no permitido",
-        datos: null
-      });
-    };
-
-    const [idRepartidor] = await conection.query(
-      `SELECT id FROM repartidores WHERE usuario_id = ?`,
-      [idUsuario.id]
-    );
-
-    if (idRepartidor.length === 0) {
-      return res.status(401).json({
-        codigo: 401,
-        estado: "Repartidor no identificado",
-        datos: null
-      });
-    };
-
-    const [{ id: idRepa }] = idRepartidor;
-
-    const { idPedido } = req.params;
-
-    const codigo = await generarCodigo();
-
-    const [pedidoAsignado] = await conection.query(
-      `UPDATE pedidos
-       SET repartidor_id = ?, estado = 'en_camino', codigo = ?
-       WHERE id = ?
-         AND repartidor_id IS NULL
-         AND estado = 'en_preparacion'`,
-      [idRepa, codigo, idPedido]
-    );
-
-    if (pedidoAsignado.affectedRows === 0) {
-      return res.status(409).json({
-        codigo: 409,
-        estado: "El pedido ya no está disponible",
-        datos: null
-      });
-    };
-
-    // Buscar el usuario_id del cliente para notificar
-    const [clienteInfo] = await conection.query(
-      `SELECT c.usuario_id
-       FROM pedidos p
-       INNER JOIN clientes c ON c.id = p.cliente_id
-       WHERE p.id = ?`,
-      [idPedido]
-    );
-
-    if (clienteInfo.length > 0) {
-      await notificarClienteCodigo(clienteInfo[0].usuario_id, codigo, idPedido);
+        if (connection) connection.release();
     }
-
-    return res.status(200).json({
-      codigo: 200,
-      estado: "Pedido asignado exitosamente",
-      datos: { idPedido: Number(idPedido), idRepartidor: idRepa }
-    });
-
-  } catch (error) {
-    return res.status(500).json({
-      codigo: 500,
-      estado: "Error interno del servidor",
-      datos: null
-    });
-  } finally {
-    if (conection) conection.release();
-  };
 };
 
+// PATCH /api/pedido/entrega/:idPedido
+// Body: { "codigoPedido": "12345678" }
 const entregaPedido = async (req, res) => {
-  let conection;
-  try {
-    conection = await database.getConection();
+    let connection;
+    try {
+        const pedidoId = obtenerIdValido(req.params.idPedido);
+        if (pedidoId === null) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El id del pedido no es válido" }
+            });
+        }
 
-    const idUsuario = req.usuario;
+        const codigo = normalizarCodigo(req.body?.codigoPedido);
+        if (codigo === null) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El código de entrega es obligatorio y tiene que tener 8 dígitos" }
+            });
+        }
 
-    if (idUsuario.rol !== 'repartidor') {
-      return res.status(403).json({
-        codigo: 403,
-        estado: "Tipo de usuario no permitido",
-        datos: null
-      });
-    };
+        connection = await database.getConnection();
+        await connection.beginTransaction();
 
-    const [repartidor] = await conection.query(
-      `SELECT id FROM repartidores WHERE usuario_id = ?`,
-      [idUsuario.id]
-    );
+        // Aca no hace falta leer disponible, pero el lock del repartidor va primero igual
+        // para respetar el orden repartidores -> pedidos (ver repartidor.service.js)
+        await bloquearRepartidor(connection, req.repartidorId);
 
-    if (repartidor.length === 0) {
-      return res.status(404).json({
-        codigo: 404,
-        estado: "Cuenta de repartidor no registrada",
-        datos: null
-      });
-    };
+        const entregado = await confirmarEntregaPedido(connection, {
+            pedidoId,
+            repartidorId: req.repartidorId,
+            codigo,
+            usuarioId: req.usuario.id
+        });
 
-    const [{ id: idRepa }] = repartidor;
+        if (!entregado) {
+            await connection.rollback();
 
-    const { idPedido } = req.params;
-    const { codigoPedido } = req.body;
+            const error = await explicarEntregaRechazada(connection, pedidoId, req.repartidorId);
+            return res.status(error.codigo).json({
+                codigo: error.codigo,
+                estado: "error",
+                datos: { mensaje: error.mensaje }
+            });
+        }
 
-    if (!codigoPedido) {
-      return res.status(400).json({
-        codigo: 400,
-        estado: "Falta el código de entrega",
-        datos: null
-      });
-    };
+        // Con el pedido entregado, el repartidor puede volver a tomar otro
+        await actualizarDisponibilidad(connection, { repartidorId: req.repartidorId, disponible: true });
 
-    const [resultado] = await conection.query(
-      `UPDATE pedidos
-       SET estado = 'entregado', codigo = NULL
-       WHERE id = ?
-         AND repartidor_id = ?
-         AND estado = 'en_camino'
-         AND codigo = ?`,
-      [idPedido, idRepa, codigoPedido]
-    );
+        const { usuario_cliente, comercio } = await buscarDetallePedido(connection, pedidoId);
 
-    if (resultado.affectedRows === 0) {
-      return res.status(409).json({
-        codigo: 409,
-        estado: "No se pudo confirmar la entrega (código incorrecto o pedido no disponible)",
-        datos: null
-      });
-    };
+        await registrarNotificacion(connection, {
+            usuarioId: usuario_cliente,
+            tipo: 'pedido_entregado',
+            mensaje: `Tu pedido #${pedidoId} de ${comercio} fue entregado.`
+        });
 
-    return res.status(200).json({
-      codigo: 200,
-      estado: "Pedido entregado exitosamente",
-      datos: { idPedido: Number(idPedido) }
-    });
+        await connection.commit();
 
-  } catch (error) {
-    return res.status(500).json({
-      codigo: 500,
-      estado: "Error interno del servidor",
-      datos: null
-    });
-  } finally {
-    if (conection) conection.release();
-  };
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                mensaje: "Pedido entregado correctamente",
+                pedido: { id: pedidoId, estado: "entregado" },
+                disponible: true
+            }
+        });
+
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+            }
+        }
+
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    } finally {
+        if (connection) connection.release();
+    }
 };
 
 module.exports = {
-  listarPedidos,
-  asignarPedido,
-  entregaPedido
+    listarPedidos,
+    asignarPedido,
+    entregaPedido
 };

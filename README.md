@@ -180,3 +180,64 @@ El token va en el header `Authorization`, **sin** el prefijo `Bearer `.
   defecto 1. La respuesta incluye `datos.paginacion` con el total de resultados.
 
 Los casos de prueba están en `backend/postman/backend-productos.js`.
+
+---
+
+## Repartidores y asignación de pedidos (Semana 8 — CU19, CU20)
+
+### Endpoints del repartidor (solo rol `repartidor`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/api/pedido/listar` | Pedidos disponibles para repartir (CU19): pagados y sin repartidor. Filtros: `pagina`, `limite` |
+| `PATCH` | `/api/pedido/asignar/:idPedido` | Aceptar un pedido (CU20): le asigna `repartidor_id` y lo pasa a `en_camino` |
+| `PATCH` | `/api/pedido/entrega/:idPedido` | Confirmar la entrega con el código del cliente. Body: `{ codigoPedido }` |
+| `GET` | `/api/repartidor/disponibilidad` | Disponibilidad actual y pedido en curso |
+| `PATCH` | `/api/repartidor/disponibilidad` | Entrar o salir de servicio. Body: `{ disponible }` |
+
+Protegidos por la cadena `verificarToken` → `verificarRol('repartidor')` → `resolverRepartidor`.
+
+### Endpoint para cualquier usuario logueado
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/api/notificaciones` | Notificaciones propias, las más recientes primero. Filtros: `pagina`, `limite` |
+
+### Decisiones de diseño
+
+- **Un pedido no puede asignarse dos veces.** La asignación es un único `UPDATE ... WHERE
+  repartidor_id IS NULL AND estado = 'en_preparacion'`, no un "consultar si está libre y
+  después asignar". Si dos repartidores aceptan a la vez, InnoDB hace esperar al segundo
+  `UPDATE`: cuando le toca, la fila ya tiene repartidor, afecta 0 filas y recibe `409`.
+- **`disponible` significa "puede tomar un pedido nuevo".** Pasa a `FALSE` al aceptar,
+  vuelve a `TRUE` al entregar, y además el repartidor entra y sale de servicio a mano. Para
+  ver pedidos y aceptarlos tiene que estar disponible, y no puede ponerse disponible con un
+  pedido en camino.
+- **Orden de locks.** Aceptar, entregar y cambiar la disponibilidad lockean primero la fila
+  del repartidor (`SELECT ... FOR UPDATE`). Eso impide que el mismo repartidor acepte dos
+  pedidos a la vez y fija el orden `repartidores → pagos → pedidos → productos`, que evita
+  deadlocks con el resto del sistema.
+- **Código de entrega.** Al aceptar se genera un código de 8 dígitos con `crypto.randomInt`
+  (y no `Math.random`, porque es lo que autoriza la entrega). Le llega **al cliente** por
+  notificación y **no** viene en la respuesta al repartidor: si viniera, el repartidor
+  podría confirmar una entrega que no hizo. Al entregar se borra.
+- **Todo en una transacción.** Asignar el pedido, cambiar la disponibilidad, auditar y
+  notificar al cliente se confirman juntos. Si falla cualquier parte, el pedido queda sin
+  asignar: nunca queda tomado con un código que el cliente no recibió.
+- **`auditoria_pedidos.usuario_id`.** Mismo criterio que en productos: se agregó para
+  registrar al actor real de cada cambio (el repartidor que acepta o entrega). Queda en
+  `NULL` cuando el cambio lo dispara un pago aprobado.
+- **Notificaciones mínimas.** Por ahora solo se guardan en la tabla `notificaciones` y se
+  leen con `GET /api/notificaciones`. El envío en tiempo real es de la semana 11.
+- **Lista vacía → `200`**, no `404`: que no haya pedidos para repartir es una respuesta
+  válida.
+- **El listado no muestra la `direccion_entrega` del cliente.** La ve solo el repartidor
+  que toma el pedido, en la respuesta de `asignar`.
+
+### Base de datos
+
+Los cambios de esquema (`auditoria_pedidos.usuario_id` y el índice `idx_pedidos_disponibles`)
+y los datos de prueba nuevos están en `backend/scripts/aTuPuerta.sql`. Para aplicarlos sobre
+una base ya cargada sin borrarla, correr una sola vez `backend/scripts/migracion-semana8.sql`.
+
+Los casos de prueba están en `backend/postman/backend-repartidores.js`.

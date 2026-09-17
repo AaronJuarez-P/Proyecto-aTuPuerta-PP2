@@ -1,6 +1,7 @@
 const database = require('../database/database');
 const { registrarAuditoriaProducto } = require('../services/auditoria.service');
 const { obtenerPaginacion } = require('../utils/paginacion');
+const { obtenerIdValido } = require('../utils/validacion');
 
 // La columna precio es DECIMAL(10,2), o sea que no entra un valor mas grande que este
 const PRECIO_MAXIMO = 99999999.99;
@@ -65,12 +66,6 @@ const validarDatosProducto = ({ nombre, descripcion, categoria, precio, stock })
     }
 
     return validarPrecio(precio) || validarStock(stock);
-};
-
-// Valida el :id de la ruta. Devuelve el numero o null si no sirve
-const obtenerIdValido = (valor) => {
-    const id = parseInt(valor, 10);
-    return (isNaN(id) || id < 1) ? null : id;
 };
 
 // Busca un producto y verifica que sea del comercio autenticado.
