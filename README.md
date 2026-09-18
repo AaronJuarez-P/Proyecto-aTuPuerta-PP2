@@ -2,7 +2,7 @@
 
 Proyecto anual Practica Profesionalizante 2 — IES Santa Fe — 2026.
 
-Sistema de delivery enfocado en la distribuciòn de productos variados, soportar tipos de usuarios cliente, comerio y repartidor y soportar funcionalidades como el pago, trackeo de repartidores, sistema push de notificaciones, google maps integrado, etc. Desarrollo dividido en dos ramas;
+Sistema de delivery enfocado en la distribuciòn de productos variados, soportar tipos de usuarios cliente, comerio y repartidor y soportar funcionalidades como el pago, trackeo de repartidores, sistema push de notificaciones, mapas integrados con Mapbox, etc. Desarrollo dividido en dos ramas;
 backend: Las tecnologias utilizadas son Node.js, Express.js y API rest para las conecciones y el funcionamiento general de la app, MySql para la base de datos, VisualStudio como IDE, Github como plataforma para aplicar los cambios en el proyecto y desarrollo colaborativo.
 frontend: Creado con JavaScript, HTML y CSS.
 
@@ -241,3 +241,99 @@ y los datos de prueba nuevos están en `backend/scripts/aTuPuerta.sql`, que hay 
 importar entero para tenerlos.
 
 Los casos de prueba están en `backend/postman/backend-repartidores.js`.
+
+---
+
+## Geolocalización e integración con Mapbox (Semana 9 — CU21, CU22)
+
+### Endpoints nuevos (solo rol `repartidor`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/api/repartidor/ubicacion` | Registra la posición actual del repartidor. Body: `{ latitud, longitud }` |
+| `GET` | `/api/pedido/ruta/:idPedido` | Ruta optimizada hacia el destino y ETA (CU21). Query: `retirado=true\|false` |
+
+Y `PATCH /api/pedido/entrega/:idPedido` (CU22) ahora acepta además `{ latitud, longitud }`
+de forma **opcional**, para dejar registrado el punto exacto donde se hizo la entrega.
+
+### Decisiones de diseño
+
+- **El proveedor de mapas es Mapbox, y se eligió por la barrera de entrada, no por el
+  precio.** El plan original decía Google Maps Platform, pero Google **no habilita ninguna
+  de sus APIs hasta que el proyecto de Google Cloud tenga una cuenta de facturación con
+  tarjeta de crédito real cargada**, aunque después el consumo entre en el free tier y no
+  cobre nada: alguien del equipo tendría que poner su tarjeta personal. Mapbox entrega un
+  access token funcional apenas te registrás. Se usa la Directions API v5 para la ruta y la
+  Geocoding API v6 para convertir direcciones en coordenadas.
+- **La migración costó dos funciones de un archivo.** La semana 9 se escribió entera contra
+  Google (Routes API + Geocoding API) y se migró a Mapbox la semana siguiente sin tocar el
+  esquema, ningún controller, ninguna ruta ni el modo mock: `maps.service.js` es el único
+  archivo del proyecto que sabe qué proveedor se usa, y todo el resto del backend habla
+  contra una interfaz que no cambió. **Aislar al proveedor detrás de un adaptador se pagó
+  solo a la semana de haberlo hecho.**
+- **Mapbox pide las coordenadas como `{longitud},{latitud}`, al revés que Google.** Es la
+  fuente de bugs número uno de este tipo de integración, porque invertirlas no falla de
+  forma ruidosa: devuelve un punto válido en el lugar equivocado del planeta. La interfaz
+  interna sigue hablando de `{ latitud, longitud }` y el orden se da vuelta en el borde del
+  adaptador, en un solo lugar.
+- **Todo el flujo se puede probar sin access token.** `MAPS_MODO=mock` (el valor por
+  defecto) no llama a Mapbox: geocodifica con un hash determinístico alrededor de Santo Tomé
+  y calcula la distancia con la fórmula de Haversine. Determinístico a propósito: la misma
+  dirección da siempre el mismo punto, así los números de la demo no cambian entre corridas.
+  Mismo criterio que se tomó con MercadoPago en la semana 6.
+- **Una caída de Mapbox nunca tira abajo un pedido.** `distancia_km`, `tiempo_estimado` y
+  `comision` son `NOT NULL`, así que si la API falla, expira el timeout o falta el token, el
+  backend degrada a un cálculo local y sigue. La degradación no es silenciosa: queda un
+  `console.error` en el servidor y el campo `origen_datos` de la respuesta dice de dónde
+  salió cada número (`mapbox`, `mock` o `estimado`).
+- **La ruta pasa por el comercio.** Cuando el repartidor acepta, el pedido pasa a
+  `en_camino` pero todavía no retiró la mercadería, así que la ruta real es
+  `donde estoy → comercio → domicilio del cliente`. Con `?retirado=true` va derecho al
+  cliente, para que después de pasar por la tienda no lo mande de vuelta.
+- **"Optimizada" es el mejor camino, no reordenar las paradas.** Las paradas van en el orden
+  en que se mandan, justamente porque reordenarlas sería incorrecto: no se puede entregar
+  antes de retirar. Lo que optimiza la ruta es el perfil `driving-traffic`, que tiene en
+  cuenta el tráfico en tiempo real.
+- **El vehículo define el perfil de ruta.** `bicicleta` → `cycling`, `moto`, `auto` y `otro`
+  → `driving-traffic`. Mapbox no tiene un perfil dedicado para motos, así que van por el
+  mismo que los autos: es una pérdida menor frente al `TWO_WHEELER` que tenía Google, y a
+  cambio desaparece la restricción que obligaba a tratar la bicicleta como un caso aparte.
+- **El ETA viaja adentro de la respuesta de la ruta.** Sale de la misma llamada, así que un
+  endpoint aparte significaría pagar dos veces la misma request a Mapbox.
+- **Geocodificación "temporary" vs "permanent".** Los términos de Mapbox distinguen las dos,
+  y solo la permanent habilita a guardar las coordenadas en una base de datos. Como el
+  proyecto las guarda, la variable `MAPS_GEOCODING_PERMANENT` controla cuál se pide; viene
+  en `false` porque la permanent cuesta más por request y exige una tarjeta cargada en la
+  cuenta. Para el trabajo de cátedra queda documentado; para un despliegue real hay que
+  prenderla. Google también prohíbe el almacenamiento permanente, con la diferencia de que
+  no ofrece una opción paga explícita.
+- **Ninguna llamada de red ocurre dentro de una transacción.** Por eso
+  `confirmarCarrito` quedó partido en dos fases: la primera lee el carrito y calcula las
+  rutas contra el pool, la segunda abre la transacción, lockea los productos y crea los
+  pedidos. Si la llamada quedara adentro, habría filas de productos bloqueadas mientras se
+  espera la red.
+- **Se terminaron los valores hardcodeados.** `distancia_km`, `tiempo_estimado` y `comision`
+  se calculaban con los literales `100.00, 25, 500.50`. Ahora salen de la ruta real, y la
+  comisión es `COMISION_BASE + COMISION_POR_KM × distancia_km`, configurable en el `.env`.
+- **Las coordenadas se completan solas.** Se cargan al registrar un cliente o un comercio y
+  al crear el pedido. Las filas que ya existían quedan en `NULL` y se geocodifican la
+  primera vez que hacen falta, así que no hizo falta ningún script de migración masiva.
+- **Snapshot e histórico.** Cada posición se guarda en los dos lados:
+  `ubicaciones_repartidor` acumula el recorrido completo del pedido y
+  `repartidores.latitud_actual/longitud_actual` guarda dónde está ahora. Las dos columnas
+  existían en el modelo desde el principio y no se usaban.
+
+### Base de datos
+
+Cambios de esquema en `backend/scripts/aTuPuerta.sql` (hay que volver a importarlo entero):
+
+- `latitud` / `longitud` en `comercios` y `clientes`.
+- `destino_latitud` / `destino_longitud` en `pedidos`, como foto fija del destino.
+- `pedidos.distancia_km` pasa de `DECIMAL(4,1)` a `DECIMAL(6,2)`: ahora sale de una ruta
+  real y la comisión se calcula sobre ella, así que redondear a 100 metros se notaba en
+  plata. **Ojo:** `mysql2` devuelve los `DECIMAL` como string, así que en las respuestas
+  ese campo pasó de `"1.2"` a `"1.20"`.
+- Índice `idx_ubicaciones_pedido (pedido_id, registrado_en)`, que es como se consulta la
+  última posición de un pedido.
+
+Los casos de prueba están en `backend/postman/backend-geolocalizacion.js`.

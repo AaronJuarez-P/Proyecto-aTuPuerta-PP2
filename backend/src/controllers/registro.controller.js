@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const database = require('../database/database');
+const { geocodificarDireccion } = require('../services/maps.service');
 
 const registro = async (req, res) => {
     let connection;
@@ -26,6 +27,12 @@ const registro = async (req, res) => {
                 datos: { mensaje: "Datos ingresados incompletos" }
             });
         }
+
+        // Geocodificacion ANTES de abrir la transaccion (semana 9): es una llamada de
+        // red y no puede quedar adentro. Si falla devuelve null y el usuario se crea
+        // igual con las coordenadas en NULL; se completan solas la primera vez que
+        // hagan falta (ver asegurarCoordenadasCliente en ubicacion.service.js).
+        const punto = await geocodificarDireccion(direccion_entrega);
 
         connection = await database.getConnection();
         await connection.beginTransaction();
@@ -55,8 +62,8 @@ const registro = async (req, res) => {
         // FIX: crear también el perfil de cliente, sin esto el usuario
         // nunca puede usar el carrito ni crear pedidos.
         await connection.query(
-            `INSERT INTO clientes (usuario_id, direccion_entrega) VALUES (?, ?)`,
-            [usuarioId, direccion_entrega]
+            `INSERT INTO clientes (usuario_id, direccion_entrega, latitud, longitud) VALUES (?, ?, ?, ?)`,
+            [usuarioId, direccion_entrega, punto?.latitud ?? null, punto?.longitud ?? null]
         );
 
         await connection.commit();

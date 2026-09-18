@@ -35,4 +35,21 @@ const actualizarDisponibilidad = async (conexion, { repartidorId, disponible }) 
     );
 };
 
-module.exports = { bloquearRepartidor, actualizarDisponibilidad };
+// Id del pedido que el repartidor tiene en camino, o null si no tiene ninguno.
+//
+// Sirve tanto con el pool como con una conexion de transaccion. Vivia como helper
+// local en repartidor.controller.js hasta la semana 9, cuando registrar una ubicacion
+// tambien necesito saber a que pedido asociarla.
+const buscarPedidoEnCurso = async (conexion, repartidorId) => {
+    const [pedidos] = await conexion.query(
+        `SELECT id FROM pedidos
+         WHERE repartidor_id = ? AND estado = 'en_camino'
+         ORDER BY id ASC
+         LIMIT 1`,
+        [repartidorId]
+    );
+
+    return pedidos.length > 0 ? pedidos[0].id : null;
+};
+
+module.exports = { bloquearRepartidor, actualizarDisponibilidad, buscarPedidoEnCurso };

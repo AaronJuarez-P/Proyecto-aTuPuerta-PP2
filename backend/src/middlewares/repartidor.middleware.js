@@ -1,7 +1,9 @@
 const database = require('../database/database');
 
-// Deja en req.repartidorId el id del repartidor del usuario autenticado, y en
-// req.repartidorDisponible si puede tomar un pedido nuevo.
+// Deja en req.repartidorId el id del repartidor del usuario autenticado, en
+// req.repartidorDisponible si puede tomar un pedido nuevo, y en
+// req.repartidorVehiculo su tipo de vehiculo (que en la semana 9 define el perfil de
+// ruta con el que se le pide la ruta a Mapbox).
 // Se usa despues de verificarToken y verificarRol('repartidor').
 // Resuelve siempre contra la base y no contra el repartidorId del token: la base es
 // la fuente de verdad, asi un token viejo o de un usuario dado de baja no sirve.
@@ -15,7 +17,7 @@ const database = require('../database/database');
 const resolverRepartidor = async (req, res, next) => {
     try {
         const [repartidores] = await database.query(
-            `SELECT r.id, r.disponible
+            `SELECT r.id, r.disponible, r.tipo_vehiculo
              FROM repartidores r
              INNER JOIN usuarios u ON u.id = r.usuario_id
              WHERE r.usuario_id = ? AND u.activo = TRUE AND u.rol = 'repartidor'`,
@@ -32,6 +34,7 @@ const resolverRepartidor = async (req, res, next) => {
 
         req.repartidorId = repartidores[0].id;
         req.repartidorDisponible = Boolean(repartidores[0].disponible);
+        req.repartidorVehiculo = repartidores[0].tipo_vehiculo;
         next();
 
     } catch (error) {

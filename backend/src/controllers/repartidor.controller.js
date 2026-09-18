@@ -1,19 +1,11 @@
 const database = require('../database/database');
-const { bloquearRepartidor, actualizarDisponibilidad } = require('../services/repartidor.service');
-
-// Id del pedido que el repartidor tiene en camino, o null si no tiene ninguno.
-// Sirve tanto con el pool como con una conexion de transaccion.
-const buscarPedidoEnCurso = async (conexion, repartidorId) => {
-    const [pedidos] = await conexion.query(
-        `SELECT id FROM pedidos
-         WHERE repartidor_id = ? AND estado = 'en_camino'
-         ORDER BY id ASC
-         LIMIT 1`,
-        [repartidorId]
-    );
-
-    return pedidos.length > 0 ? pedidos[0].id : null;
-};
+const {
+    bloquearRepartidor,
+    actualizarDisponibilidad,
+    buscarPedidoEnCurso
+} = require('../services/repartidor.service');
+const { registrarUbicacion } = require('../services/ubicacion.service');
+const { obtenerLatitudValida, obtenerLongitudValida } = require('../utils/validacion');
 
 // GET /api/repartidor/disponibilidad
 //
@@ -114,7 +106,89 @@ const cambiarDisponibilidad = async (req, res) => {
     }
 };
 
+// ---------------------------------------------------------------------------
+// CU21 (semana 9) - Registrar la posicion del repartidor
+// ---------------------------------------------------------------------------
+
+// POST /api/repartidor/ubicacion
+// Body: { "latitud": -31.6725, "longitud": -60.7825 }
+//
+// El pedido NO viene en el body: se infiere. ubicaciones_repartidor.pedido_id es NOT
+// NULL y un repartidor puede tener un solo pedido en camino a la vez (lo garantiza
+// disponible), asi que no hay ambiguedad. Y que el cliente no pueda elegir el
+// pedido_id cierra de entrada la posibilidad de escribir en el historico de un pedido
+// ajeno.
+const registrarUbicacionRepartidor = async (req, res) => {
+    let connection;
+    try {
+        const latitud = obtenerLatitudValida(req.body?.latitud);
+        const longitud = obtenerLongitudValida(req.body?.longitud);
+
+        if (latitud === null || longitud === null) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "latitud y longitud son obligatorias, tienen que ser números y estar dentro de rango (±90 y ±180)" }
+            });
+        }
+
+        connection = await database.getConnection();
+        await connection.beginTransaction();
+
+        // El lock va primero aunque no se lea disponible, para respetar el orden
+        // repartidores -> pedidos (ver repartidor.service.js). El costo real es cero:
+        // el UPDATE de latitud_actual iba a tomar el lock de esa misma fila igual.
+        await bloquearRepartidor(connection, req.repartidorId);
+
+        const pedidoEnCurso = await buscarPedidoEnCurso(connection, req.repartidorId);
+
+        if (pedidoEnCurso === null) {
+            await connection.rollback();
+            return res.status(409).json({
+                codigo: 409,
+                estado: "error",
+                datos: { mensaje: "No tenés ningún pedido en curso al que asociar tu ubicación" }
+            });
+        }
+
+        const ubicacionId = await registrarUbicacion(connection, {
+            repartidorId: req.repartidorId,
+            pedidoId: pedidoEnCurso,
+            latitud,
+            longitud
+        });
+
+        await connection.commit();
+
+        return res.status(201).json({
+            codigo: 201,
+            estado: "exito",
+            datos: {
+                mensaje: "Ubicación registrada",
+                ubicacion: { id: ubicacionId, pedido_id: pedidoEnCurso, latitud, longitud }
+            }
+        });
+
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+            }
+        }
+
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
 module.exports = {
     consultarDisponibilidad,
-    cambiarDisponibilidad
+    cambiarDisponibilidad,
+    registrarUbicacionRepartidor
 };

@@ -9,12 +9,14 @@ Backend del proyecto anual Practica Profesionalizante 2. Node.js + Express + MyS
 ```
 backend/
 ├── scripts/
-│   ├── aTuPuerta.sql
+│   └── aTuPuerta.sql
 ├── postman/
 │   ├── backend-registro.js         <- guía de pruebas: registro y login
 │   ├── backend-productos.js        <- guía de pruebas: catálogo y stock
 │   ├── backend-pagos.js            <- guía de pruebas: pagos (CU07)
-│   └── backend-repartidores.js     <- guía de pruebas: repartidores (CU19, CU20)
+│   ├── backend-repartidores.js     <- guía de pruebas: repartidores (CU19, CU20)
+│   ├── backend-geolocalizacion.js  <- guía de pruebas: ubicación y rutas (CU21, CU22)
+│   └── lista-semanas-8-9.js        <- las semanas 8 y 9 en una sola lista, para ir tildando
 ├── src/
 │   ├── controllers/
 │   │   ├── registro.controller.js
@@ -46,8 +48,10 @@ backend/
 │   │   └── notificacion.routes.js
 │   ├── services/
 │   │   ├── auditoria.service.js
-│   │   ├── pedido.service.js       <- estados del pedido, devolución de stock, asignación y entrega
+│   │   ├── pedido.service.js       <- estados del pedido, stock, asignación, entrega y comisión
 │   │   ├── pago.service.js         <- adaptador de MercadoPago
+│   │   ├── maps.service.js         <- adaptador de Mapbox (Directions + Geocoding)
+│   │   ├── ubicacion.service.js    <- posiciones del repartidor y coordenadas guardadas
 │   │   ├── repartidor.service.js   <- disponibilidad del repartidor
 │   │   └── notificacion.service.js
 │   ├── utils/
@@ -75,6 +79,12 @@ backend/
 > borra los datos locales. Los usuarios de prueba quedan con la contraseña `Test1234!`.
 > Cada vez que el script cambia hay que volver a importarlo entero.
 
+> **Si lo importás desde la consola** en vez de phpMyAdmin, el `.sql` ya trae
+> `SET NAMES utf8mb4` en la primera línea. Sin eso, `mysql.exe` en Windows usa la
+> codepage de la consola y guarda todos los acentos doble-codificados: *Librería del Sur*
+> queda como *Librer├¡a del Sur* en la base y no hay forma de darse cuenta hasta que
+> falla una comparación.
+
 ### 2 — Variables de entorno
 
 Crear `.env` en la raíz de `backend/` copiando `.env.example`:
@@ -92,6 +102,19 @@ MP_MODO=mock
 MP_ACCESS_TOKEN=
 MP_WEBHOOK_SECRET=
 URL_PUBLICA=http://localhost:4000
+
+MAPS_MODO=mock
+MAPS_ACCESS_TOKEN=
+MAPS_GEOCODING_PERMANENT=false
+MAPS_CENTRO_LAT=-31.6667
+MAPS_CENTRO_LNG=-60.7667
+MAPS_RADIO_MOCK_KM=5
+MAPS_VELOCIDAD_KMH=25
+MAPS_FACTOR_RUTA=1.3
+MAPS_DISTANCIA_FALLBACK_KM=3
+
+COMISION_BASE=500
+COMISION_POR_KM=80
 ```
 
 > `PASSWORD` es la contraseña del usuario de MySQL. En XAMPP recién instalado `root` va
@@ -115,6 +138,24 @@ credenciales ni ngrok. Las credenciales de prueba de MercadoPago tampoco cuestan
 (simulan transacciones sin dinero real), pero requieren exponer el backend a internet
 para poder recibir el webhook.
 
+#### Variables de geolocalización (semana 9)
+
+| Variable | Para qué sirve |
+|---|---|
+| `MAPS_MODO` | `mock` no llama a Mapbox: geocodifica de forma determinística y estima la distancia con Haversine. `real` usa la Directions API y la Geocoding API |
+| `MAPS_ACCESS_TOKEN` | Access token de Mapbox. Solo con `MAPS_MODO=real` |
+| `MAPS_GEOCODING_PERMANENT` | En `true` pide derechos de almacenamiento permanente al geocodificar, que es lo que habilita a guardar las coordenadas en la base. Cuesta más por request y exige una tarjeta cargada en la cuenta, así que viene en `false` |
+| `MAPS_CENTRO_LAT` / `MAPS_CENTRO_LNG` | Centro alrededor del cual el modo mock reparte las direcciones (por defecto, Santo Tomé) |
+| `MAPS_RADIO_MOCK_KM` | Radio en el que el mock las dispersa |
+| `MAPS_VELOCIDAD_KMH` | Velocidad promedio del repartidor, para estimar el tiempo de viaje sin Mapbox |
+| `MAPS_FACTOR_RUTA` | Factor calle / línea recta que se le aplica al Haversine |
+| `MAPS_DISTANCIA_FALLBACK_KM` | Distancia que se usa cuando no hay ni coordenadas para estimar |
+| `COMISION_BASE` / `COMISION_POR_KM` | `comision = COMISION_BASE + COMISION_POR_KM × distancia_km` |
+
+Igual que con los pagos, para la defensa alcanza con `MAPS_MODO=mock`: no hace falta
+access token ni cargar una tarjeta. El modo mock es determinístico, así que la misma
+dirección da siempre la misma coordenada y los números no cambian entre corridas.
+
 ### 3 — Instalar y correr
 
 ```bash
@@ -123,6 +164,18 @@ npm run dev
 ```
 
 Servidor en `http://localhost:4000`
+
+### 4 — Probar
+
+Todo se prueba desde Postman con las guías de `postman/`. Cada guía explica, caso por caso,
+qué request mandar, qué tiene que contestar y por qué el endpoint hace lo que hace.
+
+Para las semanas 8 y 9 hay además `postman/lista-semanas-8-9.js`: las dos guías resumidas en
+una sola lista ordenada, para ir tildando mientras se prueba. Sirve como checklist de
+regresión antes de entregar; el detalle sigue estando en las guías largas.
+
+Los casos se corren **en orden** y cada uno deja la base como la necesita el siguiente, así
+que conviene reimportar `scripts/aTuPuerta.sql` antes de empezar cada guía.
 
 ---
 
@@ -247,7 +300,7 @@ Los casos de prueba están en `postman/backend-pagos.js`.
 |---|---|---|
 | `GET` | `/api/pedido/listar` | Pedidos disponibles: `en_preparacion` y sin repartidor. Filtros: `pagina`, `limite` |
 | `PATCH` | `/api/pedido/asignar/:idPedido` | Acepta el pedido: `repartidor_id`, `en_camino` y código de entrega |
-| `PATCH` | `/api/pedido/entrega/:idPedido` | Confirma la entrega. Body: `{ codigoPedido }` |
+| `PATCH` | `/api/pedido/entrega/:idPedido` | Confirma la entrega. Body: `{ codigoPedido }` y, opcional, `{ latitud, longitud }` |
 | `GET` | `/api/repartidor/disponibilidad` | `{ disponible, pedido_en_curso }` |
 | `PATCH` | `/api/repartidor/disponibilidad` | Entrar o salir de servicio. Body: `{ disponible }` |
 
@@ -278,6 +331,66 @@ repartidor confirma la entrega con ese código y vuelve a quedar disponible.
   repartidor), `409` (estado que no corresponde) o `400` (código incorrecto). Para la
   entrega, la pertenencia se verifica antes que el código: a quien no tiene el pedido
   nunca se le confirma si un código es correcto.
+
+### Geolocalización — CU21, CU22 (rol `repartidor`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/api/repartidor/ubicacion` | Registra la posición actual. Body: `{ latitud, longitud }` |
+| `GET` | `/api/pedido/ruta/:idPedido` | Ruta optimizada hacia el destino + ETA. Query: `retirado=true\|false` |
+
+Misma cadena de middlewares que el resto de repartidores. `resolverRepartidor` deja además
+`req.repartidorVehiculo`, que es lo que define el perfil de ruta con el que se le pide la
+ruta a Mapbox.
+
+Flujo: el repartidor manda su posición cada tanto → pide la ruta y obtiene el camino
+`donde estoy → comercio → domicilio del cliente` con la distancia, la duración y el ETA →
+al confirmar la entrega puede mandar la posición final, que cierra el rastro del pedido.
+
+- **El proveedor es Mapbox**: `GET api.mapbox.com/directions/v5/mapbox/{perfil}/{coords}`
+  para la ruta y la Geocoding API v6 para convertir direcciones en coordenadas. La semana 9
+  se escribió contra Google Maps Platform y se migró a Mapbox porque Google no habilita
+  ninguna de sus APIs hasta que el proyecto de Google Cloud tenga una cuenta de facturación
+  con tarjeta de crédito real cargada, aunque después el consumo entre en el free tier y no
+  cobre nada. Migrar costó reescribir dos funciones de `maps.service.js`: nada afuera del
+  adaptador se enteró.
+- **Mapbox pide las coordenadas como `{longitud},{latitud}`, al revés que Google.** La
+  interfaz interna sigue hablando de `{ latitud, longitud }` y el orden se da vuelta en el
+  borde del adaptador, en un solo lugar.
+- **El comercio es una parada obligatoria.** Cuando el repartidor acepta, el pedido pasa a
+  `en_camino` pero todavía no retiró la mercadería, así que la ruta por defecto pasa por
+  el comercio. Con `?retirado=true` va derecho al cliente.
+- **Las paradas no se reordenan a propósito.** Reordenarlas sería incorrecto: no se puede
+  entregar antes de retirar. "Ruta optimizada" acá significa el mejor camino según el
+  tráfico (perfil `driving-traffic`), no cambiar el orden.
+- **El perfil de ruta sale de `repartidores.tipo_vehiculo`**: `bicicleta` → `cycling`, todo
+  el resto → `driving-traffic`. Mapbox no tiene perfil de moto, así que las motos van por
+  el mismo que los autos; a cambio desaparece la restricción de Google, que devolvía `400
+  INVALID_ARGUMENT` si se le mandaba la preferencia de tráfico junto con `BICYCLE`.
+- **El ETA va adentro de la respuesta de la ruta**, no en un endpoint aparte: sale de la
+  misma llamada, así que separarlo significaría pagar dos veces la misma request.
+- **La geocodificación es "temporary" mientras `MAPS_GEOCODING_PERMANENT` esté en `false`.**
+  Los términos de Mapbox distinguen geocodificación temporary de permanent, y solo la
+  segunda habilita a guardar las coordenadas en una base de datos. Como este proyecto las
+  guarda, para un despliegue real hay que prender el flag y cargar una tarjeta en la
+  cuenta. Para el trabajo de cátedra queda documentado y apagado.
+- **Nada de esto puede tirar abajo un pedido.** Si Mapbox no contesta, expira el timeout o
+  falta el access token, `maps.service.js` degrada a un cálculo local con Haversine y lo
+  avisa con un `console.error`. El campo `origen_datos` de la respuesta dice de dónde salió
+  cada número: `mapbox`, `mock` (modo de prueba) o `estimado` (degradó).
+- **Ninguna llamada de red ocurre dentro de una transacción.** `confirmarCarrito` está
+  partido en dos fases justamente por eso: la fase 1 calcula las rutas contra el pool y la
+  fase 2 abre la transacción, lockea los productos y crea los pedidos.
+- **Las coordenadas se completan solas.** `clientes`, `comercios` y `pedidos` tienen
+  columnas de latitud/longitud nullables. Se llenan al registrarse o al crear el pedido, y
+  las filas viejas se geocodifican la primera vez que hacen falta
+  (`asegurarCoordenadas*` en `services/ubicacion.service.js`). No hay script de backfill.
+- **Snapshot e histórico.** Cada posición se escribe en los dos lados:
+  `ubicaciones_repartidor` guarda el recorrido completo del pedido y
+  `repartidores.latitud_actual/longitud_actual` guarda dónde está ahora, que es lo que la
+  ruta usa como origen sin tener que ordenar el histórico.
+
+Los casos de prueba están en `postman/backend-geolocalizacion.js`.
 
 ### Notificaciones (cualquier usuario logueado)
 

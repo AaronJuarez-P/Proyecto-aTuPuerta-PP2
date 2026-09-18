@@ -117,10 +117,30 @@ const confirmarEntregaPedido = async (conexion, { pedidoId, repartidorId, codigo
     return true;
 };
 
+// ---------------------------------------------------------------------------
+// Tarifa (semana 9)
+// ---------------------------------------------------------------------------
+
+// Lo que cobra el repartidor por el viaje: una base fija mas un adicional por km.
+//
+// Vive aca y no en maps.service.js porque es una regla de negocio del pedido, no algo
+// que sepa el proveedor de mapas. Y es una funcion pura: no recibe conexion porque no
+// toca la base.
+const calcularComision = (distanciaKm) => {
+    const base = Number(process.env.COMISION_BASE);
+    const porKm = Number(process.env.COMISION_POR_KM);
+
+    const comision = (Number.isFinite(base) ? base : 500) +
+                     (Number.isFinite(porKm) ? porKm : 80) * distanciaKm;
+
+    return Math.round(comision * 100) / 100;
+};
+
 module.exports = {
     ESTADOS_PEDIDO,
     cambiarEstadoPedido,
     restaurarStockPedido,
     asignarPedidoARepartidor,
-    confirmarEntregaPedido
+    confirmarEntregaPedido,
+    calcularComision
 };

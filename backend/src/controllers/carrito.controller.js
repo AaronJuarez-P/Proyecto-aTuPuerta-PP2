@@ -1,4 +1,49 @@
 const database = require("../database/database");
+const { calcularRuta, geocodificarDireccion, estimarMinutos } = require("../services/maps.service");
+const { asegurarCoordenadasComercio, asegurarCoordenadasCliente } = require("../services/ubicacion.service");
+const { calcularComision } = require("../services/pedido.service");
+
+// Tope de pedidos.distancia_km, que es DECIMAL(6,2). Una direccion mal geocodificada
+// del otro lado del mundo daria miles de km y MySQL en modo estricto cortaria el
+// INSERT con "Out of range value", rompiendo la confirmacion con un 500.
+const DISTANCIA_MAXIMA_KM = 9999.99;
+
+const distanciaFallbackKm = () => {
+    const valor = Number(process.env.MAPS_DISTANCIA_FALLBACK_KM);
+    return Number.isFinite(valor) ? valor : 3;
+};
+
+// Distancia, tiempo y comision del envio de un comercio al domicilio del cliente.
+//
+// NUNCA tira y NUNCA deja de devolver un valor. distancia_km, tiempo_estimado y
+// comision son NOT NULL, asi que hay que poner algo si o si, y un pedido que no se
+// puede crear porque Mapbox no contesto es una caida de produccion regalada. Los tres
+// valores son informativos mas una comision que el negocio puede absorber.
+//
+// origen_datos dice de donde salio cada numero ('mapbox', 'mock', 'estimado' o
+// 'fallback'), para que la degradacion no sea silenciosa.
+const calcularEnvio = async (origen, destino) => {
+    if (!origen || !destino) {
+        const distanciaKm = distanciaFallbackKm();
+
+        return {
+            distancia_km: distanciaKm,
+            tiempo_estimado: estimarMinutos(distanciaKm),
+            comision: calcularComision(distanciaKm),
+            origen_datos: 'fallback'
+        };
+    }
+
+    const ruta = await calcularRuta({ origen, destino });
+    const distanciaKm = Math.min(ruta.distanciaKm, DISTANCIA_MAXIMA_KM);
+
+    return {
+        distancia_km: distanciaKm,
+        tiempo_estimado: ruta.duracionMinutos,
+        comision: calcularComision(distanciaKm),
+        origen_datos: ruta.origenDatos
+    };
+};
 
 const agregarAlCarrito = async (req, res) => {
     let connection;
@@ -381,21 +426,33 @@ const eliminarProductoCarrito = async (req, res) => {
     }
 };
 
+// POST /api/carrito/confirmar
+//
+// Va en DOS FASES a proposito (semana 9).
+//
+// La fase 1 lee el carrito y calcula las rutas SIN transaccion abierta. La fase 2
+// abre la transaccion, lockea los productos y crea los pedidos. Tienen que estar
+// separadas porque la fase 1 habla con Mapbox: si la llamada quedara adentro de la
+// transaccion, habria filas de productos lockeadas mientras se espera la red, y con
+// varios comercios y el timeout de 5 s eso son varios segundos de lock sobre
+// productos que otros clientes estan intentando comprar.
+//
+// La regla que sale de ahi: adentro de la transaccion NUNCA hay una llamada de red.
 const confirmarCarrito = async (req, res) => {
     let connection;
     try {
         const idUsuario = req.usuario.id;
 
-        connection = await database.getConnection();
-        await connection.beginTransaction();
+        // ---------------------------------------------------------------
+        // FASE 1 - lectura y calculo de rutas, contra el pool
+        // ---------------------------------------------------------------
 
-        const [clientes] = await connection.query(
-            `SELECT id, direccion_entrega FROM clientes WHERE usuario_id = ?`,
+        const [clientes] = await database.query(
+            `SELECT id, direccion_entrega, latitud, longitud FROM clientes WHERE usuario_id = ?`,
             [idUsuario]
         );
 
         if (clientes.length === 0) {
-            await connection.rollback();
             return res.status(404).json({
                 codigo: 404,
                 estado: "error",
@@ -404,13 +461,12 @@ const confirmarCarrito = async (req, res) => {
         }
         const cliente = clientes[0];
 
-        const [carritos] = await connection.query(
+        const [carritos] = await database.query(
             `SELECT id FROM carritos WHERE cliente_id = ?`,
             [cliente.id]
         );
 
         if (carritos.length === 0) {
-            await connection.rollback();
             return res.status(404).json({
                 codigo: 404,
                 estado: "error",
@@ -418,6 +474,73 @@ const confirmarCarrito = async (req, res) => {
             });
         }
         const carritoId = carritos[0].id;
+
+        // La direccion se resuelve aca arriba porque es lo que define el destino de
+        // todas las rutas. Antes se validaba adentro de la transaccion, donde no
+        // necesitaba estar.
+        let direccionEntrega = cliente.direccion_entrega;
+        let usaDireccionDelPerfil = true;
+
+        if (req.body?.direccion_entrega !== undefined) {
+            const direccionBody = String(req.body.direccion_entrega).trim();
+
+            if (direccionBody.length === 0 || direccionBody.length > 200) {
+                return res.status(400).json({
+                    codigo: 400,
+                    estado: "error",
+                    datos: { mensaje: "direccion_entrega inválida (debe tener entre 1 y 200 caracteres)" }
+                });
+            }
+
+            direccionEntrega = direccionBody;
+            usaDireccionDelPerfil = false;
+        }
+
+        // Si usa la direccion de su perfil y el cliente ya tiene coordenadas, se
+        // reusan sin gastar una llamada. Una direccion puntual del body se geocodifica
+        // pero NO se guarda en clientes: es una entrega suelta, no un cambio de perfil.
+        const destino = usaDireccionDelPerfil
+            ? await asegurarCoordenadasCliente(database, cliente)
+            : await geocodificarDireccion(direccionEntrega);
+
+        // Los comercios del carrito, sin lockear nada: solo para saber cuantas rutas
+        // hay que calcular y desde donde.
+        const [comerciosCarrito] = await database.query(
+            `SELECT DISTINCT c.id, c.direccion, c.latitud, c.longitud
+             FROM items_carrito ic
+             INNER JOIN productos p ON p.id = ic.producto_id
+             INNER JOIN comercios c ON c.id = p.comercio_id
+             WHERE ic.carrito_id = ?`,
+            [carritoId]
+        );
+
+        if (comerciosCarrito.length === 0) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El carrito está vacío" }
+            });
+        }
+
+        // En paralelo: las rutas de comercios distintos son independientes entre si.
+        // Con N comercios la espera del peor caso es un timeout, no N timeouts.
+        const envios = await Promise.all(
+            comerciosCarrito.map(async (comercio) => {
+                const origen = await asegurarCoordenadasComercio(database, comercio);
+                return [String(comercio.id), await calcularEnvio(origen, destino)];
+            })
+        );
+
+        // Las claves se normalizan con String() en los dos lados porque mas abajo se
+        // busca con Object.keys(), que devuelve strings.
+        const envioPorComercio = new Map(envios);
+
+        // ---------------------------------------------------------------
+        // FASE 2 - transaccion: lock de productos, stock y alta de pedidos
+        // ---------------------------------------------------------------
+
+        connection = await database.getConnection();
+        await connection.beginTransaction();
 
         const [items] = await connection.query(
             `SELECT
@@ -488,23 +611,6 @@ const confirmarCarrito = async (req, res) => {
             itemsPorComercio[item.comercio_id].push(item);
         }
 
-        let direccionEntrega = cliente.direccion_entrega;
-
-        if (req.body?.direccion_entrega !== undefined) {
-            const direccionBody = String(req.body.direccion_entrega).trim();
-
-            if (direccionBody.length === 0 || direccionBody.length > 200) {
-                await connection.rollback();
-                return res.status(400).json({
-                    codigo: 400,
-                    estado: "error",
-                    datos: { mensaje: "direccion_entrega inválida (debe tener entre 1 y 200 caracteres)" }
-                });
-            }
-
-            direccionEntrega = direccionBody;
-        }
-
         const pedidosCreados = [];
 
         for (const comercioId of Object.keys(itemsPorComercio)) {
@@ -516,14 +622,24 @@ const confirmarCarrito = async (req, res) => {
                     .toFixed(2)
             );
 
-            //Ingresa datos temporal
-            //===========
-            //En espera de la integracion de la API
-            //===========
+            // El envio ya viene calculado de la fase 1. Si este comercio no esta en el
+            // Map es porque el carrito cambio entre las dos fases (un doble submit):
+            // se usa el fallback, que es calculo local. Nunca una llamada de red aca
+            // adentro.
+            const envio = envioPorComercio.get(String(comercioId)) ?? await calcularEnvio(null, null);
+
             const [resultadoPedido] = await connection.query(
-                `INSERT INTO pedidos (cliente_id, comercio_id, estado, direccion_entrega, total, distancia_km, tiempo_estimado, comision)
-                 VALUES (?, ?, 'pendiente_pago', ?, ?, 100.00, 25, 500.50)`,
-                [cliente.id, comercioId, direccionEntrega, totalComercio]
+                `INSERT INTO pedidos
+                    (cliente_id, comercio_id, estado, direccion_entrega,
+                     destino_latitud, destino_longitud, total,
+                     distancia_km, tiempo_estimado, comision)
+                 VALUES (?, ?, 'pendiente_pago', ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    cliente.id, comercioId, direccionEntrega,
+                    destino?.latitud ?? null, destino?.longitud ?? null,
+                    totalComercio,
+                    envio.distancia_km, envio.tiempo_estimado, envio.comision
+                ]
             );
             const pedidoId = resultadoPedido.insertId;
 
@@ -542,7 +658,15 @@ const confirmarCarrito = async (req, res) => {
                 );
             }
 
-            pedidosCreados.push({ pedidoId, comercioId, total: totalComercio });
+            pedidosCreados.push({
+                pedidoId,
+                comercioId,
+                total: totalComercio,
+                distancia_km: envio.distancia_km,
+                tiempo_estimado: envio.tiempo_estimado,
+                comision: envio.comision,
+                origen_datos: envio.origen_datos
+            });
         }
 
         await connection.query(`DELETE FROM items_carrito WHERE carrito_id = ?`, [carritoId]);

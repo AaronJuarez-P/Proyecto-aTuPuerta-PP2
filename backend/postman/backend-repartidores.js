@@ -160,7 +160,7 @@
 //    "pedidos": [
 //      {
 //        "id": 3,
-//        "distancia_km": "0.8",
+//        "distancia_km": "0.80",
 //        "tiempo_estimado": 6,
 //        "comision": "700.00",
 //        "comercio": "Librería del Sur",
@@ -174,6 +174,11 @@
 //```
 //> La `direccion_entrega` del cliente **no** aparece a propósito. La ve solo el repartidor
 //> que toma el pedido (Caso 9).
+//
+//> **Actualizado en la semana 9:** `distancia_km` viene como `"0.80"` y no como `"0.8"`.
+//> La columna pasó de `DECIMAL(4,1)` a `DECIMAL(6,2)` y `mysql2` devuelve los `DECIMAL`
+//> como string. Es cosmético, pero si comparás contra una captura vieja te va a llamar la
+//> atención.
 //
 //---
 //---
@@ -213,7 +218,7 @@
 //      "id": 3,
 //      "estado": "en_camino",
 //      "direccion_entrega": "Belgrano 567, Santo Tomé, Santa Fe",
-//      "distancia_km": "0.8",
+//      "distancia_km": "0.80",
 //      "tiempo_estimado": 6,
 //      "comision": "700.00",
 //      "comercio": "Librería del Sur",
@@ -487,3 +492,7 @@
 //- [ ] Servidor levantado con `npm run dev` sin errores
 //- [ ] Tokens de Lucía, Carlos y María, cada uno en el header `Authorization`, **sin** `Bearer`
 //- [ ] Correr los casos en orden (cada uno deja la base lista para el siguiente)
+//
+//> Si ya conocés los casos y solo querés volver a correrlos para ver que nada se rompió,
+//> `postman/lista-semanas-8-9.js` los tiene todos resumidos en una tabla, en orden, junto
+//> con los de la semana 9.

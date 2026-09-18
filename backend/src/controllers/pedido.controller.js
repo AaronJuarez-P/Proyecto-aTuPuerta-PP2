@@ -3,8 +3,15 @@ const database = require('../database/database');
 const { asignarPedidoARepartidor, confirmarEntregaPedido } = require('../services/pedido.service');
 const { bloquearRepartidor, actualizarDisponibilidad } = require('../services/repartidor.service');
 const { registrarNotificacion } = require('../services/notificacion.service');
+const { calcularRuta } = require('../services/maps.service');
+const {
+    registrarUbicacion,
+    obtenerUbicacionRepartidor,
+    asegurarCoordenadasComercio,
+    asegurarDestinoPedido
+} = require('../services/ubicacion.service');
 const { obtenerPaginacion } = require('../utils/paginacion');
-const { obtenerIdValido } = require('../utils/validacion');
+const { obtenerIdValido, obtenerLatitudValida, obtenerLongitudValida } = require('../utils/validacion');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -14,6 +21,27 @@ const { obtenerIdValido } = require('../utils/validacion');
 // entrega, asi que sale de crypto y no de Math.random: no tiene que poder predecirse.
 const generarCodigo = () => {
     return crypto.randomInt(10000000, 100000000).toString();
+};
+
+// Coordenadas OPCIONALES del cuerpo de la entrega (semana 9, CU22).
+//
+// Devuelve el punto, null si no vinieron, o el string 'invalidas' si vinieron mal.
+// Distinguir "no las mandaste" de "las mandaste mal" es el punto: lo primero es el
+// comportamiento de la semana 8 y tiene que seguir andando exactamente igual, lo
+// segundo es un error que conviene avisar en vez de descartar en silencio.
+const obtenerPuntoOpcional = (cuerpo) => {
+    if (cuerpo?.latitud === undefined && cuerpo?.longitud === undefined) {
+        return null;
+    }
+
+    const latitud = obtenerLatitudValida(cuerpo?.latitud);
+    const longitud = obtenerLongitudValida(cuerpo?.longitud);
+
+    if (latitud === null || longitud === null) {
+        return 'invalidas';
+    }
+
+    return { latitud, longitud };
 };
 
 // Acepta el codigo como string o como numero y devuelve el string de 8 digitos listo
@@ -92,6 +120,31 @@ const explicarEntregaRechazada = async (conexion, pedidoId, repartidorId) => {
     }
 
     return { codigo: 400, mensaje: "El código de entrega no es correcto" };
+};
+
+// Todo lo que CU21 necesita para armar la ruta: el pedido con su punto de destino y
+// el comercio con el suyo. Trae tambien las direcciones de texto porque son lo que se
+// geocodifica cuando alguna de las dos filas todavia no tiene coordenadas.
+const buscarPedidoParaRuta = async (conexion, pedidoId) => {
+    const [pedidos] = await conexion.query(
+        `SELECT pe.id,
+                pe.estado,
+                pe.repartidor_id,
+                pe.direccion_entrega,
+                pe.destino_latitud,
+                pe.destino_longitud,
+                co.id AS comercio_id,
+                co.nombre AS comercio,
+                co.direccion AS direccion_comercio,
+                co.latitud AS comercio_latitud,
+                co.longitud AS comercio_longitud
+         FROM pedidos pe
+         INNER JOIN comercios co ON co.id = pe.comercio_id
+         WHERE pe.id = ?`,
+        [pedidoId]
+    );
+
+    return pedidos[0];
 };
 
 // ---------------------------------------------------------------------------
@@ -263,6 +316,8 @@ const asignarPedido = async (req, res) => {
 
 // PATCH /api/pedido/entrega/:idPedido
 // Body: { "codigoPedido": "12345678" }
+// Body con la posicion de la entrega (opcional, semana 9):
+//      { "codigoPedido": "12345678", "latitud": -31.6760, "longitud": -60.7735 }
 const entregaPedido = async (req, res) => {
     let connection;
     try {
@@ -281,6 +336,15 @@ const entregaPedido = async (req, res) => {
                 codigo: 400,
                 estado: "error",
                 datos: { mensaje: "El código de entrega es obligatorio y tiene que tener 8 dígitos" }
+            });
+        }
+
+        const punto = obtenerPuntoOpcional(req.body);
+        if (punto === 'invalidas') {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "Si mandás la ubicación de la entrega tenés que mandar latitud y longitud, las dos, como números dentro de rango" }
             });
         }
 
@@ -312,6 +376,19 @@ const entregaPedido = async (req, res) => {
         // Con el pedido entregado, el repartidor puede volver a tomar otro
         await actualizarDisponibilidad(connection, { repartidorId: req.repartidorId, disponible: true });
 
+        // La posicion final cierra el rastro del pedido en el punto donde se entrego.
+        // Va en la MISMA transaccion que la entrega, y es seguro: es una operacion de
+        // base pura, sin red. El orden de locks se respeta solo, porque
+        // bloquearRepartidor ya corrio mas arriba.
+        if (punto) {
+            await registrarUbicacion(connection, {
+                repartidorId: req.repartidorId,
+                pedidoId,
+                latitud: punto.latitud,
+                longitud: punto.longitud
+            });
+        }
+
         const { usuario_cliente, comercio } = await buscarDetallePedido(connection, pedidoId);
 
         await registrarNotificacion(connection, {
@@ -328,7 +405,8 @@ const entregaPedido = async (req, res) => {
             datos: {
                 mensaje: "Pedido entregado correctamente",
                 pedido: { id: pedidoId, estado: "entregado" },
-                disponible: true
+                disponible: true,
+                ubicacion_registrada: Boolean(punto)
             }
         });
 
@@ -350,8 +428,170 @@ const entregaPedido = async (req, res) => {
     }
 };
 
+// ---------------------------------------------------------------------------
+// CU21 - Ver la ruta optimizada hacia el destino (semana 9)
+// ---------------------------------------------------------------------------
+
+// GET /api/pedido/ruta/:idPedido?retirado=true|false
+//
+// La ruta por defecto es "donde estoy -> comercio -> domicilio del cliente", con el
+// comercio como parada: cuando el repartidor acepta, el pedido pasa directo a
+// en_camino pero todavia NO retiro la mercaderia. Con ?retirado=true la ruta va
+// derecho al cliente; sin ese parametro, despues de pasar por el comercio la ruta lo
+// mandaria de vuelta a la tienda.
+//
+// Sin transaccion: es una lectura, y ademas la llamada a Mapbox no puede quedar
+// adentro de una. Lo unico que escribe es el relleno perezoso de coordenadas, que es
+// un calentamiento de cache y no un efecto de negocio: el GET sigue siendo idempotente
+// visto desde afuera.
+const rutaPedido = async (req, res) => {
+    try {
+        const pedidoId = obtenerIdValido(req.params.idPedido);
+        if (pedidoId === null) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El id del pedido no es válido" }
+            });
+        }
+
+        const pedido = await buscarPedidoParaRuta(database, pedidoId);
+
+        if (!pedido) {
+            return res.status(404).json({
+                codigo: 404,
+                estado: "error",
+                datos: { mensaje: "Pedido no encontrado" }
+            });
+        }
+
+        // La pertenencia se chequea antes que el estado, mismo criterio que
+        // explicarEntregaRechazada: a quien no le toca el pedido no se le cuenta nada
+        // de como viene.
+        if (pedido.repartidor_id !== req.repartidorId) {
+            return res.status(403).json({
+                codigo: 403,
+                estado: "error",
+                datos: { mensaje: "Ese pedido no está asignado a vos" }
+            });
+        }
+
+        if (pedido.estado !== 'en_camino') {
+            return res.status(409).json({
+                codigo: 409,
+                estado: "error",
+                datos: { mensaje: `El pedido está en estado "${pedido.estado}" y no tiene una ruta que calcular` }
+            });
+        }
+
+        const origen = await obtenerUbicacionRepartidor(database, req.repartidorId);
+
+        if (!origen) {
+            return res.status(409).json({
+                codigo: 409,
+                estado: "error",
+                datos: { mensaje: "Todavía no registraste tu ubicación. Mandá POST /api/repartidor/ubicacion antes de pedir la ruta" }
+            });
+        }
+
+        const destino = await asegurarDestinoPedido(database, pedido);
+
+        if (!destino) {
+            return res.status(409).json({
+                codigo: 409,
+                estado: "error",
+                datos: { mensaje: "No pudimos ubicar la dirección de entrega en el mapa" }
+            });
+        }
+
+        // Los query params siempre llegan como string: "false" a secas seria truthy
+        const retirado = req.query.retirado === 'true';
+        const paradas = [];
+
+        if (!retirado) {
+            const comercio = await asegurarCoordenadasComercio(database, {
+                id: pedido.comercio_id,
+                direccion: pedido.direccion_comercio,
+                latitud: pedido.comercio_latitud,
+                longitud: pedido.comercio_longitud
+            });
+
+            // Se corta en vez de seguir sin la parada: una ruta que saltea el comercio
+            // no es la ruta que el repartidor tiene que hacer, y devolverla como si
+            // nada seria peor que no devolver nada.
+            if (!comercio) {
+                return res.status(409).json({
+                    codigo: 409,
+                    estado: "error",
+                    datos: { mensaje: "No pudimos ubicar la dirección del comercio en el mapa" }
+                });
+            }
+
+            paradas.push(comercio);
+        }
+
+        const ruta = await calcularRuta({
+            origen,
+            destino,
+            paradas,
+            vehiculo: req.repartidorVehiculo
+        });
+
+        // Los tramos vuelven en el mismo orden que [...paradas, destino]
+        const etiquetas = retirado ? ['cliente'] : ['comercio', 'cliente'];
+        const calculadoEn = new Date();
+
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                pedido: {
+                    id: pedido.id,
+                    estado: pedido.estado,
+                    comercio: pedido.comercio,
+                    direccion_comercio: pedido.direccion_comercio,
+                    direccion_entrega: pedido.direccion_entrega
+                },
+                retirado,
+                ruta: {
+                    distancia_km: ruta.distanciaKm,
+                    duracion_minutos: ruta.duracionMinutos,
+                    polilinea: ruta.polilinea,
+                    tramos: ruta.tramos.map((tramo, indice) => ({
+                        hasta: etiquetas[indice] ?? 'cliente',
+                        distancia_km: tramo.distanciaKm,
+                        duracion_minutos: tramo.duracionMinutos
+                    })),
+                    puntos: {
+                        origen,
+                        ...(retirado ? {} : { comercio: paradas[0] }),
+                        destino
+                    },
+                    // 'mapbox' = ruta real. 'mock' = modo de prueba. 'estimado' = Mapbox
+                    // no contesto y se calculo localmente. Viaja hasta aca a proposito:
+                    // la degradacion nunca tiene que ser silenciosa.
+                    origen_datos: ruta.origenDatos
+                },
+                eta: {
+                    minutos: ruta.duracionMinutos,
+                    hora_estimada: new Date(calculadoEn.getTime() + ruta.duracionMinutos * 60000).toISOString(),
+                    calculado_en: calculadoEn.toISOString()
+                }
+            }
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    }
+};
+
 module.exports = {
     listarPedidos,
     asignarPedido,
-    entregaPedido
+    entregaPedido,
+    rutaPedido
 };

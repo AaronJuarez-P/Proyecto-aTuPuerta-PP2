@@ -5,6 +5,13 @@
 -- Incluye usuarios de prueba de los 4 roles para probar con Postman
 -- =====================================================================
 
+-- Este archivo esta guardado en UTF-8 y SET NAMES le avisa al servidor que los bytes
+-- que va a recibir son UTF-8. Sin esta linea, importar desde la linea de comandos en
+-- Windows rompe todos los acentos: mysql.exe usa por defecto la codepage de la consola
+-- (cp850), asi que "Libreria del Sur" se guarda doble-codificado y queda ilegible.
+-- phpMyAdmin no tiene el problema porque fija el charset por su cuenta.
+SET NAMES utf8mb4;
+
 DROP DATABASE IF EXISTS aTuPuerta;
 CREATE DATABASE aTuPuerta CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE aTuPuerta;
@@ -303,8 +310,8 @@ CREATE TABLE notificaciones (
 
 -- =====================================================================
 -- SEMANA 8 - REPARTIDORES Y ASIGNACIÓN DE PEDIDOS (CU19, CU20)
--- Sobre una base ya cargada, estos cambios se aplican sin perder datos con
--- scripts/migracion-semana8.sql (este archivo arranca con DROP DATABASE).
+-- Este archivo arranca con DROP DATABASE: para tener estos cambios hay que
+-- volver a importarlo entero.
 -- =====================================================================
 
 -- Los pedidos también los mueve el repartidor (CU20), no solo un administrador.
@@ -318,6 +325,48 @@ ALTER TABLE auditoria_pedidos
 -- CU19 busca siempre los pedidos en_preparacion que todavía no tienen repartidor.
 ALTER TABLE pedidos
   ADD INDEX idx_pedidos_disponibles (estado, repartidor_id);
+
+-- =====================================================================
+-- SEMANA 9 - GEOLOCALIZACIÓN E INTEGRACIÓN CON GOOGLE MAPS (CU21, CU22)
+-- Este archivo arranca con DROP DATABASE: para tener estos cambios hay que
+-- volver a importarlo entero.
+-- =====================================================================
+
+-- Coordenadas de comercios y clientes, para no tener que geocodificar la misma
+-- dirección de texto en cada pedido. NULL a propósito: las filas que ya existen
+-- se crearon sin coordenadas y se completan solas la primera vez que un flujo
+-- las necesita (geocodificación perezosa), no con una migración masiva.
+-- NULL significa literalmente "todavía no la geocodifiqué". Un default de 0,0
+-- sería peor: es el Golfo de Guinea, indistinguible de un dato real.
+ALTER TABLE comercios
+  ADD COLUMN latitud  DECIMAL(10,7) NULL AFTER direccion,
+  ADD COLUMN longitud DECIMAL(10,7) NULL AFTER latitud;
+
+ALTER TABLE clientes
+  ADD COLUMN latitud  DECIMAL(10,7) NULL AFTER direccion_entrega,
+  ADD COLUMN longitud DECIMAL(10,7) NULL AFTER latitud;
+
+-- Foto fija del destino, mismo criterio que distancia_km / tiempo_estimado /
+-- comision: el pedido apunta a donde se pidió, aunque después el cliente cambie
+-- la dirección de su perfil o mande un domicilio distinto en otro pedido.
+ALTER TABLE pedidos
+  ADD COLUMN destino_latitud  DECIMAL(10,7) NULL AFTER direccion_entrega,
+  ADD COLUMN destino_longitud DECIMAL(10,7) NULL AFTER destino_latitud;
+
+-- distancia_km era DECIMAL(4,1): tope 999.9 km y una sola decimal. Ahora sale de
+-- una ruta real y la comisión se calcula sobre ella, así que redondear a 100
+-- metros se notaba en plata. Y peor: una dirección mal geocodificada a 3000 km
+-- hacía que MySQL en modo estricto tirara "Out of range value" y rompiera la
+-- confirmación del carrito con un 500. DECIMAL(6,2) da 9999.99 km con
+-- resolución de 10 metros.
+ALTER TABLE pedidos
+  MODIFY COLUMN distancia_km DECIMAL(6,2) NOT NULL;
+
+-- CU21 lee la última posición registrada para un pedido, y la semana 10 va a leer
+-- el recorrido completo. Sin el índice las dos consultas son un full scan de una
+-- tabla que crece con cada ping del repartidor.
+ALTER TABLE ubicaciones_repartidor
+  ADD INDEX idx_ubicaciones_pedido (pedido_id, registrado_en);
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -411,3 +460,23 @@ INSERT INTO notificaciones (id, usuario_id, tipo, mensaje, leida) VALUES
 (1, 1, 'pedido_en_camino', 'Tu pedido #1 salió de Ferretería Central y está en camino.', FALSE),
 (2, 1, 'pago_aprobado',    'Tu pago del pedido #1 fue aprobado.',                        TRUE),
 (3, 2, 'pedido_creado',    'Creaste el pedido #2, falta confirmar el pago.',            FALSE);
+
+-- ---------- COORDENADAS (SEMANA 9) ----------
+-- Van como UPDATE y no dentro de los INSERT de arriba para no tocar los datos de
+-- prueba que ya venían de las semanas anteriores.
+--
+-- Son puntos aproximados de Santo Tomé, Santa Fe. Alcanza con que sean plausibles
+-- y distintos entre sí: con MAPS_MODO=mock la distancia de cada pedido sale de
+-- estas coordenadas, así que el flujo completo anda apenas se importa el script.
+UPDATE comercios SET latitud = -31.6642000, longitud = -60.7712000 WHERE id = 1; -- Av. Rivadavia 800
+UPDATE comercios SET latitud = -31.6698000, longitud = -60.7648000 WHERE id = 2; -- Mitre 450
+
+UPDATE clientes SET latitud = -31.6715000, longitud = -60.7690000 WHERE id = 1; -- San Martín 1234
+UPDATE clientes SET latitud = -31.6760000, longitud = -60.7735000 WHERE id = 2; -- Belgrano 567
+
+-- Foto fija del destino de los pedidos ya cargados. Este mismo UPDATE sirve para
+-- rellenar una base que venía de antes de la semana 9.
+UPDATE pedidos p
+  INNER JOIN clientes c ON c.id = p.cliente_id
+  SET p.destino_latitud = c.latitud, p.destino_longitud = c.longitud
+  WHERE p.destino_latitud IS NULL;

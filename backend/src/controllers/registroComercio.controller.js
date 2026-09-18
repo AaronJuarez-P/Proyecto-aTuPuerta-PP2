@@ -1,6 +1,7 @@
 const database = require('../database/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { geocodificarDireccion } = require('../services/maps.service');
 
 // Registra el perfil de comercio para un usuario que YA existe como cliente.
 // Requiere email + contraseña real del usuario para autorizar la operación.
@@ -50,6 +51,16 @@ const registroComercio = async (req, res) => {
                 datos: { mensaje: "El CUIL debe tener 11 dígitos" }
             });
         }
+
+        // Geocodificacion ANTES de abrir la transaccion (semana 9): es una llamada de
+        // red y no puede quedar adentro. Solo necesita el string del body, que ya esta
+        // validado arriba.
+        //
+        // Si falla o no se puede ubicar devuelve null y el comercio se crea igual, con
+        // las coordenadas en NULL: nadie se queda sin poder registrarse porque Mapbox
+        // no contesto. Despues se completan solas la primera vez que hagan falta (ver
+        // asegurarCoordenadasComercio en ubicacion.service.js).
+        const punto = await geocodificarDireccion(direccion);
 
         connection = await database.getConnection();
         await connection.beginTransaction();
@@ -110,9 +121,12 @@ const registroComercio = async (req, res) => {
         // Ajustá las columnas de este INSERT a tu esquema real de "comercios".
         await connection.query(
             `INSERT INTO comercios
-             (usuario_id, nombre, cuit_cuil, categoria, direccion, horario_atencion)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [usuarios[0].id, nombre, cuit_cuil, categoria, direccion, horario_atencion]
+             (usuario_id, nombre, cuit_cuil, categoria, direccion, horario_atencion, latitud, longitud)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                usuarios[0].id, nombre, cuit_cuil, categoria, direccion, horario_atencion,
+                punto?.latitud ?? null, punto?.longitud ?? null
+            ]
         );
 
         await connection.query(
