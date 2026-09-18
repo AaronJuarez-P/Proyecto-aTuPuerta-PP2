@@ -52,10 +52,8 @@
 //
 //**Cliente** → `POST /api/inicioSesion`
 //```json
-//{ "correo": "maria.gomez@test.com", "contrasena": "Test1234!" }
+//{ "email": "maria.gomez@test.com", "contrasena": "Test1234!" }
 //```
-//
-//> Ojo: el login de repartidor pide `email`, el de cliente pide `correo`.
 //
 //```
 //Authorization: <el token, sin la palabra Bearer>

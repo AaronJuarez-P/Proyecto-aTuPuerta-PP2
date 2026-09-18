@@ -2,16 +2,17 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const database = require('../database/database');
 const { geocodificarDireccion } = require('../services/maps.service');
+const { esEmailValido } = require('../utils/validacion');
 
 const registro = async (req, res) => {
     let connection;
     try {
-        const { nombre, correo, contrasena, telefono, direccion_entrega } = req.body;
+        const { nombre, email, contrasena, telefono, direccion_entrega } = req.body;
 
-        if (typeof nombre !== "string" || typeof correo !== "string" ||
+        if (typeof nombre !== "string" || typeof email !== "string" ||
             typeof contrasena !== "string" || typeof telefono !== "string" ||
             typeof direccion_entrega !== "string" ||
-            !nombre || !correo || !contrasena || !telefono || !direccion_entrega) {
+            !nombre || !email || !contrasena || !telefono || !direccion_entrega) {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -19,12 +20,20 @@ const registro = async (req, res) => {
             });
         }
 
-        if (!nombre.trim() || !correo.trim() || !contrasena.trim() ||
+        if (!nombre.trim() || !email.trim() || !contrasena.trim() ||
             !telefono.trim() || !direccion_entrega.trim()) {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
                 datos: { mensaje: "Datos ingresados incompletos" }
+            });
+        }
+
+        if (!esEmailValido(email)) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El email no tiene un formato válido" }
             });
         }
 
@@ -39,7 +48,7 @@ const registro = async (req, res) => {
 
         const [existentes] = await connection.query(
             `SELECT id FROM usuarios WHERE email = ? FOR UPDATE`,
-            [correo]
+            [email]
         );
         if (existentes.length > 0) {
             await connection.rollback();
@@ -55,7 +64,7 @@ const registro = async (req, res) => {
 
         const [resultado] = await connection.query(
             `INSERT INTO usuarios (nombre, email, contrasena, telefono, rol) VALUES (?, ?, ?, ?, ?)`,
-            [nombre, correo, contrasenaHash, telefono, 'cliente']
+            [nombre, email, contrasenaHash, telefono, 'cliente']
         );
         const usuarioId = resultado.insertId;
 
@@ -71,7 +80,7 @@ const registro = async (req, res) => {
         return res.status(201).json({
             codigo: 201,
             estado: "exito",
-            datos: { mensaje: `Usuario registrado exitosamente ${nombre}, ${correo}, ${telefono}` }
+            datos: { mensaje: `Usuario registrado exitosamente ${nombre}, ${email}, ${telefono}` }
         });
 
     } catch (error) {
@@ -97,18 +106,18 @@ const registro = async (req, res) => {
 const inicioSesion = async (req, res) => {
     try {
 
-        const { correo, contrasena } = req.body;
+        const { email, contrasena } = req.body;
 
-        if (typeof correo !== "string" || typeof contrasena !== "string" ||
-            !correo || !contrasena) {
+        if (typeof email !== "string" || typeof contrasena !== "string" ||
+            !email || !contrasena) {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
-                datos: { mensaje: "Correo y contraseña son obligatorios" }
+                datos: { mensaje: "Email y contraseña son obligatorios" }
             });
         }
 
-        if (!correo.trim() || !contrasena.trim()) {
+        if (!email.trim() || !contrasena.trim()) {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -116,25 +125,41 @@ const inicioSesion = async (req, res) => {
             });
         }
 
-        const [existentes] = await database.query(
-            `SELECT * FROM usuarios WHERE email = ?`,
-            [correo]
+        // El formato del email NO se valida aca a proposito: si no coincide con ninguna
+        // fila hay que contestar el mismo mensaje generico igual, y un 400 de "formato
+        // invalido" seria una forma mas de distinguir "mal escrito" de "no existe".
+
+        // FIX: el INNER JOIN contra clientes. Antes esto era un SELECT * sobre usuarios,
+        // asi que cualquier usuario podia entrar por aca -- incluidos los comercios y los
+        // repartidores, que no tienen perfil de cliente. Como mas abajo el rol se fija en
+        // 'cliente', entrar al login equivocado les pisaba el rol en la base y les dejaba
+        // todos sus endpoints en 403 (resolverComercio y resolverRepartidor filtran por el
+        // rol de la base, no por el del token).
+        const [usuarios] = await database.query(
+            `SELECT u.id, u.nombre, u.email, u.contrasena, u.activo
+             FROM usuarios u
+             INNER JOIN clientes c ON u.id = c.usuario_id
+             WHERE u.email = ?`,
+            [email]
         );
-        if (existentes.length === 0) {
+
+        // Los dos casos de credenciales rechazadas contestan exactamente lo mismo, para que
+        // nadie pueda averiguar que emails estan registrados probando de a uno.
+        if (usuarios.length === 0) {
             return res.status(401).json({
                 codigo: 401,
                 estado: "error",
-                datos: { mensaje: "Usuario no encontrado" }
+                datos: { mensaje: "Email o contraseña incorrectos" }
             });
         }
 
-        const [usuario] = existentes;
+        const [usuario] = usuarios;
 
         const contrasenaValida = await bcrypt.compare(contrasena, usuario.contrasena);
         if (!contrasenaValida) {
             return res.status(401).json({
                 codigo: 401, estado: "error",
-                datos: { mensaje: "Contraseña incorrecta" }
+                datos: { mensaje: "Email o contraseña incorrectos" }
             });
         }
 
@@ -146,8 +171,16 @@ const inicioSesion = async (req, res) => {
             });
         }
 
+        // usuarios.rol guarda el rol de la SESION activa, no lo que el usuario es: por eso
+        // cerrarSesionRepartidor y cerrarSesionComercio lo devuelven a 'cliente', y por eso
+        // los middlewares lo consultan contra la base en vez de confiar en el token.
+        // Consecuencia: si alguien es cliente y repartidor a la vez, entrar por aca cierra
+        // de hecho su sesion de repartidor. Viene con el modelo; sacarlo implica dejar de
+        // usar la columna como estado de sesion.
+        // El WHERE extra evita reescribir una fila que ya esta en 'cliente', que es el caso
+        // normal de todos los logins.
         await database.query(
-            `UPDATE usuarios SET rol = 'cliente' WHERE id = ?`,
+            `UPDATE usuarios SET rol = 'cliente' WHERE id = ? AND rol <> 'cliente'`,
             [usuario.id]
         );
 
@@ -164,7 +197,7 @@ const inicioSesion = async (req, res) => {
                 usuario: {
                     id: usuario.id,
                     nombre: usuario.nombre,
-                    correo: usuario.email,
+                    email: usuario.email,
                     rol: 'cliente'
                 }
             }

@@ -17,13 +17,18 @@
 //Los endpoints de gestión están protegidos por `verificarToken` → `verificarRol('comercio')`
 //→ `resolverComercio`. Antes de probarlos hay que loguearse como comercio.
 //
-//`POST /api/inicioSesion`
+//`POST /api/inicioSesionComercio`
 //```json
 //{
-//  "correo": "ferreteria.central@test.com",
-//  "contrasena": "Test1234!"
+//  "email": "ferreteria.central@test.com",
+//  "contrasena": "Test1234!",
+//  "cuil": "20304050607"
 //}
 //```
+//
+//> **Tiene que ser este endpoint, no `/api/inicioSesion`.** Ese otro es el login de la app
+//> del cliente: devuelve un token con `rol: "cliente"`, con el que `verificarRol('comercio')`
+//> corta todo lo de esta guía en `403`. El login de comercio además pide el `cuil`.
 //
 //Del `datos.token` que devuelve, copiar el JWT y mandarlo en el header de cada request
 //protegido:

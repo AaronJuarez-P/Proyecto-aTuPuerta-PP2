@@ -51,27 +51,33 @@ Formato de respuesta uniforme en ambos:
 ```json
 {
   "nombre": "string",
-  "correo": "string",
+  "email": "string",
   "contrasena": "string",
-  "telefono": "string"
+  "telefono": "string",
+  "direccion_entrega": "string"
 }
 ```
 
+> Toda la API nombra este campo `email`, igual que la columna `usuarios.email`. Los seis endpoints de registro y login usan el mismo nombre.
+
 **Validaciones, en orden de ejecución:**
 
-1. **Campos obligatorios.** Si falta `nombre`, `correo`, `contrasena` o `telefono` → `400`, `"Todos los campos son obligatorios"`.
+1. **Campos obligatorios.** Si falta `nombre`, `email`, `contrasena`, `telefono` o `direccion_entrega` → `400`, `"Todos los campos son obligatorios"`.
 2. **Campos vacíos o solo espacios.** Se aplica `.trim()` a cada campo; si alguno queda vacío → `400`, `"Datos ingresados incompletos"`.
-3. **Email ya registrado.** Se consulta `SELECT id FROM usuarios WHERE email = ?` antes de insertar. Si ya existe una fila → `400`, `"Usuario ya registrado"`. (Esta validación es una capa adicional de UX; la base también rechaza duplicados por el `UNIQUE KEY uq_usuarios_email`, como red de seguridad ante condiciones de carrera.)
-4. **Hash de contraseña.** Recién después de pasar las validaciones anteriores, se genera el hash con `bcrypt.genSalt(10)` + `bcrypt.hash()`. La contraseña en texto plano nunca se guarda ni se loguea.
-5. **Inserción.** `INSERT INTO usuarios (nombre, email, contrasena, telefono)` — sin `rol`, que queda `NULL` por defecto en la base.
+3. **Formato del email.** `esEmailValido()` de `utils/validacion.js`. Si no pasa → `400`, `"El email no tiene un formato válido"`. Es una validación deliberadamente laxa: descarta lo obviamente mal escrito, no pretende cumplir el RFC 5322. Lo único que prueba de verdad que una dirección existe es mandarle un mail de verificación, que el proyecto todavía no hace.
+4. **Geocodificación de la dirección.** Se resuelve **antes** de abrir la transacción, porque es una llamada de red y ninguna llamada de red puede quedar adentro de una. Si falla, devuelve `null` y el usuario se crea igual con las coordenadas en `NULL` (ver *Geolocalización*).
+5. **Email ya registrado.** Se consulta `SELECT id FROM usuarios WHERE email = ? FOR UPDATE` antes de insertar. Si ya existe una fila → `400`, `"Usuario ya registrado"`. (Esta validación es una capa adicional de UX; la base también rechaza duplicados por el `UNIQUE KEY uq_usuarios_email`, como red de seguridad ante condiciones de carrera.)
+6. **Hash de contraseña.** Recién después de pasar las validaciones anteriores, se genera el hash con `bcrypt.genSalt(10)` + `bcrypt.hash()`. La contraseña en texto plano nunca se guarda ni se loguea.
+7. **Inserción.** Dentro de una transacción, `INSERT INTO usuarios (...)` con `rol = 'cliente'` y después `INSERT INTO clientes (...)` con la dirección y las coordenadas. Sin la segunda fila el usuario nunca podría usar el carrito.
 
 **Respuestas posibles:**
 
 | Código | Caso | `datos.mensaje` |
 |---|---|---|
-| `201` | Registro exitoso | `"Usuario registrado exitosamente {nombre}, {correo}, {telefono}"` |
+| `201` | Registro exitoso | `"Usuario registrado exitosamente {nombre}, {email}, {telefono}"` |
 | `400` | Campo faltante | `"Todos los campos son obligatorios"` |
 | `400` | Campo vacío / solo espacios | `"Datos ingresados incompletos"` |
+| `400` | Email con formato inválido | `"El email no tiene un formato válido"` |
 | `400` | Email ya registrado | `"Usuario ya registrado"` |
 | `500` | Error interno (ej. base caída) | `"Error interno del servidor"` |
 
@@ -82,33 +88,42 @@ Formato de respuesta uniforme en ambos:
 **Body esperado:**
 ```json
 {
-  "correo": "string",
+  "email": "string",
   "contrasena": "string"
 }
 ```
 
 **Validaciones, en orden de ejecución:**
 
-1. **Campos obligatorios.** Si falta `correo` o `contrasena` → `400`, `"Correo y contraseña son obligatorios"`.
+1. **Campos obligatorios.** Si falta `email` o `contrasena` → `400`, `"Email y contraseña son obligatorios"`.
 2. **Campos vacíos o solo espacios.** → `400`, `"Datos ingresados incompletos"`.
-3. **Existencia del usuario.** `SELECT * FROM usuarios WHERE email = ?`. Si no hay resultados → `401`, `"Correo o contraseña incorrectos"`.
-4. **Comparación de contraseña.** `bcrypt.compare(contrasena, usuario.contrasena)` contra el hash guardado (nunca se compara texto plano contra texto plano). Si no coincide → `401`, `"Correo o contraseña incorrectos"`.
+3. **Existencia del usuario, con perfil de cliente.** `SELECT ... FROM usuarios u INNER JOIN clientes c ON u.id = c.usuario_id WHERE u.email = ?`. Si no hay resultados → `401`, `"Email o contraseña incorrectos"`. El `INNER JOIN` es importante: este endpoint es el login de la app del cliente y solo sirve para usuarios que tengan perfil de cliente. Un comercio o un repartidor entran por el suyo.
+4. **Comparación de contraseña.** `bcrypt.compare(contrasena, usuario.contrasena)` contra el hash guardado (nunca se compara texto plano contra texto plano). Si no coincide → `401`, `"Email o contraseña incorrectos"`.
 5. **Usuario activo.** Si `usuario.activo` es `false` → `403`, `"Usuario inactivo"`. Va **después** de validar la contraseña a propósito: si fuera antes, un atacante sin credenciales podría averiguar qué cuentas existen y en qué estado están.
-6. **Generación de token.** `jwt.sign({ id, rol, comercioId }, JWT_SECRET, { expiresIn: '8h' })`. `comercioId` solo se incluye cuando el usuario tiene `rol = 'comercio'`, para que el token sea idéntico al que emite `/api/inicioSesionComercio`. Nota: `rol` puede llegar como `null` para cualquier usuario creado solo con `/api/registro`, hasta que el proyecto implemente la asignación de rol.
+6. **Rol de la sesión.** `UPDATE usuarios SET rol = 'cliente' WHERE id = ? AND rol <> 'cliente'`. Ver la nota de abajo.
+7. **Generación de token.** `jwt.sign({ id, rol: 'cliente' }, JWT_SECRET, { expiresIn: '8h' })`.
 
 **Respuestas posibles:**
 
 | Código | Caso | `datos.mensaje` |
 |---|---|---|
-| `200` | Login exitoso | — (`datos` trae `token` y `usuario: { id, nombre, correo, rol, comercioId }`) |
-| `400` | Campo faltante | `"Correo y contraseña son obligatorios"` |
+| `200` | Login exitoso | — (`datos` trae `token` y `usuario: { id, nombre, email, rol }`) |
+| `400` | Campo faltante | `"Email y contraseña son obligatorios"` |
 | `400` | Campo vacío / solo espacios | `"Datos ingresados incompletos"` |
-| `401` | Email no existe | `"Correo o contraseña incorrectos"` |
-| `401` | Contraseña incorrecta | `"Correo o contraseña incorrectos"` |
+| `401` | Email no existe, o no tiene perfil de cliente | `"Email o contraseña incorrectos"` |
+| `401` | Contraseña incorrecta | `"Email o contraseña incorrectos"` |
 | `403` | Usuario inactivo | `"Usuario inactivo"` |
 | `500` | Error interno | `"Error interno del servidor"` |
 
-> **Resuelto:** los casos "email no existe" y "contraseña incorrecta" ahora devuelven exactamente el mismo mensaje genérico, para que un atacante no pueda confirmar qué emails están registrados.
+> Los casos "email no existe" y "contraseña incorrecta" devuelven exactamente el mismo mensaje genérico, para que un atacante no pueda confirmar qué emails están registrados probando de a uno. Lo mismo vale para los logins de comercio y de repartidor.
+
+#### `usuarios.rol` es el rol de la sesión, no lo que el usuario es
+
+Los tres logins fijan `usuarios.rol` al entrar y los dos `cerrarSesion` lo devuelven a `'cliente'`. Los middlewares `resolverComercio` y `resolverRepartidor` consultan esa columna contra la base en vez de confiar en el rol del token, justamente para que cerrar sesión sirva de algo: el JWT ya emitido sigue diciendo `'repartidor'` hasta que expira.
+
+La consecuencia es que **un usuario tiene un solo rol activo por vez**. Si alguien es cliente y repartidor, entrar por `/api/inicioSesion` cierra de hecho su sesión de repartidor. Es una limitación conocida del diseño; sacarla implicaría dejar de usar la columna como estado de sesión, que toca los tres logins, los dos `cerrarSesion` y los dos middlewares.
+
+El `INNER JOIN clientes` del punto 3 acota el daño: antes, **cualquier** usuario podía autenticarse acá y quedaba con el rol pisado, incluidos los comercios y los repartidores de la semilla, que ni siquiera tienen perfil de cliente. Se llevaban un token que no les servía para el carrito y perdían el acceso a sus propios endpoints hasta volver a entrar por el login que les corresponde.
 
 ---
 

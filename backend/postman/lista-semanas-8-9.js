@@ -44,11 +44,11 @@
 //|---|---|---|
 //| Lucía (repartidora, bicicleta) | `POST /inicioSesionRepartidor` | `{ "email": "lucia.repartidor@test.com", "contrasena": "Test1234!" }` |
 //| Carlos (repartidor, moto) | `POST /inicioSesionRepartidor` | `{ "email": "carlos.repartidor@test.com", "contrasena": "Test1234!" }` |
-//| María (clienta) | `POST /inicioSesion` | `{ "correo": "maria.gomez@test.com", "contrasena": "Test1234!" }` |
-//| Juan (cliente, solo para 9.20) | `POST /inicioSesion` | `{ "correo": "juan.perez@test.com", "contrasena": "Test1234!" }` |
+//| María (clienta) | `POST /inicioSesion` | `{ "email": "maria.gomez@test.com", "contrasena": "Test1234!" }` |
+//| Juan (cliente, solo para 9.20) | `POST /inicioSesion` | `{ "email": "juan.perez@test.com", "contrasena": "Test1234!" }` |
 //
-//> El login de **cliente** pide `correo`; el de **repartidor** pide `email`. No es un error
-//> de tipeo de la guía.
+//> Los cuatro logins de la API usan `email`, igual que la columna `usuarios.email`. El de
+//> comercio, que acá no hace falta, pide además el `cuil`.
 //
 //El token va así:
 //
@@ -124,7 +124,7 @@
 //| 9.18 | `GET /pedido/ruta/4` | María | `403` · "No tenés permisos para acceder a este recurso" |
 //| 9.19 | `GET /pedido/ruta/4` sin header | — | `401` · "Token no proporcionado" |
 //| 9.20 🔧 | `POST /carrito/agregar` → `{ "id_producto": 1, "cantidad": 1 }`, y después `POST /carrito/confirmar` → `{}` | Juan | `201` **igual** · `distancia_km 1.09`, `tiempo_estimado 3`, `comision 587.2`, `origen_datos "estimado"`. En la consola del servidor: `[maps] Directions API fallo` … `Falta MAPS_ACCESS_TOKEN en el .env para usar MAPS_MODO=real` |
-//| 9.21 🔧 | `POST /registro` → `{ "nombre": "Prueba", "correo": "prueba.geo@test.com", "contrasena": "Test1234!", "telefono": "3421999999", "direccion_entrega": "Sarmiento 100, Santo Tomé" }` | — | `201` · el usuario se crea lo mismo, con `latitud` y `longitud` en `NULL`. Nadie se queda sin poder registrarse porque un tercero no contestó |
+//| 9.21 🔧 | `POST /registro` → `{ "nombre": "Prueba", "email": "prueba.geo@test.com", "contrasena": "Test1234!", "telefono": "3421999999", "direccion_entrega": "Sarmiento 100, Santo Tomé" }` | — | `201` · el usuario se crea lo mismo, con `latitud` y `longitud` en `NULL`. Nadie se queda sin poder registrarse porque un tercero no contestó |
 //| 9.22 🔧 | Login de `prueba.geo@test.com`, `POST /carrito/agregar` → `{ "id_producto": 3, "cantidad": 2 }`, y después `POST /carrito/confirmar` → `{}` | el nuevo | `201` · `origen_datos "mock"`, y las coordenadas de ese cliente ya **no** están en `NULL`: se rellenaron solas al necesitarlas |
 //| 9.23 🔧 | `GET /pedido/ruta/4` | Lucía | `500` · "Error interno del servidor" |
 //

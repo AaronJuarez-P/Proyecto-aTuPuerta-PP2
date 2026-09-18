@@ -37,7 +37,7 @@
 //`POST /api/inicioSesion`
 //```json
 //{
-//  "correo": "juan.perez@test.com",
+//  "email": "juan.perez@test.com",
 //  "contrasena": "Test1234!"
 //}
 //```

@@ -2,6 +2,7 @@ const database = require('../database/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { geocodificarDireccion } = require('../services/maps.service');
+const { esEmailValido } = require('../utils/validacion');
 
 // Registra el perfil de comercio para un usuario que YA existe como cliente.
 // Requiere email + contraseña real del usuario para autorizar la operación.
@@ -40,6 +41,14 @@ const registroComercio = async (req, res) => {
                 codigo: 400,
                 estado: "error",
                 datos: { mensaje: "Ningún campo puede estar vacío" }
+            });
+        }
+
+        if (!esEmailValido(email)) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El email no tiene un formato válido" }
             });
         }
 
@@ -204,11 +213,15 @@ const iniciarSesionComercio = async (req, res) => {
             [cuil, email]
         );
 
+        // Los dos casos de credenciales rechazadas contestan exactamente lo mismo, para que
+        // nadie pueda averiguar que combinaciones de email y CUIL estan registradas
+        // probando de a una. Antes este primero devolvia un 400, que ademas es el codigo
+        // equivocado para unas credenciales que se rechazan.
         if (comercioExistente.length === 0) {
-            return res.status(400).json({
-                codigo: 400,
+            return res.status(401).json({
+                codigo: 401,
                 estado: "error",
-                datos: { mensaje: "Credenciales incorrectas o comercio no registrado" }
+                datos: { mensaje: "Email o contraseña incorrectos" }
             });
         }
 
@@ -221,7 +234,7 @@ const iniciarSesionComercio = async (req, res) => {
             return res.status(401).json({
                 codigo: 401,
                 estado: "error",
-                datos: { mensaje: "Credenciales inválidas" }
+                datos: { mensaje: "Email o contraseña incorrectos" }
             });
         }
 

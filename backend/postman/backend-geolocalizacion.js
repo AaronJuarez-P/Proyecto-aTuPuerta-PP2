@@ -57,15 +57,13 @@
 //
 //**Cliente** → `POST /api/inicioSesion`
 //```json
-//{ "correo": "maria.gomez@test.com", "contrasena": "Test1234!" }
+//{ "email": "maria.gomez@test.com", "contrasena": "Test1234!" }
 //```
 //
 //**Repartidora** → `POST /api/inicioSesionRepartidor`
 //```json
 //{ "email": "lucia.repartidor@test.com", "contrasena": "Test1234!" }
 //```
-//
-//> Ojo: el login de cliente pide `correo`, el de repartidor pide `email`.
 //
 //```
 //Authorization: <el token, sin la palabra Bearer>
@@ -465,7 +463,7 @@
 //### Caso 21 — Registrarse con `MAPS_MODO=real` y sin access token
 //**Request:** `POST /api/registro`
 //```json
-//{ "nombre": "Prueba", "correo": "prueba.geo@test.com", "contrasena": "Test1234!",
+//{ "nombre": "Prueba", "email": "prueba.geo@test.com", "contrasena": "Test1234!",
 //  "telefono": "3421999999", "direccion_entrega": "Sarmiento 100, Santo Tomé" }
 //```
 //**Respuesta esperada:** `201 Created`. El alta funciona igual.
@@ -559,7 +557,7 @@
 //
 //**Request:** `POST /api/registro` con una dirección que exista de verdad
 //```json
-//{ "nombre": "Prueba Real", "correo": "prueba.real@test.com", "contrasena": "Test1234!",
+//{ "nombre": "Prueba Real", "email": "prueba.real@test.com", "contrasena": "Test1234!",
 //  "telefono": "3421888888", "direccion_entrega": "Boulevard Gálvez 1150, Santa Fe" }
 //```
 //**Verificación en base:**

@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const database = require('../database/database');
+const { esEmailValido } = require('../utils/validacion');
 
 // Registra el perfil de repartidor para un usuario que YA existe como cliente.
 const registroRepartidor = async (req, res) => {
@@ -37,6 +38,14 @@ const registroRepartidor = async (req, res) => {
                 codigo: 400,
                 estado: "error",
                 datos: { mensaje: "Ningún campo puede estar vacío" }
+            });
+        }
+
+        if (!esEmailValido(email)) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El email no tiene un formato válido" }
             });
         }
 
@@ -162,7 +171,7 @@ const iniciarSesionRepartidor = async (req, res) => {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
-                datos: { mensaje: "Correo y contraseña son obligatorios" }
+                datos: { mensaje: "Email y contraseña son obligatorios" }
             });
         }
 
@@ -183,11 +192,13 @@ const iniciarSesionRepartidor = async (req, res) => {
             [email]
         );
 
+        // Los dos casos de credenciales rechazadas contestan exactamente lo mismo, para que
+        // nadie pueda averiguar que emails estan registrados probando de a uno.
         if (usuarios.length === 0) {
             return res.status(401).json({
                 codigo: 401,
                 estado: "error",
-                datos: { mensaje: "Usuario no encontrado" }
+                datos: { mensaje: "Email o contraseña incorrectos" }
             });
         }
 
@@ -197,7 +208,7 @@ const iniciarSesionRepartidor = async (req, res) => {
             return res.status(401).json({
                 codigo: 401,
                 estado: "error",
-                datos: { mensaje: "Contraseña incorrecta" }
+                datos: { mensaje: "Email o contraseña incorrectos" }
             });
         }
 
@@ -232,7 +243,7 @@ const iniciarSesionRepartidor = async (req, res) => {
                 usuario: {
                     id: usuario.id,
                     nombre: usuario.nombre,
-                    correo: usuario.email,
+                    email: usuario.email,
                     rol: "repartidor",
                     repartidorId: usuario.repartidor_id
                 },
