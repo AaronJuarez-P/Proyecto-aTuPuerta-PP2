@@ -1,14 +1,20 @@
-//# Lista para correr en Postman — Semanas 8 y 9
+//# Lista para correr en Postman — Semanas 8, 9 y 10
 //
-//Todas las requests de las dos semanas, en orden, en una sola lista. Es para ir tildando
+//Todas las requests de las tres semanas, en orden, en una sola lista. Es para ir tildando
 //mientras se prueba: el detalle de cada caso —el JSON completo, por qué el endpoint hace lo
 //que hace, las verificaciones en la base— está en las guías largas:
 //
 //- `postman/backend-repartidores.js` — semana 8 (CU19, CU20)
 //- `postman/backend-geolocalizacion.js` — semana 9 (CU21, CU22)
+//- `postman/backend-seguimiento.js` — semana 10 (CU08, CU26)
 //
 //La numeración es la misma que la de esas guías: el `9.7` de acá es el "Caso 7" de
 //`backend-geolocalizacion.js`.
+//
+//> **La semana 10 no se corre entera con Postman.** El endpoint REST sí, pero el canal en
+//> tiempo real necesita un cliente de Socket.IO, que es un protocolo propio arriba de
+//> WebSocket y no el WebSocket crudo que Postman soporta. Para eso está
+//> `scripts/cliente-seguimiento.js`, que se deja corriendo en otra terminal.
 //
 //Base URL: `http://localhost:4000/api`
 //
@@ -133,6 +139,58 @@
 //comercio.
 //
 //---
+//---
+//
+//# Semana 10 — Seguimiento en tiempo real (CU08, CU26)
+//
+//> **Reimportar `aTuPuerta.sql` antes de empezar esta parte.** No porque la semana 10 cambie
+//> el esquema —es la primera que no lo toca— sino porque los casos salen del estado semilla
+//> y usan el pedido 1, que las semanas 8 y 9 dejan entregado.
+//
+//> **Hacen falta tres terminales**: `npm run dev`, `node scripts/cliente-seguimiento.js`, y
+//> Postman. Al arrancar el servidor tienen que aparecer **dos** líneas en la consola:
+//> `Canal de tiempo real activo (Socket.IO)` y `Servidor corriendo en puerto 4000`. Si falta
+//> la primera, todo lo del 10.8 en adelante falla.
+//
+//## Parte REST — `GET /pedidos/:id/seguimiento` (esto sí es Postman)
+//
+//| # | Request | Token | Tiene que dar |
+//|---|---|---|---|
+//| 10.1 | `GET /pedidos/1/seguimiento` sin header | — | `401` · "Token no proporcionado" |
+//| 10.2 | `GET /pedidos/1/seguimiento` | Carlos | `403` · "No tenés permisos para acceder a este recurso". Es del pedido y aun así no entra: el endpoint es del lado cliente. Por el socket sí puede (10.9) |
+//| 10.3 | `GET /pedidos/2/seguimiento` | Juan | `403` · "Ese pedido no es tuyo" |
+//| 10.4 | `GET /pedidos/9999/seguimiento` | Juan | `404` · "Pedido no encontrado" |
+//| 10.5 | `GET /pedidos/abc/seguimiento` | Juan | `400` · "El id del pedido no es válido" |
+//| 10.6 ⭐ | `GET /pedidos/1/seguimiento` | Juan | `200` · `seguimiento_activo: true`, `ubicacion -31.672 / -60.7818`, `destino -31.6715 / -60.769`, `eta.minutos 4`, `ruta.distancia_km 1.58`, `repartidor { "Carlos Rodríguez", "moto" }`, mensaje "Tu pedido está en camino." |
+//| 10.6b | `GET /pedido/ruta/1` | Carlos | `200` · `2.81 km / 8 min`. **Mostrar los dos juntos**: la del cliente va derecho a la puerta, la del repartidor pasa por el comercio |
+//| 10.7 | `GET /pedidos/2/seguimiento` y `GET /pedidos/3/seguimiento` | María | `200` los dos · todo en `null` y `seguimiento_activo: false`. Mensajes "Todavía no pagaste este pedido." y "El comercio está preparando tu pedido." |
+//
+//> Este endpoint **nunca devuelve 409**, a diferencia de `GET /pedido/ruta/:idPedido`. El
+//> repartidor sin ubicación registrada puede arreglarlo mandando un ping; el cliente no
+//> puede arreglar nada y necesita una pantalla que se dibuje igual.
+//
+//## Parte socket — `node scripts/cliente-seguimiento.js <token> <pedidoId>`
+//
+//| # | Qué correr | Tiene que dar |
+//|---|---|---|
+//| 10.8 | El script con `""` y con `esto-no-es-un-jwt` | `connect_error: Token no proporcionado (codigo 401)` y `Token inválido o expirado (codigo 401)` |
+//| 10.9 | El script con el token de Juan y el pedido `2` | ack `403` · "Ese pedido no es tuyo". Con el token de **Carlos** y el pedido 1, en cambio, ack `200`: por el socket la autorización es por pertenencia, no por rol |
+//| 10.10 ⭐ | El script con Juan y el pedido 1, y después 12 × `POST /repartidor/ubicacion` con Carlos, acercándose a `-31.6715, -60.769` | Un evento `UBICACION` por POST, con el **ETA bajando**, y `ruta` solo en el ping 1 y en el 11 |
+//| 10.11 | Con el script abierto, `GET /pedidos/1/seguimiento` | El `eta` coincide con el del último evento. Los dos caminos usan la misma función y la misma caché |
+//| 10.12 ⭐ | Con el script abierto, `PATCH /pedido/entrega/1` → `{ "codigoPedido": "12345678" }` | Evento `ESTADO -> entregado`, `seguimiento_activo: false` |
+//| 10.12b | Con el script en el pedido 2 y el token de María: `POST /pagos/simular` → `{ "pedido_id": 2, "resultado": "approved" }` | Evento `ESTADO -> en_preparacion`. Con `"rejected"`, `cancelado`; con `PATCH /pedido/asignar/2`, `en_camino` |
+//| 10.13 | `GET /pedidos/1/seguimiento` después de 10.12 | `200` · `entregado`, `ubicacion` = el punto de la entrega, `eta: null`, `ruta: null` |
+//| 10.14 | Con el script corriendo, `Ctrl+C` al servidor y `npm run dev` otra vez. Después un ping | `desconectado` → `conectado` → `seguir_pedido -> 200`, y el ping llega igual. **Socket.IO reconecta solo pero NO vuelve a entrar a las salas**: por eso el script se resuscribe en cada `connect` |
+//| 10.15 | Cerrar el script y mandar `POST /repartidor/ubicacion` | `201` igual, y la fila queda en la base. Con la sala vacía el backend ni consulta el pedido ni calcula ETA: corta antes |
+//
+//Los entregables para la defensa son **10.6, 10.10, 10.12 y 10.14**: la pantalla del
+//cliente, la ubicación en vivo con el ETA bajando, el cambio de estado sin refrescar, y la
+//reconexión.
+//
+//> **El evento de `en_camino` no lleva el código de entrega**, aunque la asignación lo
+//> genere: en la sala del pedido están el cliente **y** el repartidor.
+//
+//---
 //
 //## 🔧 Los que necesitan algo más que Postman
 //
@@ -181,11 +239,14 @@
 //## Checklist de corrida
 //
 //- [ ] MySQL prendido y `aTuPuerta.sql` recién importado
+//- [ ] `npm install` corrido (la semana 10 suma `socket.io` y `socket.io-client`)
 //- [ ] `.env` con `MAPS_MODO=mock` y `MP_MODO=mock`
-//- [ ] `npm run dev` sin errores en la consola
-//- [ ] Tokens de Lucía, Carlos y María en `Authorization`, **sin** `Bearer`
+//- [ ] `npm run dev` sin errores, y con las **dos** líneas en la consola
+//- [ ] Tokens de Lucía, Carlos, María y Juan en `Authorization`, **sin** `Bearer`
 //- [ ] Semana 8: casos 8.1 a 8.25, en orden
 //- [ ] Reimportar la base
 //- [ ] Semana 9: casos 9.1 a 9.23, en orden
+//- [ ] Reimportar la base
+//- [ ] Semana 10: casos 10.1 a 10.15, en orden, con las tres terminales abiertas
 //- [ ] Dejar el `.env` en `MAPS_MODO=mock` al terminar
 //- [ ] La consola del servidor abierta: los casos 🔧 de Mapbox se comprueban ahí

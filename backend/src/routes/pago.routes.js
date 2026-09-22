@@ -8,10 +8,13 @@ const {
     retornoPago
 } = require('../controllers/pago.controller');
 const { verificarToken, verificarRol } = require('../middlewares/autenticacion.middleware');
+const { resolverCliente } = require('../middlewares/cliente.middleware');
 
-// El pago siempre lo inicia el cliente dueño del pedido, que se resuelve por
-// req.usuario.id contra la tabla clientes.
-const soloCliente = [verificarToken, verificarRol('cliente')];
+// El pago siempre lo inicia el cliente dueño del pedido. resolverCliente (semana 10)
+// deja el id en req.clienteId: antes cada handler lo resolvia por su cuenta con un
+// helper local, tres veces el mismo SELECT. Ademas valida contra la base que el usuario
+// siga activo y siga siendo cliente, igual que soloRepartidor y soloComercio.
+const soloCliente = [verificarToken, verificarRol('cliente'), resolverCliente];
 
 // CU07 - Realizar pago
 router.post('/pedidos/:id/pagar', soloCliente, iniciarPago);

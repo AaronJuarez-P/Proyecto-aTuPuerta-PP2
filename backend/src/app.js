@@ -13,6 +13,7 @@ const pagoRoutes              = require("./routes/pago.routes");
 const pedidoRoutes            = require("./routes/pedido.routes");
 const repartidorRoutes        = require("./routes/repartidor.routes");
 const notificacionRoutes      = require("./routes/notificacion.routes");
+const seguimientoRoutes       = require("./routes/seguimiento.routes");
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use("/api", pagoRoutes);
 app.use("/api", pedidoRoutes);
 app.use("/api", repartidorRoutes);
 app.use("/api", notificacionRoutes);
+app.use("/api", seguimientoRoutes);
 app.get("/health", (req, res) => {
   res.json({ codigo: 200, estado: "ok", datos: { mensaje: "Servidor activo" } });
 });

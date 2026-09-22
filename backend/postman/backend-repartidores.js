@@ -492,5 +492,5 @@
 //- [ ] Correr los casos en orden (cada uno deja la base lista para el siguiente)
 //
 //> Si ya conocés los casos y solo querés volver a correrlos para ver que nada se rompió,
-//> `postman/lista-semanas-8-9.js` los tiene todos resumidos en una tabla, en orden, junto
-//> con los de la semana 9.
+//> `postman/lista-semanas-8-10.js` los tiene todos resumidos en una tabla, en orden, junto
+//> con los de las semanas 9 y 10.

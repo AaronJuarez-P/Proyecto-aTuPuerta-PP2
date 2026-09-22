@@ -5,6 +5,7 @@ const {
     buscarPedidoEnCurso
 } = require('../services/repartidor.service');
 const { registrarUbicacion } = require('../services/ubicacion.service');
+const { emitirUbicacionDePedido } = require('../services/tiemporeal.service');
 const { obtenerLatitudValida, obtenerLongitudValida } = require('../utils/validacion');
 
 // GET /api/repartidor/disponibilidad
@@ -159,6 +160,24 @@ const registrarUbicacionRepartidor = async (req, res) => {
         });
 
         await connection.commit();
+
+        // CU26 (semana 10): avisarle al cliente que el repartidor se movio.
+        //
+        // Va DESPUES del commit: lo que se anuncia ya tiene que estar en la base, o un
+        // rollback dejaria al cliente viendo una posicion que no existe.
+        //
+        // Y va SIN await a proposito. El recalculo del ETA puede pegarle a Mapbox (hasta
+        // 5 segundos) y esta funcion todavia no solto su conexion: el release recien pasa
+        // en el finally, cuando el handler retorna. Esperar la emision seria tener una de
+        // las 10 conexiones del pool tomada durante una llamada de red, con un repartidor
+        // que pingea cada pocos segundos. El .catch vacio no es opcional: sin el, una
+        // promesa rechazada sin manejar voltea el proceso.
+        emitirUbicacionDePedido({
+            pedidoId: pedidoEnCurso,
+            ubicacionId,
+            latitud,
+            longitud
+        }).catch(() => {});
 
         return res.status(201).json({
             codigo: 201,

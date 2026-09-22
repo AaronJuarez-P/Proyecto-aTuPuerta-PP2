@@ -16,6 +16,10 @@
     "jsonwebtoken": "^9.0.2",
     "mercadopago": "^3.6.0",
     "morgan": "^1.10.0",
-    "mysql2": "^3.9.7"
+    "mysql2": "^3.9.7",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3"
   }
 }

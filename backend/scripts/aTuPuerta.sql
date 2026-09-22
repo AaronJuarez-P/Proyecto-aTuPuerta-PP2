@@ -371,6 +371,31 @@ ALTER TABLE ubicaciones_repartidor
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- =====================================================================
+-- SEMANA 10 - SEGUIMIENTO EN TIEMPO REAL (CU08, CU26)
+--
+-- SIN CAMBIOS DE ESQUEMA. Es la primera semana que no toca la base, y la
+-- decisión se evaluó, no se pasó por alto:
+--
+--   * El seguimiento lee ubicaciones_repartidor con idx_ubicaciones_pedido,
+--     que la semana 9 ya creó justamente para esto (ver el comentario de
+--     arriba). El resto de las consultas nuevas van por pedidos.id o por
+--     claves foráneas que ya están indexadas.
+--
+--   * Se evaluó pasar registrado_en a TIMESTAMP(3), porque con precisión de
+--     segundos dos pings del mismo segundo quedan empatados. No hizo falta:
+--     las consultas ya desempatan con ORDER BY registrado_en DESC, id DESC, y
+--     los eventos del socket viajan con el id de la ubicación, que es
+--     autoincremental y por lo tanto monótono. Cambiar la columna obligaría a
+--     reimportar esta base entera —el script arranca con DROP DATABASE— y las
+--     guías de prueba de las semanas 8 y 9 dependen del estado semilla.
+--
+--   * El ETA no se persiste. pedidos.tiempo_estimado es la foto del checkout;
+--     el ETA en vivo es efímero, caduca con el próximo ping y vive en memoria.
+--
+-- Por eso esta semana NO hace falta reimportar la base.
+-- =====================================================================
+
+-- =====================================================================
 -- DATOS DE PRUEBA
 -- Contraseña en texto plano para TODOS los usuarios de prueba: Test1234!
 -- El valor almacenado es el hash bcrypt (costo 10) de esa contraseña, para que

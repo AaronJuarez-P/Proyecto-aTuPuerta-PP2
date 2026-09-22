@@ -3,6 +3,7 @@ const database = require('../database/database');
 const { asignarPedidoARepartidor, confirmarEntregaPedido } = require('../services/pedido.service');
 const { bloquearRepartidor, actualizarDisponibilidad } = require('../services/repartidor.service');
 const { registrarNotificacion } = require('../services/notificacion.service');
+const { emitirEstadoDePedido } = require('../services/tiemporeal.service');
 const { calcularRuta } = require('../services/maps.service');
 const {
     registrarUbicacion,
@@ -285,6 +286,14 @@ const asignarPedido = async (req, res) => {
 
         await connection.commit();
 
+        // CU26 (semana 10): el cliente que tenga la pantalla de seguimiento abierta ve
+        // el cambio sin tener que refrescar. Despues del commit y sin await, igual que
+        // el ping de ubicacion (ver tiemporeal.service.js).
+        //
+        // El evento NO lleva el codigo de entrega, por el mismo motivo que la respuesta
+        // de abajo tampoco: en la sala del pedido esta el cliente Y el repartidor.
+        emitirEstadoDePedido({ pedidoId, estado: 'en_camino' }).catch(() => {});
+
         // El codigo NO va en la respuesta: lo tiene que dictar el cliente. Si el
         // repartidor lo recibiera aca, podria confirmar una entrega que nunca hizo.
         return res.status(200).json({
@@ -398,6 +407,10 @@ const entregaPedido = async (req, res) => {
         });
 
         await connection.commit();
+
+        // Ultimo evento del pedido. El emisor se encarga ademas de olvidar la sesion de
+        // ETA en memoria: entregado es terminal, no va a haber mas pings.
+        emitirEstadoDePedido({ pedidoId, estado: 'entregado' }).catch(() => {});
 
         return res.status(200).json({
             codigo: 200,

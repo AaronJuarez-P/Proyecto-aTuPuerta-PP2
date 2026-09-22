@@ -588,5 +588,5 @@
 //- [ ] Los Casos 24 y 25 son aparte: solo se pueden correr con un access token de Mapbox
 //
 //> Si ya conocés los casos y solo querés volver a correrlos para ver que nada se rompió,
-//> `postman/lista-semanas-8-9.js` los tiene todos resumidos en una tabla, en orden, junto
-//> con los de la semana 8.
+//> `postman/lista-semanas-8-10.js` los tiene todos resumidos en una tabla, en orden, junto
+//> con los de las semanas 8 y 10.

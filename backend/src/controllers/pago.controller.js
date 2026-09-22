@@ -1,11 +1,36 @@
 const database = require('../database/database');
 const { esModoMock, crearPreferencia, consultarPago, validarFirmaWebhook } = require('../services/pago.service');
 const { cambiarEstadoPedido, restaurarStockPedido } = require('../services/pedido.service');
+const { emitirEstadoDePedido } = require('../services/tiemporeal.service');
 const { obtenerIdValido } = require('../utils/validacion');
 
 // Estados de pagos.estado de los que ya no se vuelve. Si el pago esta en uno de estos,
 // una notificacion repetida no tiene que volver a tocar nada.
 const ESTADOS_TERMINALES = ['aprobado', 'rechazado', 'fallido'];
+
+// A que estado quedo el PEDIDO segun como salio el PAGO (semana 10, CU26).
+//
+// aplicarResultadoPago no cuenta el estado del pedido, cuenta el del pago, y no todos
+// los resultados mueven el pedido: 'ya_procesado', 'pendiente', 'sin_pago' y
+// 'sin_pedido' lo dejan donde estaba. Solo los de este mapa emiten, y es lo que impide
+// que el reintento de un webhook de MercadoPago le anuncie dos veces al cliente un
+// cambio que paso una sola vez.
+const ESTADO_SEGUN_RESULTADO = {
+    aprobado:       'en_preparacion',
+    rechazado:      'cancelado',
+    fallido:        'cancelado',
+    monto_invalido: 'cancelado'
+};
+
+// Se llama despues del commit y sin await, igual que el resto de las emisiones
+// (ver la regla en el encabezado de tiemporeal.service.js).
+const avisarCambioDeEstado = (pedidoId, resultado) => {
+    const estado = ESTADO_SEGUN_RESULTADO[resultado];
+
+    if (estado) {
+        emitirEstadoDePedido({ pedidoId, estado }).catch(() => {});
+    }
+};
 
 // pagos.motivo_rechazo es VARCHAR(255)
 const LARGO_MAXIMO_MOTIVO = 255;
@@ -14,19 +39,13 @@ const LARGO_MAXIMO_MOTIVO = 255;
 // Helpers
 // ---------------------------------------------------------------------------
 
-// Devuelve { clienteId } o { error: { codigo, mensaje } }
-const resolverClienteId = async (conexion, usuarioId) => {
-    const [clientes] = await conexion.query(
-        `SELECT id FROM clientes WHERE usuario_id = ?`,
-        [usuarioId]
-    );
-
-    if (clientes.length === 0) {
-        return { error: { codigo: 404, mensaje: "No existe un perfil de cliente para este usuario" } };
-    }
-
-    return { clienteId: clientes[0].id };
-};
+// El cliente_id lo resuelve el middleware resolverCliente y llega en req.clienteId
+// (semana 10). Hasta entonces habia un helper local que hacia el mismo SELECT en los
+// tres handlers de este archivo.
+//
+// Ahora se resuelve FUERA de la transaccion, no adentro como antes. Es seguro:
+// clientes.usuario_id no cambia a mitad de un request, y es el mismo criterio que
+// resolverRepartidor y resolverComercio ya venian aceptando.
 
 // Busca un pedido y verifica que sea del cliente autenticado.
 // Sirve tanto con el pool como con una conexion de transaccion.
@@ -189,16 +208,7 @@ const iniciarPago = async (req, res) => {
             });
         }
 
-        const { clienteId, error: errorCliente } = await resolverClienteId(connection, req.usuario.id);
-        if (errorCliente) {
-            return res.status(errorCliente.codigo).json({
-                codigo: errorCliente.codigo,
-                estado: "error",
-                datos: { mensaje: errorCliente.mensaje }
-            });
-        }
-
-        const { pedido, error } = await buscarPedidoDelCliente(connection, id, clienteId);
+        const { pedido, error } = await buscarPedidoDelCliente(connection, id, req.clienteId);
         if (error) {
             return res.status(error.codigo).json({
                 codigo: error.codigo,
@@ -353,6 +363,8 @@ const recibirWebhook = async (req, res) => {
         const { resultado } = await aplicarResultadoPago(connection, datosPago);
         await connection.commit();
 
+        avisarCambioDeEstado(datosPago.pedidoId, resultado);
+
         return res.status(200).json({
             codigo: 200,
             estado: "exito",
@@ -396,16 +408,7 @@ const consultarPagoPedido = async (req, res) => {
             });
         }
 
-        const { clienteId, error: errorCliente } = await resolverClienteId(database, req.usuario.id);
-        if (errorCliente) {
-            return res.status(errorCliente.codigo).json({
-                codigo: errorCliente.codigo,
-                estado: "error",
-                datos: { mensaje: errorCliente.mensaje }
-            });
-        }
-
-        const { pedido, error } = await buscarPedidoDelCliente(database, id, clienteId);
+        const { pedido, error } = await buscarPedidoDelCliente(database, id, req.clienteId);
         if (error) {
             return res.status(error.codigo).json({
                 codigo: error.codigo,
@@ -485,16 +488,7 @@ const simularPago = async (req, res) => {
             });
         }
 
-        const { clienteId, error: errorCliente } = await resolverClienteId(connection, req.usuario.id);
-        if (errorCliente) {
-            return res.status(errorCliente.codigo).json({
-                codigo: errorCliente.codigo,
-                estado: "error",
-                datos: { mensaje: errorCliente.mensaje }
-            });
-        }
-
-        const { pedido, error } = await buscarPedidoDelCliente(connection, id, clienteId);
+        const { pedido, error } = await buscarPedidoDelCliente(connection, id, req.clienteId);
         if (error) {
             return res.status(error.codigo).json({
                 codigo: error.codigo,
@@ -518,6 +512,8 @@ const simularPago = async (req, res) => {
         });
 
         await connection.commit();
+
+        avisarCambioDeEstado(id, respuesta.resultado);
 
         return res.status(200).json({
             codigo: 200,

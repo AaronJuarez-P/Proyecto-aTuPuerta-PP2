@@ -9,14 +9,16 @@ Backend del proyecto anual Practica Profesionalizante 2. Node.js + Express + MyS
 ```
 backend/
 ├── scripts/
-│   └── aTuPuerta.sql
+│   ├── aTuPuerta.sql
+│   └── cliente-seguimiento.js      <- cliente de socket para probar el tiempo real a mano
 ├── postman/
 │   ├── backend-registro.js         <- guía de pruebas: registro y login
 │   ├── backend-productos.js        <- guía de pruebas: catálogo y stock
 │   ├── backend-pagos.js            <- guía de pruebas: pagos (CU07)
 │   ├── backend-repartidores.js     <- guía de pruebas: repartidores (CU19, CU20)
 │   ├── backend-geolocalizacion.js  <- guía de pruebas: ubicación y rutas (CU21, CU22)
-│   └── lista-semanas-8-9.js        <- las semanas 8 y 9 en una sola lista, para ir tildando
+│   ├── backend-seguimiento.js      <- guía de pruebas: tiempo real (CU08, CU26)
+│   └── lista-semanas-8-10.js       <- las semanas 8, 9 y 10 en una sola lista, para ir tildando
 ├── src/
 │   ├── controllers/
 │   │   ├── registro.controller.js
@@ -28,11 +30,13 @@ backend/
 │   │   ├── pago.controller.js
 │   │   ├── pedido.controller.js
 │   │   ├── repartidor.controller.js
-│   │   └── notificacion.controller.js
+│   │   ├── notificacion.controller.js
+│   │   └── seguimiento.controller.js
 │   ├── database/
 │   │   └── database.js
 │   ├── middlewares/
 │   │   ├── autenticacion.middleware.js
+│   │   ├── cliente.middleware.js
 │   │   ├── comercio.middleware.js
 │   │   └── repartidor.middleware.js
 │   ├── routes/
@@ -45,7 +49,8 @@ backend/
 │   │   ├── pago.routes.js
 │   │   ├── pedido.routes.js
 │   │   ├── repartidor.routes.js
-│   │   └── notificacion.routes.js
+│   │   ├── notificacion.routes.js
+│   │   └── seguimiento.routes.js
 │   ├── services/
 │   │   ├── auditoria.service.js
 │   │   ├── pedido.service.js       <- estados del pedido, stock, asignación, entrega y comisión
@@ -53,7 +58,9 @@ backend/
 │   │   ├── maps.service.js         <- adaptador de Mapbox (Directions + Geocoding)
 │   │   ├── ubicacion.service.js    <- posiciones del repartidor y coordenadas guardadas
 │   │   ├── repartidor.service.js   <- disponibilidad del repartidor
-│   │   └── notificacion.service.js
+│   │   ├── notificacion.service.js
+│   │   ├── seguimiento.service.js  <- negocio del seguimiento: autorización, ETA y su caché
+│   │   └── tiemporeal.service.js   <- adaptador de Socket.IO (handshake, salas, emisión)
 │   ├── utils/
 │   │   ├── paginacion.js
 │   │   └── validacion.js
@@ -156,6 +163,18 @@ Igual que con los pagos, para la defensa alcanza con `MAPS_MODO=mock`: no hace f
 access token ni cargar una tarjeta. El modo mock es determinístico, así que la misma
 dirección da siempre la misma coordenada y los números no cambian entre corridas.
 
+#### Variables del seguimiento en tiempo real (semana 10)
+
+| Variable | Para qué sirve |
+|---|---|
+| `SOCKET_ORIGEN` | Orígenes permitidos en el handshake del socket. Socket.IO **no** hereda el `cors()` de Express, así que sin esto un front servido desde otro puerto no conecta. En desarrollo, `*` |
+| `SEGUIMIENTO_PINGS_REFRESCO` | Cada cuántos pings del repartidor se le vuelve a pedir la ruta real a Mapbox. Entre refrescos el ETA se reescala localmente, que es gratis |
+| `SEGUIMIENTO_MINUTOS_REFRESCO` | Tope de tiempo entre refrescos, por si el repartidor pingea muy espaciado |
+| `SEGUIMIENTO_SESIONES_MAX` | Tope de pedidos con sesión de seguimiento viva en memoria |
+
+Las cuatro tienen valor por defecto en el código: el seguimiento funciona sin tocar el
+`.env`.
+
 ### 3 — Instalar y correr
 
 ```bash
@@ -170,9 +189,12 @@ Servidor en `http://localhost:4000`
 Todo se prueba desde Postman con las guías de `postman/`. Cada guía explica, caso por caso,
 qué request mandar, qué tiene que contestar y por qué el endpoint hace lo que hace.
 
-Para las semanas 8 y 9 hay además `postman/lista-semanas-8-9.js`: las dos guías resumidas en
-una sola lista ordenada, para ir tildando mientras se prueba. Sirve como checklist de
-regresión antes de entregar; el detalle sigue estando en las guías largas.
+Para las semanas 8, 9 y 10 hay además `postman/lista-semanas-8-10.js`: las tres guías
+resumidas en una sola lista ordenada, para ir tildando mientras se prueba. Sirve como
+checklist de regresión antes de entregar; el detalle sigue estando en las guías largas.
+
+La parte de tiempo real de la semana 10 es la única que no se corre con Postman: necesita
+un cliente de Socket.IO, y para eso está `scripts/cliente-seguimiento.js`.
 
 Los casos se corren **en orden** y cada uno deja la base como la necesita el siguiente, así
 que conviene reimportar `scripts/aTuPuerta.sql` antes de empezar cada guía.
@@ -403,3 +425,85 @@ Versión mínima de la semana 8: las notificaciones se guardan en la tabla `noti
 con este endpoint. Marcarlas como leídas y el envío en tiempo real quedan para la semana 11.
 
 Los casos de prueba están en `postman/backend-repartidores.js`.
+
+### Seguimiento en tiempo real — CU08, CU26
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/api/pedidos/:id/seguimiento` | Estado del pedido, posición del repartidor, ETA y ruta. Rol `cliente` |
+
+Y un canal de Socket.IO sobre **el mismo puerto que la API**:
+
+| Dirección | Evento | Payload |
+|---|---|---|
+| cliente → servidor | `seguir_pedido` | `{ pedidoId }`, con ack `{ codigo, estado, datos }` |
+| cliente → servidor | `dejar_pedido` | `{ pedidoId }`, con ack |
+| servidor → sala | `ubicacion_actualizada` | `{ pedido_id, ubicacion, eta, ruta, emitido_en }` |
+| servidor → sala | `estado_actualizado` | `{ pedido_id, estado, seguimiento_activo, mensaje, ocurrido_en }` |
+
+Flujo: el cliente abre la pantalla y pide `GET /pedidos/:id/seguimiento` para dibujar el
+estado inicial → se conecta al socket y emite `seguir_pedido` → mientras el pedido está
+`en_camino`, cada `POST /repartidor/ubicacion` le llega como un evento con la posición
+nueva y el ETA recalculado → los cambios de estado (pago aprobado, repartidor asignado,
+entregado, cancelado) llegan por el mismo canal.
+
+- **El socket va sobre el mismo servidor HTTP que Express.** `index.js` arma el servidor
+  con `http.createServer(app)` en vez de `app.listen()`, que crea uno propio al que
+  Socket.IO no se puede enganchar. En puertos separados el front tendría dos orígenes que
+  configurar y dos cosas que romper.
+- **El token viaja crudo en `auth.token` del handshake**, sin prefijo `Bearer`, igual que
+  lo lee `verificarToken`. Por `auth` y no por query string para que no quede en los logs
+  del servidor ni en el historial del navegador.
+- **Una sala por pedido (`pedido:<id>`).** Entrar se autoriza contra la base: hay que ser
+  el cliente del pedido o el repartidor asignado. Ahí la autorización es por pertenencia y
+  no por rol, así que el repartidor entra al socket aunque el endpoint REST le dé `403`.
+- **No se exige `en_camino` para entrar a la sala.** Si se exigiera, el cliente que abre la
+  pantalla mientras el comercio prepara el pedido nunca recibiría el evento que lo lleva a
+  `en_camino`, que es justamente el que está esperando.
+- **Las emisiones van después del `commit` y sin `await`.** Lo que se anuncia ya tiene que
+  estar en la base, y esperar la emisión sería tener una de las 10 conexiones del pool
+  tomada durante una llamada a Mapbox de hasta 5 segundos, con un repartidor que pingea
+  cada pocos segundos. El canal es best-effort: la fila y la respuesta HTTP son la verdad.
+- **El ETA se reescala entre refrescos.** Pedirle la ruta a Mapbox en cada ping sería una
+  request de red por ping por repartidor; calcularlo con Haversine crudo ignoraría que la
+  calle da vueltas. Se pide la ruta real cada `SEGUIMIENTO_PINGS_REFRESCO` pings y entre
+  medio se reescala esa ruta por la fracción de distancia que falta. `ruta` viaja solo en
+  el evento donde hubo refresco; en los demás va `null` y el front conserva la anterior.
+- **Si nadie mira, no se calcula nada.** `haySeguidores()` corta antes de consultar el
+  pedido, calcular el ETA o hablarle a Mapbox. La caché de ETA vive en memoria y es solo
+  costo, nunca corrección: si se vacía, el próximo ping paga un refresco.
+- **El REST y el socket dan el mismo ETA** porque los dos llaman a la misma función de
+  `seguimiento.service.js` y comparten la misma caché. Por eso el negocio está separado
+  del transporte: si viviera en el módulo del socket, el controlador REST tendría que
+  importar Socket.IO nada más que para sacar un número.
+- **El endpoint REST nunca devuelve `409`.** A diferencia de `GET /pedido/ruta/:idPedido`,
+  que sí le contesta `409` al repartidor sin ubicación registrada —él puede arreglarlo
+  mandando un ping—, el cliente no puede arreglar nada: siempre `200`, con los campos en
+  `null` y un `mensaje` que explica qué está pasando.
+- **La ruta del cliente va derecho a la puerta**, sin la parada en el comercio que sí mete
+  CU21. Son dos preguntas distintas: el cliente pregunta cuándo le llega, el repartidor
+  pregunta qué vuelta tiene que dar.
+- **El evento de `en_camino` no lleva el código de entrega**, aunque la asignación lo
+  genere: en la sala están el cliente y el repartidor.
+- **Socket.IO reconecta solo, pero no vuelve a entrar a las salas.** La sala es estado del
+  servidor. El cliente tiene que re-emitir `seguir_pedido` en **cada** `connect`, no solo
+  en el primero; `scripts/cliente-seguimiento.js` lo hace así.
+- **Una sola instancia.** Con dos procesos de Node cada uno tendría sus propias salas y un
+  evento emitido en uno no llegaría a los clientes del otro. La solución es
+  `@socket.io/redis-adapter`, y queda anotada sin construir.
+- **Esta semana no cambia el esquema.** Es la primera. El seguimiento lee
+  `ubicaciones_repartidor` con el índice que ya creó la semana 9, y el ETA no se persiste:
+  `pedidos.tiempo_estimado` es la foto del checkout, el ETA en vivo caduca con el próximo
+  ping.
+
+Para probarlo sin frontend:
+
+```bash
+node scripts/cliente-seguimiento.js <token> <pedidoId>
+```
+
+Se deja corriendo en una terminal aparte mientras se mandan las requests desde Postman.
+**Postman no sirve para el canal**: tiene WebSocket crudo, y Socket.IO es un protocolo
+propio por encima.
+
+Los casos de prueba están en `postman/backend-seguimiento.js`.
