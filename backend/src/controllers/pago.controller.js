@@ -1,6 +1,7 @@
 const database = require('../database/database');
 const { esModoMock, crearPreferencia, consultarPago, validarFirmaWebhook } = require('../services/pago.service');
 const { cambiarEstadoPedido, restaurarStockPedido } = require('../services/pedido.service');
+const { enviarNotificaciones } = require('./notificaciones.controller');
 
 // Estados de pagos.estado de los que ya no se vuelve. Si el pago esta en uno de estos,
 // una notificacion repetida no tiene que volver a tocar nada.
@@ -106,8 +107,13 @@ const aplicarResultadoPago = async (connection, { pedidoId, estadoExterno, motiv
         return { resultado: "ya_procesado", estado: pago.estado };
     }
 
+    // Se trae tambien el usuario_id del comercio: si el pago se aprueba, es el
+    // momento correcto para avisarle que tiene un pedido nuevo para preparar.
     const [pedidos] = await connection.query(
-        `SELECT id, estado, total FROM pedidos WHERE id = ? FOR UPDATE`,
+        `SELECT p.id, p.estado, p.total, co.usuario_id AS comercio_usuario_id
+         FROM pedidos p
+         INNER JOIN comercios co ON co.id = p.comercio_id
+         WHERE p.id = ? FOR UPDATE`,
         [pedidoId]
     );
 
@@ -157,7 +163,15 @@ const aplicarResultadoPago = async (connection, { pedidoId, estadoExterno, motiv
 
         await cambiarEstadoPedido(connection, { pedidoId, nuevoEstado: 'en_preparacion' });
 
-        return { resultado: "aprobado" };
+        return {
+            resultado: "aprobado",
+            notificacion: {
+                usuarioId: pedido.comercio_usuario_id,
+                titulo: "Nuevo pedido pagado",
+                mensaje: `Tenés un nuevo pedido #${pedidoId} para preparar`,
+                url: `/comercio/pedidos/${pedidoId}`
+            }
+        };
     }
 
     // Rechazado o fallido: queda el motivo registrado, el pedido se cancela y el stock
@@ -210,7 +224,10 @@ const iniciarPago = async (req, res) => {
             });
         }
 
-        if (pedido.estado !== 'pendiente_pago') {
+        // El pedido solo se puede pagar mientras está en 'pago' (recién creado,
+        // esperando el pago del cliente). Cualquier otro estado significa que
+        // ya se pagó, ya avanzó, o ya se canceló.
+        if (pedido.estado !== 'pago') {
             return res.status(409).json({
                 codigo: 409,
                 estado: "error",
@@ -353,13 +370,17 @@ const recibirWebhook = async (req, res) => {
         }
 
         await connection.beginTransaction();
-        const { resultado } = await aplicarResultadoPago(connection, datosPago);
+        const aplicacion = await aplicarResultadoPago(connection, datosPago);
         await connection.commit();
+
+        if (aplicacion.notificacion) {
+            await enviarNotificaciones(aplicacion.notificacion.usuarioId, aplicacion.notificacion);
+        }
 
         return res.status(200).json({
             codigo: 200,
             estado: "exito",
-            datos: { resultado }
+            datos: { resultado: aplicacion.resultado }
         });
 
     } catch (error) {
@@ -520,6 +541,10 @@ const simularPago = async (req, res) => {
         });
 
         await connection.commit();
+
+        if (respuesta.notificacion) {
+            await enviarNotificaciones(respuesta.notificacion.usuarioId, respuesta.notificacion);
+        }
 
         return res.status(200).json({
             codigo: 200,

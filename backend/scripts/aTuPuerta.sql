@@ -152,8 +152,7 @@ CREATE TABLE pedidos (
   cliente_id         INT NOT NULL,
   comercio_id        INT NOT NULL,
   repartidor_id      INT NULL,
-  estado             ENUM('pendiente_pago','en_preparacion','en_camino','entregado','cancelado')
-                       NOT NULL DEFAULT 'pendiente_pago',
+  estado             ENUM('pago','en_preparacion', 'preparado','en_camino','entregado','cancelado'),
   direccion_entrega  VARCHAR(200) NOT NULL,
   total              DECIMAL(10,2) NOT NULL,
   created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -165,6 +164,12 @@ CREATE TABLE pedidos (
   CONSTRAINT fk_pedidos_repartidor FOREIGN KEY (repartidor_id)
     REFERENCES repartidores(id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
+
+ALTER TABLE pedidos
+  ADD COLUMN codigo VARCHAR(8) NULL AFTER estado,
+  ADD COLUMN distancia_km DECIMAL(6,2) NULL,
+  ADD COLUMN tiempo_estimado INT NULL COMMENT 'minutos',
+  ADD COLUMN comision DECIMAL(10,2) NULL;
 
 -- =====================================================================
 -- 10. ITEMS_PEDIDO
@@ -278,6 +283,9 @@ CREATE TABLE auditoria_pedidos (
 
 -- =====================================================================
 -- 16. NOTIFICACIONES
+-- Historial de notificaciones in-app (lo que el usuario ve en su
+-- campanita/listado dentro de la app), independiente de si el push
+-- llegó o no al navegador.
 -- =====================================================================
 CREATE TABLE notificaciones (
   id          INT AUTO_INCREMENT PRIMARY KEY,
@@ -287,6 +295,26 @@ CREATE TABLE notificaciones (
   leida       BOOLEAN DEFAULT FALSE,
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_notificaciones_usuario FOREIGN KEY (usuario_id)
+    REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- =====================================================================
+-- 17. SUSCRIPCIONES_PUSH
+-- Guarda las suscripciones que genera el navegador (Web Push API) para
+-- poder enviar notificaciones push a cada usuario. Es distinta de la
+-- tabla NOTIFICACIONES: esa guarda el historial de mensajes in-app,
+-- esta guarda el "canal" técnico para poder enviarlos por push.
+-- Un mismo usuario puede tener varias filas (una por dispositivo/navegador).
+-- =====================================================================
+CREATE TABLE suscripciones_push (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id  INT NOT NULL,
+  endpoint    VARCHAR(500) NOT NULL,
+  p256dh      VARCHAR(255) NOT NULL,
+  auth        VARCHAR(255) NOT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_suscripciones_push_endpoint (endpoint),
+  CONSTRAINT fk_suscripciones_push_usuario FOREIGN KEY (usuario_id)
     REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
@@ -343,7 +371,7 @@ INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direcci
 
 -- Pedido 2: cliente 2 le compra a la librería, recién creado, pendiente de pago
 INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total) VALUES
-(2, 2, 2, NULL, 'pendiente_pago', 'Belgrano 567, Santo Tomé, Santa Fe', 5300.00);
+(2, 2, 2, NULL, NULL, 'Belgrano 567, Santo Tomé, Santa Fe', 5300.00);
 
 -- ---------- ITEMS_PEDIDO ----------
 INSERT INTO items_pedido (id, pedido_id, producto_id, cantidad, precio_unit, subtotal) VALUES
@@ -370,3 +398,7 @@ INSERT INTO notificaciones (id, usuario_id, tipo, mensaje, leida) VALUES
 (1, 1, 'pedido_en_camino', 'Tu pedido #1 salió de Ferretería Central y está en camino.', FALSE),
 (2, 1, 'pago_aprobado',    'Tu pago del pedido #1 fue aprobado.',                        TRUE),
 (3, 2, 'pedido_creado',    'Creaste el pedido #2, falta confirmar el pago.',            FALSE);
+
+-- Nota: no se insertan suscripciones_push de prueba a propósito. Son datos
+-- que genera el navegador real (endpoint/keys únicos por dispositivo), no
+-- tiene sentido simularlos a mano como al resto de las tablas.
