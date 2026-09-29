@@ -152,7 +152,7 @@ CREATE TABLE pedidos (
   cliente_id         INT NOT NULL,
   comercio_id        INT NOT NULL,
   repartidor_id      INT NULL,
-  estado             ENUM('pago','en_preparacion', 'preparado','en_camino','entregado','cancelado'),
+  estado             ENUM('pago_espera','en_preparacion', 'preparado','en_camino','entregado','cancelado'),
   direccion_entrega  VARCHAR(200) NOT NULL,
   total              DECIMAL(10,2) NOT NULL,
   created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -283,17 +283,18 @@ CREATE TABLE auditoria_pedidos (
 
 -- =====================================================================
 -- 16. NOTIFICACIONES
--- Historial de notificaciones in-app (lo que el usuario ve en su
--- campanita/listado dentro de la app), independiente de si el push
--- llegó o no al navegador.
+-- Historial in-app por usuario o general para un rol, independiente de
+-- si el push llegó o no al navegador.
 -- =====================================================================
 CREATE TABLE notificaciones (
   id          INT AUTO_INCREMENT PRIMARY KEY,
-  usuario_id  INT NOT NULL,
+  usuario_id  INT NULL,
+  destinatario_rol ENUM('cliente','comercio','repartidor','administrador') NULL,
   tipo        VARCHAR(50) NOT NULL,
   mensaje     TEXT NOT NULL,
   leida       BOOLEAN DEFAULT FALSE,
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_notificaciones_rol_fecha (destinatario_rol, created_at),
   CONSTRAINT fk_notificaciones_usuario FOREIGN KEY (usuario_id)
     REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
@@ -371,7 +372,7 @@ INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direcci
 
 -- Pedido 2: cliente 2 le compra a la librería, recién creado, pendiente de pago
 INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total) VALUES
-(2, 2, 2, NULL, NULL, 'Belgrano 567, Santo Tomé, Santa Fe', 5300.00);
+(2, 2, 2, NULL, 'pago_espera', 'Belgrano 567, Santo Tomé, Santa Fe', 5300.00);
 
 -- ---------- ITEMS_PEDIDO ----------
 INSERT INTO items_pedido (id, pedido_id, producto_id, cantidad, precio_unit, subtotal) VALUES

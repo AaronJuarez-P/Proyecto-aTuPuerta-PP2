@@ -11,7 +11,7 @@
 const { registrarAuditoriaPedido } = require('./auditoria.service');
 
 // El ENUM de la columna pedidos.estado
-const ESTADOS_PEDIDO = ['pago', 'en_preparacion', 'preparado', 'en_camino', 'entregado', 'cancelado'];
+const ESTADOS_PEDIDO = ['pago_espera', 'en_preparacion', 'preparado', 'en_camino', 'entregado', 'cancelado'];
 
 // Mueve el pedido a nuevoEstado y lo deja registrado en auditoria_pedidos.
 //

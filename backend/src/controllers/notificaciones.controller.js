@@ -50,7 +50,7 @@ const suscribir = async (req, res) => {
 // IMPORTANTE: nunca debe tirar (throw) hacia quien la llama.
 // Si notificar falla, el flujo principal (crear pedido, cambiar estado, etc.)
 // tiene que seguir funcionando igual.
-const enviarNotificaciones = async (usuarioId, { titulo, mensaje, url }) => {
+const enviarNotificaciones = async (usuarioId, { titulo, mensaje, url, tipo = "push" }) => {
     try {
 
         // El historial in-app se guarda aunque el usuario no tenga una suscripción
@@ -59,7 +59,7 @@ const enviarNotificaciones = async (usuarioId, { titulo, mensaje, url }) => {
             await database.query(
                 `INSERT INTO notificaciones (usuario_id, tipo, mensaje)
                  VALUES (?, ?, ?)`,
-                [usuarioId, "push", mensaje]
+                [usuarioId, tipo, mensaje]
             );
         } catch (error) {
             console.error(`Error guardando notificación para usuario ${usuarioId}:`, error.message);
@@ -114,7 +114,55 @@ const enviarNotificaciones = async (usuarioId, { titulo, mensaje, url }) => {
     }
 };
 
+const enviarNotificacionRepartidores = async ({ titulo, mensaje, url }) => {
+    try {
+        try {
+            await database.query(
+                `INSERT INTO notificaciones (usuario_id, destinatario_rol, tipo, mensaje)
+                 VALUES (NULL, 'repartidor', 'pedido_creado', ?)`,
+                [mensaje]
+            );
+        } catch (error) {
+            console.error("Error guardando notificación general para repartidores:", error.message);
+        }
+
+        const [suscripciones] = await database.query(
+            `SELECT sp.endpoint, sp.p256dh, sp.auth
+             FROM suscripciones_push sp
+             INNER JOIN usuarios u ON u.id = sp.usuario_id
+             WHERE u.rol = 'repartidor' AND u.activo = TRUE`
+        );
+        const payload = JSON.stringify({ title: titulo, body: mensaje, url });
+
+        for (const sub of suscripciones) {
+            const suscripcionPush = {
+                endpoint: sub.endpoint,
+                keys: { p256dh: sub.p256dh, auth: sub.auth },
+            };
+
+            try {
+                await webpush.sendNotification(suscripcionPush, payload);
+            } catch (error) {
+                if (error.statusCode === 404 || error.statusCode === 410) {
+                    await database.query(
+                        `DELETE FROM suscripciones_push WHERE endpoint = ?`,
+                        [sub.endpoint]
+                    );
+                } else {
+                    console.error(
+                        `Error enviando push a repartidor (endpoint ${sub.endpoint}):`,
+                        error.message
+                    );
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Error enviando notificación general a repartidores:", error.message);
+    }
+};
+
 module.exports = {
     suscribir,
-    enviarNotificaciones
+    enviarNotificaciones,
+    enviarNotificacionRepartidores
 };

@@ -120,6 +120,7 @@ const agregarAlCarrito = async (req, res) => {
         });
 
     } catch (error) {
+        console.error(error);
         if (connection) await connection.rollback();
         return res.status(500).json({
             codigo: 500,
@@ -268,6 +269,7 @@ const listarProductosCarrito = async (req, res) => {
         });
 
     } catch (error) {
+        console.error(error);
         return res.status(500).json({
             codigo: 500,
             estado: "error",
@@ -353,6 +355,7 @@ const eliminarProductoCarrito = async (req, res) => {
         });
 
     } catch (error) {
+        console.error(error);
         if (connection) await connection.rollback();
         return res.status(500).json({
             codigo: 500,
@@ -501,12 +504,12 @@ const confirmarCarrito = async (req, res) => {
                     .toFixed(2)
             );
 
-            // El pedido nace en 'pago': recién existe para el cliente, que todavía
+            // El pedido nace en 'pago_espera': recién existe para el cliente, que todavía
             // tiene que pagarlo. El comercio se entera cuando el pago se aprueba
             // (ver aplicarResultadoPago en pago.controller.js), no acá.
             const [resultadoPedido] = await connection.query(
                 `INSERT INTO pedidos (cliente_id, comercio_id, estado, direccion_entrega, total)
-                 VALUES (?, ?, 'pago', ?, ?)`,
+                 VALUES (?, ?, 'pago_espera', ?, ?)`,
                 [cliente.id, comercioId, direccionEntrega, totalComercio]
             );
             const pedidoId = resultadoPedido.insertId;
@@ -546,6 +549,7 @@ const confirmarCarrito = async (req, res) => {
         });
 
     } catch (error) {
+        console.error(error);
         if (connection) await connection.rollback();
         return res.status(500).json({
             codigo: 500,

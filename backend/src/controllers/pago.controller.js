@@ -1,7 +1,10 @@
 const database = require('../database/database');
 const { esModoMock, crearPreferencia, consultarPago, validarFirmaWebhook } = require('../services/pago.service');
 const { cambiarEstadoPedido, restaurarStockPedido } = require('../services/pedido.service');
-const { enviarNotificaciones } = require('./notificaciones.controller');
+const {
+    enviarNotificaciones,
+    enviarNotificacionRepartidores
+} = require('./notificaciones.controller');
 
 // Estados de pagos.estado de los que ya no se vuelve. Si el pago esta en uno de estos,
 // una notificacion repetida no tiene que volver a tocar nada.
@@ -76,6 +79,18 @@ const recortarMotivo = (motivo) => {
         return null;
     }
     return String(motivo).slice(0, LARGO_MAXIMO_MOTIVO);
+};
+
+const notificarNuevoPedido = async (notificaciones) => {
+    if (!notificaciones) {
+        return;
+    }
+
+    await enviarNotificaciones(
+        notificaciones.comercio.usuarioId,
+        notificaciones.comercio
+    );
+    await enviarNotificacionRepartidores(notificaciones.repartidores);
 };
 
 // ---------------------------------------------------------------------------
@@ -165,11 +180,19 @@ const aplicarResultadoPago = async (connection, { pedidoId, estadoExterno, motiv
 
         return {
             resultado: "aprobado",
-            notificacion: {
-                usuarioId: pedido.comercio_usuario_id,
-                titulo: "Nuevo pedido pagado",
-                mensaje: `Tenés un nuevo pedido #${pedidoId} para preparar`,
-                url: `/comercio/pedidos/${pedidoId}`
+            notificaciones: {
+                comercio: {
+                    usuarioId: pedido.comercio_usuario_id,
+                    titulo: "Nuevo pedido pagado",
+                    mensaje: `Tenés un nuevo pedido #${pedidoId} para preparar`,
+                    url: `/comercio/pedidos/${pedidoId}`,
+                    tipo: "pedido_creado"
+                },
+                repartidores: {
+                    titulo: "Nuevo pedido disponible",
+                    mensaje: `Se creó el pedido #${pedidoId} y está disponible para repartir`,
+                    url: "/repartidor/pedidos"
+                }
             }
         };
     }
@@ -224,10 +247,10 @@ const iniciarPago = async (req, res) => {
             });
         }
 
-        // El pedido solo se puede pagar mientras está en 'pago' (recién creado,
+        // El pedido solo se puede pagar mientras está en 'pago_espera' (recién creado,
         // esperando el pago del cliente). Cualquier otro estado significa que
         // ya se pagó, ya avanzó, o ya se canceló.
-        if (pedido.estado !== 'pago') {
+        if (pedido.estado !== 'pago_espera') {
             return res.status(409).json({
                 codigo: 409,
                 estado: "error",
@@ -373,9 +396,7 @@ const recibirWebhook = async (req, res) => {
         const aplicacion = await aplicarResultadoPago(connection, datosPago);
         await connection.commit();
 
-        if (aplicacion.notificacion) {
-            await enviarNotificaciones(aplicacion.notificacion.usuarioId, aplicacion.notificacion);
-        }
+        await notificarNuevoPedido(aplicacion.notificaciones);
 
         return res.status(200).json({
             codigo: 200,
@@ -542,9 +563,7 @@ const simularPago = async (req, res) => {
 
         await connection.commit();
 
-        if (respuesta.notificacion) {
-            await enviarNotificaciones(respuesta.notificacion.usuarioId, respuesta.notificacion);
-        }
+        await notificarNuevoPedido(respuesta.notificaciones);
 
         return res.status(200).json({
             codigo: 200,
