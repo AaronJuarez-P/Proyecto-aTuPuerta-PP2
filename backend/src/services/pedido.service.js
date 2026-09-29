@@ -11,11 +11,11 @@
 const { registrarAuditoriaPedido } = require('./auditoria.service');
 
 // El ENUM de la columna pedidos.estado
-const ESTADOS_PEDIDO = ['pendiente_pago', 'en_preparacion', 'en_camino', 'entregado', 'cancelado'];
+const ESTADOS_PEDIDO = ['pago_espera', 'en_preparacion', 'preparado', 'en_camino', 'entregado', 'cancelado'];
 
 // Mueve el pedido a nuevoEstado y lo deja registrado en auditoria_pedidos.
 //
-// No valida todavia que la transicion sea legal (que de pendiente_pago solo se pueda
+// No valida todavia que la transicion sea legal (que de pago solo se pueda
 // ir a en_preparacion o cancelado): eso es el entregable de la semana 7. Por ahora
 // solo verifica que el estado exista en el ENUM, para que un typo falle aca y no con
 // un error de MySQL a mitad de una transaccion.

@@ -3,6 +3,10 @@ const { esModoMock, crearPreferencia, consultarPago, validarFirmaWebhook } = req
 const { cambiarEstadoPedido, restaurarStockPedido } = require('../services/pedido.service');
 const { emitirEstadoDePedido } = require('../services/tiemporeal.service');
 const { obtenerIdValido } = require('../utils/validacion');
+const {
+    enviarNotificaciones,
+    enviarNotificacionRepartidores
+} = require('./notificaciones.controller');
 
 // Estados de pagos.estado de los que ya no se vuelve. Si el pago esta en uno de estos,
 // una notificacion repetida no tiene que volver a tocar nada.
@@ -91,6 +95,18 @@ const recortarMotivo = (motivo) => {
     return String(motivo).slice(0, LARGO_MAXIMO_MOTIVO);
 };
 
+const notificarNuevoPedido = async (notificaciones) => {
+    if (!notificaciones) {
+        return;
+    }
+
+    await enviarNotificaciones(
+        notificaciones.comercio.usuarioId,
+        notificaciones.comercio
+    );
+    await enviarNotificacionRepartidores(notificaciones.repartidores);
+};
+
 // ---------------------------------------------------------------------------
 // Aplicacion del resultado de un pago
 //
@@ -122,8 +138,13 @@ const aplicarResultadoPago = async (connection, { pedidoId, estadoExterno, motiv
         return { resultado: "ya_procesado", estado: pago.estado };
     }
 
+    // Se trae tambien el usuario_id del comercio: si el pago se aprueba, es el
+    // momento correcto para avisarle que tiene un pedido nuevo para preparar.
     const [pedidos] = await connection.query(
-        `SELECT id, estado, total FROM pedidos WHERE id = ? FOR UPDATE`,
+        `SELECT p.id, p.estado, p.total, co.usuario_id AS comercio_usuario_id
+         FROM pedidos p
+         INNER JOIN comercios co ON co.id = p.comercio_id
+         WHERE p.id = ? FOR UPDATE`,
         [pedidoId]
     );
 
@@ -173,7 +194,23 @@ const aplicarResultadoPago = async (connection, { pedidoId, estadoExterno, motiv
 
         await cambiarEstadoPedido(connection, { pedidoId, nuevoEstado: 'en_preparacion' });
 
-        return { resultado: "aprobado" };
+        return {
+            resultado: "aprobado",
+            notificaciones: {
+                comercio: {
+                    usuarioId: pedido.comercio_usuario_id,
+                    titulo: "Nuevo pedido pagado",
+                    mensaje: `Tenés un nuevo pedido #${pedidoId} para preparar`,
+                    url: `/comercio/pedidos/${pedidoId}`,
+                    tipo: "pedido_creado"
+                },
+                repartidores: {
+                    titulo: "Nuevo pedido disponible",
+                    mensaje: `Se creó el pedido #${pedidoId} y está disponible para repartir`,
+                    url: "/repartidor/pedidos"
+                }
+            }
+        };
     }
 
     // Rechazado o fallido: queda el motivo registrado, el pedido se cancela y el stock
@@ -217,7 +254,10 @@ const iniciarPago = async (req, res) => {
             });
         }
 
-        if (pedido.estado !== 'pendiente_pago') {
+        // El pedido solo se puede pagar mientras está en 'pago_espera' (recién creado,
+        // esperando el pago del cliente). Cualquier otro estado significa que
+        // ya se pagó, ya avanzó, o ya se canceló.
+        if (pedido.estado !== 'pago_espera') {
             return res.status(409).json({
                 codigo: 409,
                 estado: "error",
@@ -360,15 +400,16 @@ const recibirWebhook = async (req, res) => {
         }
 
         await connection.beginTransaction();
-        const { resultado } = await aplicarResultadoPago(connection, datosPago);
+        const aplicacion = await aplicarResultadoPago(connection, datosPago);
         await connection.commit();
 
         avisarCambioDeEstado(datosPago.pedidoId, resultado);
+        await notificarNuevoPedido(aplicacion.notificaciones);
 
         return res.status(200).json({
             codigo: 200,
             estado: "exito",
-            datos: { resultado }
+            datos: { resultado: aplicacion.resultado }
         });
 
     } catch (error) {
@@ -514,6 +555,7 @@ const simularPago = async (req, res) => {
         await connection.commit();
 
         avisarCambioDeEstado(id, respuesta.resultado);
+        await notificarNuevoPedido(respuesta.notificaciones);
 
         return res.status(200).json({
             codigo: 200,

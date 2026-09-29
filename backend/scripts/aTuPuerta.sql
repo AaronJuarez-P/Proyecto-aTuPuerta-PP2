@@ -159,8 +159,7 @@ CREATE TABLE pedidos (
   cliente_id         INT NOT NULL,
   comercio_id        INT NOT NULL,
   repartidor_id      INT NULL,
-  estado             ENUM('pendiente_pago','en_preparacion','en_camino','entregado','cancelado')
-                       NOT NULL DEFAULT 'pendiente_pago',
+  estado             ENUM('pago_espera','en_preparacion', 'preparado','en_camino','entregado','cancelado'),
   direccion_entrega  VARCHAR(200) NOT NULL,
   total              DECIMAL(10,2) NOT NULL,
   codigo             VARCHAR(8) NULL,
@@ -174,6 +173,7 @@ CREATE TABLE pedidos (
     REFERENCES repartidores(id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
+<<<<<<< HEAD
 -- distancia_km, tiempo_estimado y comision se calculan al CREAR el pedido
 -- (comercio -> cliente, vía API de Google Maps), NO al aceptar. Se guardan
 -- como una "foto fija" del momento del cálculo, no se recalculan después,
@@ -183,6 +183,13 @@ ALTER TABLE pedidos
   ADD COLUMN distancia_km     DECIMAL(4,1) NOT NULL,
   ADD COLUMN tiempo_estimado  INT NOT NULL COMMENT 'minutos',
   ADD COLUMN comision         DECIMAL(10,2) NOT NULL;
+=======
+ALTER TABLE pedidos
+  ADD COLUMN codigo VARCHAR(8) NULL AFTER estado,
+  ADD COLUMN distancia_km DECIMAL(6,2) NULL,
+  ADD COLUMN tiempo_estimado INT NULL COMMENT 'minutos',
+  ADD COLUMN comision DECIMAL(10,2) NULL;
+>>>>>>> ramAaron
 
 -- =====================================================================
 -- 10. ITEMS_PEDIDO
@@ -296,19 +303,24 @@ CREATE TABLE auditoria_pedidos (
 
 -- =====================================================================
 -- 16. NOTIFICACIONES
+-- Historial in-app por usuario o general para un rol, independiente de
+-- si el push llegó o no al navegador.
 -- =====================================================================
 CREATE TABLE notificaciones (
   id          INT AUTO_INCREMENT PRIMARY KEY,
-  usuario_id  INT NOT NULL,
+  usuario_id  INT NULL,
+  destinatario_rol ENUM('cliente','comercio','repartidor','administrador') NULL,
   tipo        VARCHAR(50) NOT NULL,
   mensaje     TEXT NOT NULL,
   leida       BOOLEAN DEFAULT FALSE,
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_notificaciones_rol_fecha (destinatario_rol, created_at),
   CONSTRAINT fk_notificaciones_usuario FOREIGN KEY (usuario_id)
     REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 -- =====================================================================
+<<<<<<< HEAD
 -- SEMANA 8 - REPARTIDORES Y ASIGNACIÓN DE PEDIDOS (CU19, CU20)
 -- Este archivo arranca con DROP DATABASE: para tener estos cambios hay que
 -- volver a importarlo entero.
@@ -367,6 +379,26 @@ ALTER TABLE pedidos
 -- tabla que crece con cada ping del repartidor.
 ALTER TABLE ubicaciones_repartidor
   ADD INDEX idx_ubicaciones_pedido (pedido_id, registrado_en);
+=======
+-- 17. SUSCRIPCIONES_PUSH
+-- Guarda las suscripciones que genera el navegador (Web Push API) para
+-- poder enviar notificaciones push a cada usuario. Es distinta de la
+-- tabla NOTIFICACIONES: esa guarda el historial de mensajes in-app,
+-- esta guarda el "canal" técnico para poder enviarlos por push.
+-- Un mismo usuario puede tener varias filas (una por dispositivo/navegador).
+-- =====================================================================
+CREATE TABLE suscripciones_push (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id  INT NOT NULL,
+  endpoint    VARCHAR(500) NOT NULL,
+  p256dh      VARCHAR(255) NOT NULL,
+  auth        VARCHAR(255) NOT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_suscripciones_push_endpoint (endpoint),
+  CONSTRAINT fk_suscripciones_push_usuario FOREIGN KEY (usuario_id)
+    REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+>>>>>>> ramAaron
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -450,6 +482,7 @@ INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direcci
 (1, 1, 1, 1, 'en_camino', 'San Martín 1234, Santo Tomé, Santa Fe', 36500.00, '12345678', 1.2, 8, 800.00);
 
 -- Pedido 2: cliente 2 le compra a la librería, recién creado, pendiente de pago
+<<<<<<< HEAD
 INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total, distancia_km, tiempo_estimado, comision) VALUES
 (2, 2, 2, NULL, 'pendiente_pago', 'Belgrano 567, Santo Tomé, Santa Fe', 5300.00, 0.8, 6, 700.00);
 
@@ -457,6 +490,10 @@ INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direcci
 -- Es el que aparece en GET /api/pedido/listar para probar CU19 y CU20.
 INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total, distancia_km, tiempo_estimado, comision) VALUES
 (3, 2, 2, NULL, 'en_preparacion', 'Belgrano 567, Santo Tomé, Santa Fe', 4200.00, 0.8, 6, 700.00);
+=======
+INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total) VALUES
+(2, 2, 2, NULL, 'pago_espera', 'Belgrano 567, Santo Tomé, Santa Fe', 5300.00);
+>>>>>>> ramAaron
 
 -- ---------- ITEMS_PEDIDO ----------
 INSERT INTO items_pedido (id, pedido_id, producto_id, cantidad, precio_unit, subtotal) VALUES
@@ -486,6 +523,7 @@ INSERT INTO notificaciones (id, usuario_id, tipo, mensaje, leida) VALUES
 (2, 1, 'pago_aprobado',    'Tu pago del pedido #1 fue aprobado.',                        TRUE),
 (3, 2, 'pedido_creado',    'Creaste el pedido #2, falta confirmar el pago.',            FALSE);
 
+<<<<<<< HEAD
 -- ---------- COORDENADAS (SEMANA 9) ----------
 -- Van como UPDATE y no dentro de los INSERT de arriba para no tocar los datos de
 -- prueba que ya venían de las semanas anteriores.
@@ -505,3 +543,8 @@ UPDATE pedidos p
   INNER JOIN clientes c ON c.id = p.cliente_id
   SET p.destino_latitud = c.latitud, p.destino_longitud = c.longitud
   WHERE p.destino_latitud IS NULL;
+=======
+-- Nota: no se insertan suscripciones_push de prueba a propósito. Son datos
+-- que genera el navegador real (endpoint/keys únicos por dispositivo), no
+-- tiene sentido simularlos a mano como al resto de las tablas.
+>>>>>>> ramAaron

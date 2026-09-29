@@ -44,14 +44,12 @@ const calcularEnvio = async (origen, destino) => {
         origen_datos: ruta.origenDatos
     };
 };
+const { enviarNotificaciones } = require("./notificaciones.controller");
 
 const agregarAlCarrito = async (req, res) => {
     let connection;
     try {
-        // 1. Usuario desde el token
         const idUsuario = req.usuario.id;
-
-        // 2. Datos que llegan del click "+"
         const { id_producto, cantidad } = req.body;
 
         if (!Number.isInteger(id_producto) || !Number.isInteger(cantidad) || cantidad <= 0) {
@@ -65,7 +63,6 @@ const agregarAlCarrito = async (req, res) => {
         connection = await database.getConnection();
         await connection.beginTransaction();
 
-        // 3. Cliente asociado al usuario del token
         const [clientes] = await connection.query(
             `SELECT id FROM clientes WHERE usuario_id = ?`,
             [idUsuario]
@@ -81,8 +78,6 @@ const agregarAlCarrito = async (req, res) => {
         }
         const cliente = clientes[0];
 
-        // 4. Producto elegido: validar que existe y esté activo (el stock se valida más abajo,
-        //    una vez que sabemos cuánto tiene ya el cliente en el carrito)
         const [productos] = await connection.query(
             `SELECT id, precio, stock, activo FROM productos WHERE id = ? FOR UPDATE`,
             [id_producto]
@@ -107,9 +102,6 @@ const agregarAlCarrito = async (req, res) => {
             });
         }
 
-        // 5. Buscar o crear el carrito del cliente (uno solo, general, sin comercio).
-        //    Si dos requests chocan por el UNIQUE KEY (cliente_id), se recupera
-        //    el carrito ya creado por la otra en vez de devolver un 500.
         const [carritos] = await connection.query(
             `SELECT id FROM carritos WHERE cliente_id = ?`,
             [cliente.id]
@@ -138,8 +130,6 @@ const agregarAlCarrito = async (req, res) => {
             }
         }
 
-        // 6. Ver cuánto tiene ya el cliente de este producto en el carrito,
-        //    para validar el stock contra el total acumulado (previo + nuevo)
         const [itemsExistentes] = await connection.query(
             `SELECT cantidad FROM items_carrito WHERE carrito_id = ? AND producto_id = ? FOR UPDATE`,
             [carritoId, id_producto]
@@ -159,7 +149,6 @@ const agregarAlCarrito = async (req, res) => {
             });
         }
 
-        // 7. Insertar el item, o sumar cantidad si ya estaba en el carrito
         await connection.query(
             `INSERT INTO items_carrito (carrito_id, producto_id, cantidad)
              VALUES (?, ?, ?)
@@ -176,6 +165,7 @@ const agregarAlCarrito = async (req, res) => {
         });
 
     } catch (error) {
+        console.error(error);
         if (connection) await connection.rollback();
         return res.status(500).json({
             codigo: 500,
@@ -190,7 +180,6 @@ const agregarAlCarrito = async (req, res) => {
 const listarProductosCarrito = async (req, res) => {
     let connection;
     try {
-        // 1. Usuario desde el token
         const idUsuario = req.usuario?.id;
 
         if (!idUsuario) {
@@ -203,7 +192,6 @@ const listarProductosCarrito = async (req, res) => {
 
         connection = await database.getConnection();
 
-        // 2. Cliente asociado al usuario del token
         const [clientes] = await connection.query(
             `SELECT id, direccion_entrega FROM clientes WHERE usuario_id = ?`,
             [idUsuario]
@@ -218,7 +206,6 @@ const listarProductosCarrito = async (req, res) => {
         }
         const cliente = clientes[0];
 
-        // 3. Carrito del cliente
         const [carritos] = await connection.query(
             `SELECT id FROM carritos WHERE cliente_id = ?`,
             [cliente.id]
@@ -237,7 +224,6 @@ const listarProductosCarrito = async (req, res) => {
         }
         const carritoId = carritos[0].id;
 
-        // 4. Traer todos los items del carrito con datos de producto y comercio
         const [items] = await connection.query(
             `SELECT
                 ic.id AS item_carrito_id,
@@ -272,8 +258,6 @@ const listarProductosCarrito = async (req, res) => {
             });
         }
 
-        // 5. Armar cada item con subtotal y estado de disponibilidad,
-        //    agrupado por comercio para que el frontend lo pueda mostrar separado
         const comerciosMap = {};
         let totalGeneral = 0;
 
@@ -330,6 +314,7 @@ const listarProductosCarrito = async (req, res) => {
         });
 
     } catch (error) {
+        console.error(error);
         return res.status(500).json({
             codigo: 500,
             estado: "error",
@@ -415,6 +400,7 @@ const eliminarProductoCarrito = async (req, res) => {
         });
 
     } catch (error) {
+        console.error(error);
         if (connection) await connection.rollback();
         return res.status(500).json({
             codigo: 500,
@@ -552,7 +538,8 @@ const confirmarCarrito = async (req, res) => {
                 p.stock,
                 p.activo AS producto_activo,
                 p.comercio_id,
-                c.activo AS comercio_activo
+                c.activo AS comercio_activo,
+                c.usuario_id AS comercio_usuario_id
              FROM items_carrito ic
              INNER JOIN productos p ON p.id = ic.producto_id
              INNER JOIN comercios c ON c.id = p.comercio_id
@@ -613,6 +600,7 @@ const confirmarCarrito = async (req, res) => {
 
         const pedidosCreados = [];
 
+        // Un pedido por cada comercio presente en el carrito.
         for (const comercioId of Object.keys(itemsPorComercio)) {
             const itemsDelComercio = itemsPorComercio[comercioId];
 
@@ -639,8 +627,8 @@ const confirmarCarrito = async (req, res) => {
                     destino?.latitud ?? null, destino?.longitud ?? null,
                     totalComercio,
                     envio.distancia_km, envio.tiempo_estimado, envio.comision
-                ]
-            );
+                ])
+            
             const pedidoId = resultadoPedido.insertId;
 
             for (const item of itemsDelComercio) {
@@ -667,6 +655,9 @@ const confirmarCarrito = async (req, res) => {
                 comision: envio.comision,
                 origen_datos: envio.origen_datos
             });
+            pedidosCreados.push({ pedidoId, comercioId, total: totalComercio });
+
+            // Sin notificación al comercio acá: todavía no hay pago confirmado.
         }
 
         await connection.query(`DELETE FROM items_carrito WHERE carrito_id = ?`, [carritoId]);
@@ -678,12 +669,13 @@ const confirmarCarrito = async (req, res) => {
             codigo: 201,
             estado: "exito",
             datos: {
-                mensaje: "Pedido(s) confirmado(s) correctamente",
+                mensaje: "Pedido confirmado correctamente, listo para pagar",
                 pedidos: pedidosCreados
             }
         });
 
     } catch (error) {
+        console.error(error);
         if (connection) await connection.rollback();
         return res.status(500).json({
             codigo: 500,
