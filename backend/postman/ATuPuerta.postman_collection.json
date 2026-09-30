@@ -1,0 +1,1878 @@
+{
+  "info": {
+    "_postman_id": "bac953a4-b2a2-42c7-9fc2-7915c7bfc6c4",
+    "name": "ATuPuerta — Backend",
+    "description": "Todos los endpoints del backend de ATuPuerta (Práctica Profesionalizante 2), agrupados por módulo y semana.\n\n**Antes de empezar:** importar `scripts/aTuPuerta.sql` recién (los ids de los ejemplos son los de la semilla), `.env` con `MP_MODO=mock` y `MAPS_MODO=mock`, y `npm run dev`.\n\n**Tokens:** correr la carpeta `00 · Sesiones`. Cada login guarda su token en las variables de la colección (`{{token_maria}}`, `{{token_admin}}`, ...) y el resto de los requests ya los usa. El header `Authorization` va con el token pelado; desde la semana 14 también se acepta con `Bearer `.\n\n**Contraseña de todos los usuarios de prueba:** `Test1234!`.\n\nLa colección tiene un test a nivel colección que verifica que toda respuesta tenga el formato de la API: `{ codigo, estado, datos }`, con `estado` = `exito` o `error` según el código.\n\nEl detalle caso por caso de cada semana está en las guías `postman/*.js`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Formato uniforme de la API (ver readme): { codigo, estado, datos }",
+          "pm.test(\"respuesta con el formato de la API\", () => {",
+          "    const cuerpo = pm.response.json();",
+          "    pm.expect(cuerpo).to.have.all.keys(\"codigo\", \"estado\", \"datos\");",
+          "    pm.expect(cuerpo.codigo).to.eql(pm.response.code);",
+          "    pm.expect(cuerpo.estado).to.eql(pm.response.code < 400 ? \"exito\" : \"error\");",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000/api"
+    },
+    {
+      "key": "raiz",
+      "value": "http://localhost:4000"
+    },
+    {
+      "key": "token_juan",
+      "value": ""
+    },
+    {
+      "key": "token_maria",
+      "value": ""
+    },
+    {
+      "key": "token_ferreteria",
+      "value": ""
+    },
+    {
+      "key": "token_libreria",
+      "value": ""
+    },
+    {
+      "key": "token_carlos",
+      "value": ""
+    },
+    {
+      "key": "token_lucia",
+      "value": ""
+    },
+    {
+      "key": "token_admin",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 · Sesiones",
+      "description": "Logins de los usuarios de la semilla. Correr primero: guardan los tokens.",
+      "item": [
+        {
+          "name": "Salud del servidor y la base",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{raiz}}/health",
+            "description": "Semana 1. `200` si el servidor y la base responden, `503` si la base no."
+          }
+        },
+        {
+          "name": "Login Juan (cliente)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/inicioSesion",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"juan.perez@test.com\",\n  \"contrasena\": \"Test1234!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Guarda el token en las variables de la colección para el resto de los requests",
+                  "const datos = pm.response.json().datos;",
+                  "if (pm.response.code === 200 && datos && datos.token) {",
+                  "    pm.collectionVariables.set(\"token_juan\", datos.token);",
+                  "}",
+                  "pm.test(\"login correcto\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login María (cliente)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/inicioSesion",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"maria.gomez@test.com\",\n  \"contrasena\": \"Test1234!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Guarda el token en las variables de la colección para el resto de los requests",
+                  "const datos = pm.response.json().datos;",
+                  "if (pm.response.code === 200 && datos && datos.token) {",
+                  "    pm.collectionVariables.set(\"token_maria\", datos.token);",
+                  "}",
+                  "pm.test(\"login correcto\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Ferretería Central (comercio)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/inicioSesionComercio",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ferreteria.central@test.com\",\n  \"contrasena\": \"Test1234!\",\n  \"cuil\": \"20304050607\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Guarda el token en las variables de la colección para el resto de los requests",
+                  "const datos = pm.response.json().datos;",
+                  "if (pm.response.code === 200 && datos && datos.token) {",
+                  "    pm.collectionVariables.set(\"token_ferreteria\", datos.token);",
+                  "}",
+                  "pm.test(\"login correcto\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Librería del Sur (comercio)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/inicioSesionComercio",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"libreria.sur@test.com\",\n  \"contrasena\": \"Test1234!\",\n  \"cuil\": \"20405060708\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Guarda el token en las variables de la colección para el resto de los requests",
+                  "const datos = pm.response.json().datos;",
+                  "if (pm.response.code === 200 && datos && datos.token) {",
+                  "    pm.collectionVariables.set(\"token_libreria\", datos.token);",
+                  "}",
+                  "pm.test(\"login correcto\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Carlos (repartidor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/inicioSesionRepartidor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"carlos.repartidor@test.com\",\n  \"contrasena\": \"Test1234!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Guarda el token en las variables de la colección para el resto de los requests",
+                  "const datos = pm.response.json().datos;",
+                  "if (pm.response.code === 200 && datos && datos.token) {",
+                  "    pm.collectionVariables.set(\"token_carlos\", datos.token);",
+                  "}",
+                  "pm.test(\"login correcto\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Lucía (repartidora)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/inicioSesionRepartidor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"lucia.repartidor@test.com\",\n  \"contrasena\": \"Test1234!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Guarda el token en las variables de la colección para el resto de los requests",
+                  "const datos = pm.response.json().datos;",
+                  "if (pm.response.code === 200 && datos && datos.token) {",
+                  "    pm.collectionVariables.set(\"token_lucia\", datos.token);",
+                  "}",
+                  "pm.test(\"login correcto\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/inicioSesionAdministrador",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@test.com\",\n  \"contrasena\": \"Test1234!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Guarda el token en las variables de la colección para el resto de los requests",
+                  "const datos = pm.response.json().datos;",
+                  "if (pm.response.code === 200 && datos && datos.token) {",
+                  "    pm.collectionVariables.set(\"token_admin\", datos.token);",
+                  "}",
+                  "pm.test(\"login correcto\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 · Registro y cierre de sesión (CU01, CU02, CU12, CU18)",
+      "description": "Registro de cliente y alta de los perfiles de comercio y repartidor sobre una cuenta que ya existe. Los tres tienen límite de intentos fallidos.",
+      "item": [
+        {
+          "name": "Registro de cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/registro",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana López\",\n  \"email\": \"ana.lopez@test.com\",\n  \"contrasena\": \"Test1234!\",\n  \"telefono\": \"3421000099\",\n  \"direccion_entrega\": \"Rivadavia 2100, Santo Tomé\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Crea la cuenta con perfil de cliente. Contraseña de 8 a 72 caracteres."
+          }
+        },
+        {
+          "name": "Registro de comercio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/registroComercio",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Kiosco de Ana\",\n  \"email\": \"ana.lopez@test.com\",\n  \"contrasena\": \"Test1234!\",\n  \"telefono\": \"3421000099\",\n  \"cuit_cuil\": \"27111222333\",\n  \"categoria\": \"Kiosco\",\n  \"direccion\": \"Rivadavia 2100, Santo Tomé\",\n  \"horario_atencion\": \"Lun a Sáb 08:00-21:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "La cuenta tiene que existir (registrarse antes como cliente). Pide la contraseña de esa cuenta."
+          }
+        },
+        {
+          "name": "Registro de repartidor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/registroRepartidor",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana López\",\n  \"email\": \"ana.lopez@test.com\",\n  \"contrasena\": \"Test1234!\",\n  \"telefono\": \"3421000099\",\n  \"dni\": \"40111222\",\n  \"tipo_vehiculo\": \"moto\",\n  \"patente\": \"AB123CD\",\n  \"numero_licencia\": \"LIC-000333\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cerrar sesión de comercio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_ferreteria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/cerrarSesionComercio",
+            "description": "Deja la cuenta en sesión de cliente: desde la semana 14 el token de comercio deja de servir en todas las rutas."
+          }
+        },
+        {
+          "name": "Cerrar sesión de repartidor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_carlos}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/cerrarSesionRepartidor"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 · Perfil (semana 3: CU11, CU12, CU18)",
+      "description": "El usuario sale siempre del token.",
+      "item": [
+        {
+          "name": "Mi perfil",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_juan}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/perfil"
+          }
+        },
+        {
+          "name": "Editar mi perfil",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_juan}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/perfil",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefono\": \"3421111111\",\n  \"direccion_entrega\": \"San Martín 1500, Santo Tomé\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "nombre, telefono y (si es cliente) direccion_entrega. El email no se edita desde acá."
+          }
+        },
+        {
+          "name": "Cambiar contraseña",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_juan}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/perfil/contrasena",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contrasena_actual\": \"Test1234!\",\n  \"contrasena_nueva\": \"OtraClave123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Dar de baja mi cuenta",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_juan}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/perfil",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contrasena\": \"Test1234!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Baja lógica. `409` con pedidos pagados en curso. Solo un administrador puede reactivarla."
+          }
+        },
+        {
+          "name": "Perfil del comercio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_ferreteria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/comercio/perfil"
+          }
+        },
+        {
+          "name": "Editar perfil del comercio",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_ferreteria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/comercio/perfil",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"horario_atencion\": \"Lun a Dom 08:00-22:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "nombre, categoria, direccion (se vuelve a geocodificar) y horario_atencion. El CUIT no se edita."
+          }
+        },
+        {
+          "name": "Perfil del repartidor",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_lucia}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/repartidor/perfil"
+          }
+        },
+        {
+          "name": "Editar perfil del repartidor",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_lucia}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/repartidor/perfil",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numero_licencia\": \"LIC-000999\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "tipo_vehiculo, patente (única) y numero_licencia. `409` con un pedido en camino."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 · Catálogo (CU03, CU04)",
+      "description": "Público: no hace falta token.",
+      "item": [
+        {
+          "name": "Explorar comercios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/comercios?buscar=libr&pagina=1&limite=20"
+          }
+        },
+        {
+          "name": "Detalle de un comercio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/comercios/1"
+          }
+        },
+        {
+          "name": "Productos de un comercio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/comercios/1/productos?categoria=Herramientas"
+          }
+        },
+        {
+          "name": "Buscar productos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos?buscar=cuaderno&precioMax=5000"
+          }
+        },
+        {
+          "name": "Detalle de un producto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 · Gestión de productos (CU13 a CU16)",
+      "description": "Solo el comercio dueño. Cada cambio queda en auditoria_productos.",
+      "item": [
+        {
+          "name": "Crear producto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_ferreteria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Destornillador Phillips\",\n  \"descripcion\": \"Punta PH2, mango de goma\",\n  \"categoria\": \"Herramientas\",\n  \"precio\": 2500,\n  \"stock\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Editar producto",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_ferreteria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Martillo carpintero\",\n  \"descripcion\": \"Martillo de acero, mango de fibra de vidrio\",\n  \"categoria\": \"Herramientas\",\n  \"precio\": 4500,\n  \"stock\": 25\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Actualizar stock",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_ferreteria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/1/stock",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ajuste\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "{ stock } fija el valor; { ajuste } suma o resta."
+          }
+        },
+        {
+          "name": "Actualizar precio",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_ferreteria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/1/precio",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"precio\": 4700\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Dar de baja un producto",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_ferreteria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/6",
+            "description": "Baja lógica. El 6 es el que crea \"Crear producto\" sobre la base recién importada."
+          }
+        },
+        {
+          "name": "Auditoría de un producto",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_ferreteria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/productos/1/auditoria"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 · Carrito y pedidos (CU05, CU06)",
+      "description": "Solo clientes. Confirmar crea un pedido por comercio, en pago_espera, y descuenta el stock.",
+      "item": [
+        {
+          "name": "Agregar al carrito",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/carrito/agregar",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_producto\": 4,\n  \"cantidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Ver el carrito",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/carrito/listar"
+          }
+        },
+        {
+          "name": "Quitar un producto",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/carrito/4"
+          }
+        },
+        {
+          "name": "Confirmar el carrito",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/carrito/confirmar",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Opcional: { \"direccion_entrega\": \"...\" } para una entrega puntual a otro domicilio."
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 · Pagos (CU07)",
+      "description": "MP_MODO=mock: el resultado se simula con /pagos/simular.",
+      "item": [
+        {
+          "name": "Pagar un pedido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/2/pagar",
+            "description": "El pedido tiene que estar en pago_espera."
+          }
+        },
+        {
+          "name": "Estado del pago",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/2/pago"
+          }
+        },
+        {
+          "name": "Simular resultado (mock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pagos/simular",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pedido_id\": 2,\n  \"resultado\": \"approved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "resultado: \"approved\" o \"rejected\". Opcional: monto, para probar un monto que no coincide."
+          }
+        },
+        {
+          "name": "Retorno de MercadoPago",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/pagos/retorno?payment_id=123"
+          }
+        },
+        {
+          "name": "Webhook de MercadoPago",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pagos/webhook",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"payment\",\n  \"data\": {\n    \"id\": \"123\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Público, autenticado por la firma x-signature. En modo mock contesta 200 y no hace nada."
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 · Comercio: pedidos y ventas (semana 7, CU17)",
+      "description": "",
+      "item": [
+        {
+          "name": "Marcar un pedido como preparado",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_libreria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/comercios/pedidos/3/subir",
+            "description": "en_preparacion -> preparado. Avisa al cliente y a los repartidores."
+          }
+        },
+        {
+          "name": "Historial de ventas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_libreria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/comercio/ventas?estado=&desde=&hasta=&pagina=1",
+            "description": "Pedidos pagados del comercio + resumen. Con ?estado=en_preparacion, la bandeja de pedidos a preparar."
+          }
+        },
+        {
+          "name": "Detalle de una venta",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_libreria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/comercio/ventas/3"
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 · Repartidores (CU19, CU20)",
+      "description": "",
+      "item": [
+        {
+          "name": "Mi disponibilidad",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_lucia}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/repartidor/disponibilidad"
+          }
+        },
+        {
+          "name": "Entrar o salir de servicio",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_lucia}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/repartidor/disponibilidad",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Pedidos disponibles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_lucia}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pedido/listar",
+            "description": "Pagados (en_preparacion o preparado) y sin repartidor."
+          }
+        },
+        {
+          "name": "Aceptar un pedido",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_lucia}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pedido/asignar/3",
+            "description": "El código de entrega le llega al cliente por notificación, nunca al repartidor."
+          }
+        },
+        {
+          "name": "Confirmar la entrega",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_lucia}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pedido/entrega/3",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoPedido\": \"12345678\",\n  \"latitud\": -31.676,\n  \"longitud\": -60.7735\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "codigoPedido: el que el cliente ve en su notificación o en GET /pedidos/:id. latitud y longitud son opcionales."
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 · Geolocalización (CU21, CU22)",
+      "description": "MAPS_MODO=mock no necesita token de Mapbox.",
+      "item": [
+        {
+          "name": "Registrar mi ubicación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_lucia}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/repartidor/ubicacion",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitud\": -31.672,\n  \"longitud\": -60.78\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Ruta al destino",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_lucia}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pedido/ruta/3?retirado=false",
+            "description": "retirado=false pasa por el comercio; true va derecho al cliente."
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 · Seguimiento (CU08, CU26)",
+      "description": "El canal en vivo es Socket.IO: se prueba con scripts/cliente-seguimiento.js, no con Postman.",
+      "item": [
+        {
+          "name": "Seguimiento de un pedido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_juan}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/1/seguimiento"
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 · Notificaciones (CU27)",
+      "description": "",
+      "item": [
+        {
+          "name": "Mis notificaciones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/notificaciones?no_leidas=false&pagina=1",
+            "description": "Propias y generales del rol de la sesión. datos.no_leidas es el número de la campana."
+          }
+        },
+        {
+          "name": "Marcar una como leída",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/notificaciones/3/leida"
+          }
+        },
+        {
+          "name": "Marcar todas como leídas",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/notificaciones/leidas"
+          }
+        },
+        {
+          "name": "Clave pública VAPID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/notificaciones/clave-publica",
+            "description": "Pública. push_habilitado: false si el servidor no tiene claves VAPID."
+          }
+        },
+        {
+          "name": "Suscribirse a push",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/notificaciones/suscribir",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endpoint\": \"https://fcm.googleapis.com/fcm/send/ejemplo\",\n  \"keys\": {\n    \"p256dh\": \"clave-p256dh-del-navegador\",\n    \"auth\": \"clave-auth-del-navegador\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "El body es la PushSubscription que devuelve el navegador, tal cual."
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 · Historial del cliente (CU09, CU10)",
+      "description": "",
+      "item": [
+        {
+          "name": "Mis pedidos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos?estado=&desde=&hasta=&pagina=1"
+          }
+        },
+        {
+          "name": "Detalle de un pedido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/3"
+          }
+        },
+        {
+          "name": "Repetir un pedido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/3/repetir",
+            "description": "Suma sus productos al carrito con los precios de hoy. Informa agregados y omitidos."
+          }
+        },
+        {
+          "name": "Cancelar un pedido sin pagar",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pedidos/2/cancelar",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Me equivoqué de dirección\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Solo en pago_espera. Devuelve el stock."
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 · Administración (CU23, CU24)",
+      "description": "Solo administradores.",
+      "item": [
+        {
+          "name": "Usuarios",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/usuarios?rol=&activo=&buscar=&pagina=1",
+            "description": "rol filtra por los perfiles que tiene: cliente, comercio, repartidor o administrador."
+          }
+        },
+        {
+          "name": "Detalle de un usuario",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/usuarios/2"
+          }
+        },
+        {
+          "name": "Alta de administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/usuarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Otra Admin\",\n  \"email\": \"otra.admin@test.com\",\n  \"contrasena\": \"Clave12345\",\n  \"telefono\": \"3421000008\",\n  \"rol\": \"administrador\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Alta de cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/usuarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Pedro Prueba\",\n  \"email\": \"pedro@test.com\",\n  \"contrasena\": \"Clave12345\",\n  \"telefono\": \"3421000009\",\n  \"rol\": \"cliente\",\n  \"direccion_entrega\": \"Rivadavia 100, Santo Tomé\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Editar un usuario",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/usuarios/1",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Pérez\",\n  \"telefono\": \"3421000001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "nombre, telefono y email (único)."
+          }
+        },
+        {
+          "name": "Suspender un usuario",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/usuarios/2/estado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Corta el acceso al instante. 409 si hay pedidos pagados que dependen de la cuenta."
+          }
+        },
+        {
+          "name": "Reactivar un usuario",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/usuarios/2/estado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Dar de baja un usuario",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/usuarios/9",
+            "description": "Baja lógica. El 9 es el que crea \"Alta de cliente\" después de \"Alta de administrador\" sobre la base recién importada."
+          }
+        },
+        {
+          "name": "Suspender un comercio",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/comercios/1/estado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Solo el comercio: sale del catálogo, la cuenta sigue activa como cliente."
+          }
+        },
+        {
+          "name": "Pedidos (vista global)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/pedidos?activos=true&estado=&comercioId=&clienteId=&repartidorId=&desde=&hasta="
+          }
+        },
+        {
+          "name": "Detalle de un pedido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/pedidos/1"
+          }
+        },
+        {
+          "name": "Cancelar un pedido",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/pedidos/2/cancelar",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Pedido duplicado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Desde cualquier estado no terminal. Devuelve el stock y libera al repartidor."
+          }
+        },
+        {
+          "name": "Auditoría de productos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/auditoria/productos?comercioId=1&accion=&desde=&hasta="
+          }
+        },
+        {
+          "name": "Auditoría de pedidos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/auditoria/pedidos?pedidoId=1&accion=&desde=&hasta="
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 · Reclamos (CU25)",
+      "description": "Reclaman cliente, comercio y repartidor; los atienden los administradores.",
+      "item": [
+        {
+          "name": "Hacer un reclamo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/reclamos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pedido_id\": 3,\n  \"descripcion\": \"El pedido tarda mucho más de lo estimado.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Mis reclamos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/reclamos?estado="
+          }
+        },
+        {
+          "name": "Un reclamo mío",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/reclamos/1"
+          }
+        },
+        {
+          "name": "Cola de reclamos (admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/reclamos?estado=&asignado=",
+            "description": "asignado: yo | ninguno."
+          }
+        },
+        {
+          "name": "Detalle de un reclamo (admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/reclamos/1"
+          }
+        },
+        {
+          "name": "Asignar un reclamo (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/reclamos/1/asignar",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Sin body se lo asigna quien lo pide. { administrador_id } para asignárselo a otro."
+          }
+        },
+        {
+          "name": "Resolver un reclamo (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_admin}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/admin/reclamos/1/resolver",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"resuelto\",\n  \"resolucion\": \"Se acreditó el pago y el pedido sigue su curso.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Solo el administrador asignado."
+          }
+        }
+      ]
+    }
+  ]
+}
