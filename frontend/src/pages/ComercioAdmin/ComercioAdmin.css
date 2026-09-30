@@ -1,0 +1,370 @@
+.comercio-admin-page {
+    min-height: calc(100vh - 80px);
+    padding: 120px 24px 80px;
+    background: var(--background);
+  }
+  
+  .comercio-admin-container {
+    width: min(1200px, 100%);
+    margin: 0 auto;
+  }
+  
+  /* HEADER */
+  
+  .comercio-admin-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 30px;
+    margin-bottom: 45px;
+  }
+  
+  .comercio-admin-label {
+    margin-bottom: 8px;
+    color: var(--brand);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  
+  .comercio-admin-header h1 {
+    margin-bottom: 10px;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    line-height: 1;
+  }
+  
+  .comercio-admin-header p {
+    color: var(--muted);
+  }
+  
+  /* CONTADOR */
+  
+  .pedidos-count {
+    min-width: 120px;
+    padding: 18px 22px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    text-align: center;
+  }
+  
+  .pedidos-count strong {
+    display: block;
+    font-size: 2rem;
+    line-height: 1;
+  }
+  
+  .pedidos-count span {
+    display: block;
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  
+  /* LISTA */
+  
+  .pedidos-admin-list {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  
+  /* CARD */
+  
+  .pedido-admin-card {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+  }
+  
+  /* PARTE SUPERIOR */
+  
+  .pedido-admin-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .pedido-admin-label {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  
+  .pedido-admin-top h2 {
+    margin: 4px 0;
+    font-size: 1.5rem;
+  }
+  
+  .pedido-admin-top p {
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  
+  /* ESTADO */
+  
+  .pedido-admin-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 14px;
+    border-radius: 999px;
+    background: #f1f1f1;
+    color: #444;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  
+  .pedido-admin-status.pendiente_pago {
+    background: #fff3cd;
+    color: #856404;
+  }
+  
+  .pedido-admin-status.confirmado {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  
+  .pedido-admin-status.preparando {
+    background: #ede9fe;
+    color: #6d28d9;
+  }
+  
+  .pedido-admin-status.listo {
+    background: #dcfce7;
+    color: #166534;
+  }
+  
+  .pedido-admin-status.en_camino {
+    background: #cffafe;
+    color: #155e75;
+  }
+  
+  .pedido-admin-status.entregado {
+    background: #dcfce7;
+    color: #166534;
+  }
+  
+  .pedido-admin-status.cancelado {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  
+  /* CONTENIDO */
+  
+  .pedido-admin-content {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 40px;
+    padding: 28px;
+  }
+  
+  .pedido-admin-info h3 {
+    margin-bottom: 20px;
+    font-size: 1rem;
+  }
+  
+  /* PRODUCTOS */
+  
+  .admin-products {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  
+  .admin-product {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+  }
+  
+  .admin-product-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--background);
+    font-size: 1.2rem;
+  }
+  
+  .admin-product div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  
+  .admin-product strong {
+    font-size: 0.9rem;
+  }
+  
+  .admin-product span {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  
+  /* DATOS DEL PEDIDO */
+  
+  .pedido-admin-details {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-left: 30px;
+    border-left: 1px solid var(--border);
+  }
+  
+  .pedido-admin-details div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .pedido-admin-details span {
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+  
+  .pedido-admin-details strong {
+    font-size: 0.9rem;
+  }
+  
+  .pedido-admin-details .admin-total {
+    margin-top: 5px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+  
+  .admin-total strong {
+    font-size: 1.3rem;
+  }
+  
+  /* BOTONES */
+  
+  .pedido-admin-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 28px;
+    border-top: 1px solid var(--border);
+  }
+  
+  .admin-next-button,
+  .admin-cancel-button {
+    padding: 11px 18px;
+    border-radius: 9px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+  }
+  
+  .admin-next-button {
+    border: none;
+    background: var(--brand);
+    color: white;
+  }
+  
+  .admin-next-button:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+  }
+  
+  .admin-cancel-button {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: #991b1b;
+  }
+  
+  .admin-cancel-button:hover {
+    background: #fee2e2;
+  }
+  
+  /* VACÍO */
+  
+  .comercio-empty {
+    padding: 80px 20px;
+    border: 1px dashed var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+    text-align: center;
+  }
+  
+  .empty-icon {
+    margin-bottom: 15px;
+    font-size: 3rem;
+  }
+  
+  .comercio-empty h2 {
+    margin-bottom: 8px;
+  }
+  
+  .comercio-empty p {
+    color: var(--muted);
+  }
+  
+  /* RESPONSIVE */
+  
+  @media (max-width: 800px) {
+  
+    .comercio-admin-header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  
+    .pedidos-count {
+      width: 100%;
+    }
+  
+    .pedido-admin-content {
+      grid-template-columns: 1fr;
+    }
+  
+    .pedido-admin-details {
+      padding-top: 25px;
+      padding-left: 0;
+      border-top: 1px solid var(--border);
+      border-left: none;
+    }
+  
+  }
+  
+  @media (max-width: 600px) {
+  
+    .comercio-admin-page {
+      padding: 105px 16px 60px;
+    }
+  
+    .pedido-admin-top {
+      align-items: flex-start;
+      flex-direction: column;
+      padding: 20px;
+    }
+  
+    .pedido-admin-content {
+      padding: 20px;
+    }
+  
+    .pedido-admin-actions {
+      align-items: stretch;
+      flex-direction: column;
+      padding: 18px 20px;
+    }
+  
+    .admin-next-button,
+    .admin-cancel-button {
+      width: 100%;
+    }
+  
+  }
