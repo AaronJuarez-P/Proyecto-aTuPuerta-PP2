@@ -1,187 +1,211 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
+import { Cargando, MensajeError } from '../../components/Comunes/Comunes'
+import { useAvisos } from '../../context/avisos'
+import { useCarrito } from '../../context/carrito'
+import { iconoDeCategoria } from '../../utils/categorias'
+import { formatearPrecio, plural } from '../../utils/formato'
 import './Carrito.css'
 
+// Por qué un ítem no se puede comprar, según lo que marca GET /carrito/listar
+function motivoNoDisponible(item, comercioActivo) {
+  if (!comercioActivo) {
+    return 'El comercio no está disponible en este momento.'
+  }
+
+  if (!item.producto_activo) {
+    return 'Este producto ya no está a la venta.'
+  }
+
+  if (item.stock_disponible <= 0) {
+    return 'Se quedó sin stock.'
+  }
+
+  return `Solo quedan ${plural(item.stock_disponible, 'unidad', 'unidades')}.`
+}
+
 export default function Carrito() {
-    const [carrito, setCarrito] = useState(() => {
-        const guardado = localStorage.getItem('carrito')
-        return guardado ? JSON.parse(guardado) : []
-    })
+  const { carrito, cantidad, error, recargar, cambiarCantidad, quitar } = useCarrito()
+  const avisar = useAvisos()
+  const [ocupado, setOcupado] = useState(null)
 
-    function actualizarCarrito(nuevoCarrito) {
-        setCarrito(nuevoCarrito)
-        localStorage.setItem('carrito', JSON.stringify(nuevoCarrito))
+  async function ejecutar(idProducto, accion, mensajeExito) {
+    setOcupado(idProducto)
+
+    try {
+      await accion()
+      if (mensajeExito) {
+        avisar(mensajeExito)
+      }
+    } catch (errorAccion) {
+      avisar(errorAccion.message, 'error')
+    } finally {
+      setOcupado(null)
     }
+  }
 
-    function cambiarCantidad(id, cambio) {
-        const nuevoCarrito = carrito
-            .map((producto) => {
-                if (producto.id !== id) {
-                    return producto
-                }
+  const restar = (item) =>
+    item.cantidad <= 1
+      ? ejecutar(item.producto_id, () => quitar(item.producto_id), `Sacaste ${item.nombre} del carrito.`)
+      : ejecutar(item.producto_id, () => cambiarCantidad(item.producto_id, item.cantidad - 1))
 
-                return {
-                    ...producto,
-                    cantidad: producto.cantidad + cambio,
-                }
-            })
-            .filter((producto) => producto.cantidad > 0)
+  const sumar = (item) => ejecutar(item.producto_id, () => cambiarCantidad(item.producto_id, item.cantidad + 1))
 
-        actualizarCarrito(nuevoCarrito)
-    }
+  const eliminar = (item) =>
+    ejecutar(item.producto_id, () => quitar(item.producto_id), `Sacaste ${item.nombre} del carrito.`)
 
-    function eliminarProducto(id) {
-        const nuevoCarrito = carrito.filter(
-            (producto) => producto.id !== id
-        )
+  const ajustarAlStock = (item) =>
+    ejecutar(item.producto_id, () => cambiarCantidad(item.producto_id, item.stock_disponible))
 
-        actualizarCarrito(nuevoCarrito)
-    }
+  const comercios = carrito?.comercios ?? []
+  const hayNoDisponibles = comercios.some((grupo) => grupo.items.some((item) => !item.disponible))
 
-    const total = carrito.reduce(
-        (acumulado, producto) =>
-            acumulado + producto.precio * producto.cantidad,
-        0
-    )
+  return (
+    <main className="carrito-page">
+      <section className="carrito-container">
+        <div className="carrito-title">
+          <p className="eyebrow">TU PEDIDO</p>
+          <h1>Carrito</h1>
+          <p>
+            {cantidad === 0
+              ? 'Todavía no agregaste productos.'
+              : `${plural(cantidad, 'producto')} en tu carrito.`}
+          </p>
+        </div>
 
-    const cantidadProductos = carrito.reduce(
-        (acumulado, producto) => acumulado + producto.cantidad,
-        0
-    )
+        {!carrito ? (
+          error ? <MensajeError error={error} alReintentar={() => recargar().catch(() => {})} /> : <Cargando />
+        ) : comercios.length === 0 ? (
+          <div className="carrito-vacio">
+            <span aria-hidden="true">🛒</span>
+            <h2>Tu carrito está vacío</h2>
+            <p>Explorá los comercios y agregá productos para empezar tu pedido.</p>
+            <Link to="/comercios">Explorar comercios →</Link>
+          </div>
+        ) : (
+          <div className="carrito-layout">
+            <div className="carrito-productos">
+              {comercios.map((grupo) => (
+                <section className="carrito-comercio" key={grupo.comercio_id}>
+                  <header className="carrito-comercio-encabezado">
+                    <h2>🏪 {grupo.comercio_nombre}</h2>
+                    <Link to={`/comercios/${grupo.comercio_id}`}>Agregar más →</Link>
+                  </header>
 
-    return (
-        <>
+                  {grupo.items.map((item) => (
+                    <article
+                      className={`carrito-producto ${item.disponible ? '' : 'no-disponible'}`}
+                      key={item.producto_id}
+                    >
+                      <div className="carrito-producto-icon" aria-hidden="true">
+                        {iconoDeCategoria(item.categoria, '📦')}
+                      </div>
 
-            <main className="carrito-page">
-                <section className="carrito-container">
+                      <div className="carrito-producto-info">
+                        <h3>{item.nombre}</h3>
+                        {item.descripcion && <p>{item.descripcion}</p>}
+                        <strong>{formatearPrecio(item.precio_unitario)}</strong>
 
-                    <div className="carrito-title">
-                        <p className="eyebrow">TU PEDIDO</p>
-                        <h1>Carrito</h1>
-                        <p>
-                            {cantidadProductos === 0
-                                ? 'Todavía no agregaste productos.'
-                                : `${cantidadProductos} producto${cantidadProductos !== 1 ? 's' : ''} en tu carrito.`}
-                        </p>
-                    </div>
+                        {!item.disponible && (
+                          <p className="carrito-alerta">
+                            ⚠ {motivoNoDisponible(item, grupo.comercio_activo)}
+                            {grupo.comercio_activo && item.producto_activo && item.stock_disponible > 0 && (
+                              <button
+                                type="button"
+                                disabled={ocupado === item.producto_id}
+                                onClick={() => ajustarAlStock(item)}
+                              >
+                                Llevar {item.stock_disponible}
+                              </button>
+                            )}
+                          </p>
+                        )}
+                      </div>
 
-                    {carrito.length === 0 ? (
-                        <div className="carrito-vacio">
-                            <span>🛒</span>
+                      <div className="cantidad-control">
+                        <button
+                          type="button"
+                          aria-label={`Restar una unidad de ${item.nombre}`}
+                          disabled={ocupado === item.producto_id}
+                          onClick={() => restar(item)}
+                        >
+                          −
+                        </button>
 
-                            <h2>Tu carrito está vacío</h2>
+                        <span>{item.cantidad}</span>
 
-                            <p>
-                                Explorá nuestros comercios y agregá productos
-                                para comenzar tu pedido.
-                            </p>
+                        <button
+                          type="button"
+                          aria-label={`Sumar una unidad de ${item.nombre}`}
+                          disabled={ocupado === item.producto_id || item.cantidad >= item.stock_disponible}
+                          onClick={() => sumar(item)}
+                        >
+                          +
+                        </button>
+                      </div>
 
-                            <a href="/comercios">
-                                Explorar comercios →
-                            </a>
-                        </div>
-                    ) : (
-                        <div className="carrito-layout">
-
-                            <div className="carrito-productos">
-                                {carrito.map((producto) => (
-                                    <article
-                                        className="carrito-producto"
-                                        key={producto.id}
-                                    >
-                                        <div className="carrito-producto-icon">
-                                            {producto.icono || '📦'}
-                                        </div>
-
-                                        <div className="carrito-producto-info">
-                                            <h2>{producto.nombre}</h2>
-
-                                            <p>{producto.descripcion}</p>
-
-                                            <strong>
-                                                ${producto.precio.toLocaleString('es-AR')}
-                                            </strong>
-                                        </div>
-
-                                        <div className="cantidad-control">
-                                            <button
-                                                onClick={() =>
-                                                    cambiarCantidad(producto.id, -1)
-                                                }
-                                            >
-                                                −
-                                            </button>
-
-                                            <span>{producto.cantidad}</span>
-
-                                            <button
-                                                onClick={() =>
-                                                    cambiarCantidad(producto.id, 1)
-                                                }
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-
-                                        <div className="producto-subtotal">
-                                            <strong>
-                                                $
-                                                {(
-                                                    producto.precio * producto.cantidad
-                                                ).toLocaleString('es-AR')}
-                                            </strong>
-
-                                            <button
-                                                className="eliminar-button"
-                                                onClick={() =>
-                                                    eliminarProducto(producto.id)
-                                                }
-                                            >
-                                                Eliminar
-                                            </button>
-                                        </div>
-                                    </article>
-                                ))}
-                            </div>
-
-                            <aside className="carrito-resumen">
-                                <h2>Resumen del pedido</h2>
-
-                                <div className="resumen-linea">
-                                    <span>Productos</span>
-                                    <span>${total.toLocaleString('es-AR')}</span>
-                                </div>
-
-                                <div className="resumen-linea">
-                                    <span>Envío</span>
-                                    <span>A calcular</span>
-                                </div>
-
-                                <div className="resumen-total">
-                                    <span>Total</span>
-                                    <strong>${total.toLocaleString('es-AR')}</strong>
-                                </div>
-
-                                <a
-                                    href="/checkout"
-                                    className="confirmar-button"
-                                >
-                                    Continuar con el pedido
-                                </a>
-
-                                <a
-                                    className="seguir-comprando"
-                                    href="/comercios"
-                                >
-                                    🡰 Seguir comprando
-                                </a>
-                            </aside>
-
-                        </div>
-                    )}
-
+                      <div className="producto-subtotal">
+                        <strong>{formatearPrecio(item.subtotal)}</strong>
+                        <button
+                          type="button"
+                          className="eliminar-button"
+                          disabled={ocupado === item.producto_id}
+                          onClick={() => eliminar(item)}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </article>
+                  ))}
                 </section>
-            </main>
+              ))}
+            </div>
 
-        </>
-    )
+            <aside className="carrito-resumen">
+              <h2>Resumen del pedido</h2>
+
+              {comercios.map((grupo) => (
+                <div className="resumen-linea" key={grupo.comercio_id}>
+                  <span>{grupo.comercio_nombre}</span>
+                  <span>{formatearPrecio(grupo.subtotal_comercio)}</span>
+                </div>
+              ))}
+
+              <div className="resumen-total">
+                <span>Total</span>
+                <strong>{formatearPrecio(carrito.total_general)}</strong>
+              </div>
+
+              {comercios.length > 1 && (
+                <p className="resumen-nota">
+                  Tu carrito tiene productos de {comercios.length} comercios: se genera un pedido
+                  por cada uno, y cada uno se paga por separado.
+                </p>
+              )}
+
+              {hayNoDisponibles && (
+                <p className="resumen-nota resumen-nota-alerta">
+                  Sacá o ajustá los productos marcados para poder continuar.
+                </p>
+              )}
+
+              {hayNoDisponibles ? (
+                <span className="confirmar-button deshabilitado" aria-disabled="true">
+                  Continuar con el pedido
+                </span>
+              ) : (
+                <Link to="/checkout" className="confirmar-button">
+                  Continuar con el pedido
+                </Link>
+              )}
+
+              <Link className="seguir-comprando" to="/comercios">
+                ← Seguir comprando
+              </Link>
+            </aside>
+          </div>
+        )}
+      </section>
+    </main>
+  )
 }

@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router'
 import SesionProvider from './context/SesionProvider'
 import AvisosProvider from './context/AvisosProvider'
+import CarritoProvider from './context/CarritoProvider'
 import Layout from './components/Layout'
 import RutaProtegida from './components/RutaProtegida'
 import Landing from './pages/Landing/Landing'
@@ -27,6 +28,17 @@ function Redirigir({ a }) {
   return <Navigate to={a.replace(/:(\w+)/g, (_, clave) => parametros[clave])} replace />
 }
 
+// El carrito depende de la sesión (es el del cliente logueado) y los avisos los usan todos
+function Proveedores({ children }) {
+  return (
+    <SesionProvider>
+      <AvisosProvider>
+        <CarritoProvider>{children}</CarritoProvider>
+      </AvisosProvider>
+    </SesionProvider>
+  )
+}
+
 export default function App() {
   // useTransitions={false}: por defecto React Router aplica los cambios de ruta como
   // transiciones, con menos prioridad que el resto de los estados. Al cerrar sesión en una
@@ -34,50 +46,48 @@ export default function App() {
   // protegida alcanzaba a mandar al login. Así la ruta y la sesión cambian en el mismo render.
   return (
     <BrowserRouter useTransitions={false}>
-      <SesionProvider>
-        <AvisosProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
+      <Proveedores>
+        <Routes>
+          <Route path="/login" element={<Login />} />
 
-            <Route element={<Layout />}>
-              <Route index element={<Landing />} />
-              <Route path="registro" element={<Registro />} />
-              <Route path="registro/comercio" element={<RegistroComercio />} />
-              <Route path="registro/repartidor" element={<RegistroRepartidor />} />
-              <Route path="comercios" element={<Comercios />} />
-              <Route path="comercios/:id" element={<Comercio />} />
+          <Route element={<Layout />}>
+            <Route index element={<Landing />} />
+            <Route path="registro" element={<Registro />} />
+            <Route path="registro/comercio" element={<RegistroComercio />} />
+            <Route path="registro/repartidor" element={<RegistroRepartidor />} />
+            <Route path="comercios" element={<Comercios />} />
+            <Route path="comercios/:id" element={<Comercio />} />
 
-              <Route element={<RutaProtegida roles={['cliente']} />}>
-                <Route path="carrito" element={<Carrito />} />
-                <Route path="checkout" element={<Checkout />} />
-                <Route path="pedidos" element={<Pedidos />} />
-                <Route path="pedidos/:id" element={<Pedido />} />
-                <Route path="cliente/pedidos/:id" element={<Redirigir a="/pedidos/:id" />} />
-              </Route>
-
-              <Route element={<RutaProtegida />}>
-                <Route path="perfil" element={<Perfil />} />
-              </Route>
-
-              <Route element={<RutaProtegida roles={['comercio']} />}>
-                <Route path="comercio" element={<ComercioAdmin />} />
-              </Route>
-
-              <Route element={<RutaProtegida roles={['repartidor']} />}>
-                <Route path="repartidor" element={<RepartidorAdmin />} />
-                <Route path="repartidor/pedidos" element={<Navigate to="/repartidor" replace />} />
-                <Route path="repartidor/pedidos-disponibles" element={<Navigate to="/repartidor" replace />} />
-              </Route>
-
-              <Route element={<RutaProtegida roles={['administrador']} />}>
-                <Route path="admin" element={<Admin />} />
-              </Route>
-
-              <Route path="*" element={<NoEncontrado />} />
+            <Route element={<RutaProtegida roles={['cliente']} />}>
+              <Route path="carrito" element={<Carrito />} />
+              <Route path="checkout" element={<Checkout />} />
+              <Route path="pedidos" element={<Pedidos />} />
+              <Route path="pedidos/:id" element={<Pedido />} />
+              <Route path="cliente/pedidos/:id" element={<Redirigir a="/pedidos/:id" />} />
             </Route>
-          </Routes>
-        </AvisosProvider>
-      </SesionProvider>
+
+            <Route element={<RutaProtegida />}>
+              <Route path="perfil" element={<Perfil />} />
+            </Route>
+
+            <Route element={<RutaProtegida roles={['comercio']} />}>
+              <Route path="comercio" element={<ComercioAdmin />} />
+            </Route>
+
+            <Route element={<RutaProtegida roles={['repartidor']} />}>
+              <Route path="repartidor" element={<RepartidorAdmin />} />
+              <Route path="repartidor/pedidos" element={<Navigate to="/repartidor" replace />} />
+              <Route path="repartidor/pedidos-disponibles" element={<Navigate to="/repartidor" replace />} />
+            </Route>
+
+            <Route element={<RutaProtegida roles={['administrador']} />}>
+              <Route path="admin" element={<Admin />} />
+            </Route>
+
+            <Route path="*" element={<NoEncontrado />} />
+          </Route>
+        </Routes>
+      </Proveedores>
     </BrowserRouter>
   )
 }

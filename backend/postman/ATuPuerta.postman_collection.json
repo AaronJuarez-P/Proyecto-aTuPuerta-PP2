@@ -888,6 +888,35 @@
           }
         },
         {
+          "name": "Cambiar la cantidad de un producto",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/carrito/4",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "La cantidad NUEVA (mayor a 0), no un delta. Para sacar el producto se usa DELETE."
+          }
+        },
+        {
           "name": "Quitar un producto",
           "request": {
             "method": "DELETE",

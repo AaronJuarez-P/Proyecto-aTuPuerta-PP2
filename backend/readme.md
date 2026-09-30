@@ -396,6 +396,29 @@ Cadena de middlewares: `verificarToken` → `verificarRol('comercio')` → `reso
 
 Los casos de prueba de cada endpoint están en `postman/backend-productos.js`.
 
+### Carrito — CU05, CU06 (rol `cliente`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/api/carrito/agregar` | Suma un producto. Body: `{ id_producto, cantidad }`. Si ya estaba, se suma a lo que había |
+| `GET` | `/api/carrito/listar` | El carrito agrupado por comercio, con `subtotal_comercio`, `total_general` y `direccion_entrega_default` |
+| `PATCH` | `/api/carrito/:id_producto` | Cambia la cantidad de un producto que ya está en el carrito. Body: `{ cantidad }`, la nueva y mayor a 0 |
+| `DELETE` | `/api/carrito/:id_producto` | Saca el producto del carrito |
+| `POST` | `/api/carrito/confirmar` | Crea un pedido por comercio, descuenta el stock y vacía el carrito. Body opcional: `{ direccion_entrega }` |
+
+- **Un pedido por comercio.** Cada comercio prepara y despacha lo suyo, así que el carrito se
+  parte al confirmar: la respuesta trae `pedidos`, uno por comercio, con su distancia y su
+  tiempo estimado. Cada pedido nace en `pago_espera` y se paga por separado.
+- **`direccion_entrega` en confirmar** es para una entrega suelta en otra dirección: se
+  geocodifica pero no pisa la del perfil. Sin ella se usa la del perfil del cliente.
+- **El stock se valida al agregar, al cambiar la cantidad y al confirmar**, siempre con el
+  producto lockeado (`FOR UPDATE`). `listar` marca `disponible: false` lo que ya no se puede
+  comprar (producto o comercio dado de baja, o stock que no alcanza): no suma al total, y
+  confirmar con algo así contesta `409` con la lista en `datos.errores`.
+- **`PATCH` es de la integración con el front.** Agregar suma, así que sin él bajar una
+  cantidad obligaba a sacar el producto entero. Cantidad 0 no vale a propósito: sacar un
+  producto es `DELETE`, siempre una acción explícita.
+
 ### Pagos — CU07 (rol `cliente`)
 
 | Método | Ruta | Descripción |

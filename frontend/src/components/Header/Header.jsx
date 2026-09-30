@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router'
+import { useCarrito } from '../../context/carrito'
 import { useSesion } from '../../context/sesion'
 import { etiquetaDelRol } from '../../utils/roles'
 import './Header.css'
@@ -29,6 +30,7 @@ const NAVEGACION = {
 export default function Header() {
   const [menuAbierto, setMenuAbierto] = useState(false)
   const { usuario, salir } = useSesion()
+  const { cantidad: cantidadCarrito } = useCarrito()
   const navigate = useNavigate()
 
   const cerrarMenu = () => setMenuAbierto(false)
@@ -52,6 +54,11 @@ export default function Header() {
       {usuario.rol === 'cliente' && (
         <Link to="/carrito" className="cart-link" onClick={cerrarMenu}>
           🛒 Carrito
+          {cantidadCarrito > 0 && (
+            <span className="cart-counter" aria-label={`${cantidadCarrito} productos`}>
+              {cantidadCarrito}
+            </span>
+          )}
         </Link>
       )}
 

@@ -187,6 +187,13 @@ const main = async () => {
     await esperar("carrito con token de comercio", "GET", "/carrito/listar", { token: ferreteria }, 403);
     await esperar("agregar cuadernos", "POST", "/carrito/agregar", { token: maria, body: { id_producto: 4, cantidad: 2 } }, 201);
     await esperar("agregar martillo", "POST", "/carrito/agregar", { token: maria, body: { id_producto: 1, cantidad: 1 } }, 201);
+    await esperar("subir la cantidad de cuadernos", "PATCH", "/carrito/4", { token: maria, body: { cantidad: 3 } }, 200,
+        (datos) => datos.item.cantidad === 3);
+    await esperar("cantidad por encima del stock", "PATCH", "/carrito/4", { token: maria, body: { cantidad: 999 } }, 400);
+    await esperar("cantidad 0 no vale: sacar es DELETE", "PATCH", "/carrito/4", { token: maria, body: { cantidad: 0 } }, 400);
+    await esperar("un producto que no está en el carrito", "PATCH", "/carrito/5", { token: maria, body: { cantidad: 1 } }, 404);
+    await esperar("volver a 2 cuadernos", "PATCH", "/carrito/4", { token: maria, body: { cantidad: 2 } }, 200,
+        (datos) => datos.item.cantidad === 2);
     await esperar("confirmar: un pedido por comercio", "POST", "/carrito/confirmar", { token: maria }, 201,
         (datos) => datos.pedidos.length === 2 && datos.pedidos[0].pedidoId === 4 && datos.pedidos[1].pedidoId === 5);
     await esperar("nace en pago_espera", "GET", "/pedidos/5", { token: maria }, 200,

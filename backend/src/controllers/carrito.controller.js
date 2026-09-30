@@ -415,6 +415,123 @@ const eliminarProductoCarrito = async (req, res) => {
     }
 };
 
+// PATCH /api/carrito/:id_producto
+// Body: { cantidad } con la cantidad NUEVA del producto en el carrito, no un delta.
+//
+// Es lo que usan los botones "+" y "-" del carrito del front: agregarAlCarrito suma, y sin
+// esto la unica forma de bajar una cantidad era sacar el producto entero. Cantidad 0 no
+// vale a proposito: sacar un producto es DELETE /api/carrito/:id_producto, siempre una
+// accion explicita.
+//
+// Mismo orden de locks que agregarAlCarrito (primero el producto, despues el item), para
+// validar contra el stock vigente sin cruzarse con un alta del mismo producto.
+const actualizarCantidadCarrito = async (req, res) => {
+    let connection;
+    try {
+        const id_producto = obtenerIdValido(req.params.id_producto);
+        const { cantidad } = req.body ?? {};
+
+        if (id_producto === null) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "id_producto inválido" }
+            });
+        }
+
+        if (!Number.isInteger(cantidad) || cantidad <= 0) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "cantidad tiene que ser un número entero mayor a 0. Para sacar el producto usá DELETE /api/carrito/:id_producto" }
+            });
+        }
+
+        connection = await database.getConnection();
+        await connection.beginTransaction();
+
+        // req.clienteId lo deja resolverCliente (ver carrito.routes.js)
+        const [carritos] = await connection.query(
+            `SELECT id FROM carritos WHERE cliente_id = ?`,
+            [req.clienteId]
+        );
+
+        if (carritos.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                codigo: 404,
+                estado: "error",
+                datos: { mensaje: "No tenés un carrito activo" }
+            });
+        }
+        const carritoId = carritos[0].id;
+
+        const [productos] = await connection.query(
+            `SELECT stock, activo FROM productos WHERE id = ? FOR UPDATE`,
+            [id_producto]
+        );
+
+        const [items] = await connection.query(
+            `SELECT id FROM items_carrito WHERE carrito_id = ? AND producto_id = ? FOR UPDATE`,
+            [carritoId, id_producto]
+        );
+
+        if (items.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                codigo: 404,
+                estado: "error",
+                datos: { mensaje: "Ese producto no está en tu carrito" }
+            });
+        }
+
+        if (productos.length === 0 || !productos[0].activo) {
+            await connection.rollback();
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El producto no está disponible" }
+            });
+        }
+
+        if (productos[0].stock < cantidad) {
+            await connection.rollback();
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: `Stock insuficiente (disponible: ${productos[0].stock})` }
+            });
+        }
+
+        await connection.query(
+            `UPDATE items_carrito SET cantidad = ? WHERE id = ?`,
+            [cantidad, items[0].id]
+        );
+
+        await connection.commit();
+
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                mensaje: "Cantidad actualizada",
+                item: { producto_id: id_producto, cantidad }
+            }
+        });
+
+    } catch (error) {
+        console.error(error);
+        if (connection) await connection.rollback();
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
 // POST /api/carrito/confirmar
 //
 // Va en DOS FASES a proposito (semana 9).
@@ -717,6 +834,7 @@ const confirmarCarrito = async (req, res) => {
 
 module.exports = {
     agregarAlCarrito,
+    actualizarCantidadCarrito,
     eliminarProductoCarrito,
     confirmarCarrito,
     listarProductosCarrito
