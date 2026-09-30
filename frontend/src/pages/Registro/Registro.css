@@ -46,7 +46,8 @@
     font-weight: 700;
 }
 
-.campo input {
+.campo input,
+.campo select {
     width: 100%;
     padding: 13px 14px;
     border: 1px solid var(--border);
@@ -58,8 +59,58 @@
     outline: none;
 }
 
-.campo input:focus {
+.campo input:focus,
+.campo select:focus {
     border-color: var(--brand);
+}
+
+.campo-ayuda {
+    color: var(--muted);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+/* Registro de comercio y de repartidor: el formulario va en dos bloques */
+.registro-bloque {
+    margin: 6px 0 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    color: #111827;
+    font-family: var(--display);
+    font-size: 1.05rem;
+}
+
+.registro-bloque:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.registro-nota {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--brand-light);
+    color: var(--brand);
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.registro-nota a {
+    color: inherit;
+    font-weight: 700;
+}
+
+.fila-registro {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 14px;
+}
+
+@media (max-width: 550px) {
+    .fila-registro {
+        grid-template-columns: 1fr;
+    }
 }
 
 .registro-error,

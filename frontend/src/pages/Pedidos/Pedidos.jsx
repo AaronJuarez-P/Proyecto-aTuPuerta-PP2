@@ -1,5 +1,3 @@
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
 import './Pedidos.css'
 
 export default function Pedidos() {
@@ -21,7 +19,6 @@ export default function Pedidos() {
 
   return (
     <>
-      <Header />
 
       <main className="pedidos-page">
         <section className="pedidos-container">
@@ -123,7 +120,7 @@ export default function Pedidos() {
                     </span>
 
                     <a
-                      href={`/pedido?id=${pedido.id}`}
+                      href={`/pedidos/${pedido.id}`}
                       className="pedido-detail-button"
                     >
                       Ver detalle →
@@ -138,7 +135,6 @@ export default function Pedidos() {
         </section>
       </main>
 
-      <Footer />
     </>
   )
 }

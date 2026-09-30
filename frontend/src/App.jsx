@@ -1,32 +1,83 @@
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router'
+import SesionProvider from './context/SesionProvider'
+import AvisosProvider from './context/AvisosProvider'
+import Layout from './components/Layout'
+import RutaProtegida from './components/RutaProtegida'
 import Landing from './pages/Landing/Landing'
 import Login from './pages/Login/Login'
 import Registro from './pages/Registro/Registro'
+import RegistroComercio from './pages/RegistroComercio/RegistroComercio'
+import RegistroRepartidor from './pages/RegistroRepartidor/RegistroRepartidor'
 import Comercios from './pages/Comercios/Comercios'
 import Comercio from './pages/Comercio/Comercio'
 import Carrito from './pages/Carrito/Carrito'
 import Checkout from './pages/Checkout/Checkout'
 import Pedidos from './pages/Pedidos/Pedidos'
-import Perfil from './pages/Perfil/Perfil'
 import Pedido from './pages/Pedido/Pedido'
+import Perfil from './pages/Perfil/Perfil'
 import ComercioAdmin from './pages/ComercioAdmin/ComercioAdmin'
 import RepartidorAdmin from './pages/RepartidorAdmin/RepartidorAdmin'
 import Admin from './pages/Admin/Admin'
+import NoEncontrado from './pages/NoEncontrado/NoEncontrado'
+
+// Las notificaciones push del backend traen URLs propias (/cliente/pedidos/5,
+// /repartidor/pedidos...). Estas rutas las llevan a la pantalla que corresponde.
+function Redirigir({ a }) {
+  const parametros = useParams()
+  return <Navigate to={a.replace(/:(\w+)/g, (_, clave) => parametros[clave])} replace />
+}
 
 export default function App() {
-  const ruta = window.location.pathname
+  // useTransitions={false}: por defecto React Router aplica los cambios de ruta como
+  // transiciones, con menos prioridad que el resto de los estados. Al cerrar sesión en una
+  // ruta protegida, la sesión vacía llegaba antes que la navegación al inicio y la ruta
+  // protegida alcanzaba a mandar al login. Así la ruta y la sesión cambian en el mismo render.
+  return (
+    <BrowserRouter useTransitions={false}>
+      <SesionProvider>
+        <AvisosProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
 
-  if (ruta === '/login') return <Login />
-  if (ruta === '/registro') return <Registro />
-  if (ruta === '/comercios') return <Comercios />
-  if (ruta === '/comercio') return <Comercio />
-  if (ruta === '/carrito') return <Carrito />
-  if (ruta === '/checkout') return <Checkout />
-  if (ruta === '/pedidos') return <Pedidos />
-  if (ruta === '/perfil') return <Perfil />
-  if (ruta === '/pedido') return <Pedido />
-  if (ruta === '/comercio-admin') return <ComercioAdmin />
-  if (ruta === '/repartidor-admin') return <RepartidorAdmin />
-  if (ruta === '/admin') return <Admin />
+            <Route element={<Layout />}>
+              <Route index element={<Landing />} />
+              <Route path="registro" element={<Registro />} />
+              <Route path="registro/comercio" element={<RegistroComercio />} />
+              <Route path="registro/repartidor" element={<RegistroRepartidor />} />
+              <Route path="comercios" element={<Comercios />} />
+              <Route path="comercios/:id" element={<Comercio />} />
 
-  return <Landing />
+              <Route element={<RutaProtegida roles={['cliente']} />}>
+                <Route path="carrito" element={<Carrito />} />
+                <Route path="checkout" element={<Checkout />} />
+                <Route path="pedidos" element={<Pedidos />} />
+                <Route path="pedidos/:id" element={<Pedido />} />
+                <Route path="cliente/pedidos/:id" element={<Redirigir a="/pedidos/:id" />} />
+              </Route>
+
+              <Route element={<RutaProtegida />}>
+                <Route path="perfil" element={<Perfil />} />
+              </Route>
+
+              <Route element={<RutaProtegida roles={['comercio']} />}>
+                <Route path="comercio" element={<ComercioAdmin />} />
+              </Route>
+
+              <Route element={<RutaProtegida roles={['repartidor']} />}>
+                <Route path="repartidor" element={<RepartidorAdmin />} />
+                <Route path="repartidor/pedidos" element={<Navigate to="/repartidor" replace />} />
+                <Route path="repartidor/pedidos-disponibles" element={<Navigate to="/repartidor" replace />} />
+              </Route>
+
+              <Route element={<RutaProtegida roles={['administrador']} />}>
+                <Route path="admin" element={<Admin />} />
+              </Route>
+
+              <Route path="*" element={<NoEncontrado />} />
+            </Route>
+          </Routes>
+        </AvisosProvider>
+      </SesionProvider>
+    </BrowserRouter>
+  )
 }

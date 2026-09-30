@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
 import './Checkout.css'
 
 export default function Checkout() {
@@ -58,7 +56,6 @@ export default function Checkout() {
   if (carrito.length === 0 && !pedidoConfirmado) {
     return (
       <>
-        <Header />
 
         <main className="checkout-page">
           <section className="checkout-empty">
@@ -82,7 +79,6 @@ export default function Checkout() {
           </section>
         </main>
 
-        <Footer />
       </>
     )
   }
@@ -90,7 +86,6 @@ export default function Checkout() {
   if (pedidoConfirmado) {
     return (
       <>
-        <Header />
 
         <main className="checkout-page">
           <section className="order-success">
@@ -129,14 +124,12 @@ export default function Checkout() {
           </section>
         </main>
 
-        <Footer />
       </>
     )
   }
 
   return (
     <>
-      <Header />
 
       <main className="checkout-page">
 
@@ -389,7 +382,6 @@ export default function Checkout() {
 
       </main>
 
-      <Footer />
     </>
   )
 }

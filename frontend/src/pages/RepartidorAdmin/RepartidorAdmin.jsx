@@ -1,23 +1,9 @@
 import { useState } from 'react'
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
+import { useSesion } from '../../context/sesion'
 import './RepartidorAdmin.css'
 
 export default function RepartidorAdmin() {
-  const usuarioGuardado = localStorage.getItem('usuario')
-  const usuario = usuarioGuardado
-    ? JSON.parse(usuarioGuardado)
-    : null
-
-  if (!usuario) {
-    window.location.href = '/login'
-    return null
-  }
-
-  if (usuario.rol !== 'repartidor') {
-    window.location.href = '/'
-    return null
-  }
+  const { usuario } = useSesion()
 
   const pedidosGuardados = localStorage.getItem('pedidos')
 
@@ -72,7 +58,6 @@ export default function RepartidorAdmin() {
 
   return (
     <>
-      <Header />
 
       <main className="repartidor-page">
         <section className="repartidor-container">
@@ -273,7 +258,6 @@ export default function RepartidorAdmin() {
         </section>
       </main>
 
-      <Footer />
     </>
   )
 }

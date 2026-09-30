@@ -1,23 +1,7 @@
 import { useState } from 'react'
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
 import './ComercioAdmin.css'
 
 export default function ComercioAdmin() {
-    const usuarioGuardado = localStorage.getItem('usuario')
-    const usuario = usuarioGuardado
-      ? JSON.parse(usuarioGuardado)
-      : null
-  
-    if (!usuario) {
-      window.location.href = '/login'
-      return null
-    }
-  
-    if (usuario.rol !== 'comercio') {
-      window.location.href = '/'
-      return null
-    }
   
     const pedidosGuardados = localStorage.getItem('pedidos')
   
@@ -70,7 +54,6 @@ export default function ComercioAdmin() {
 
   return (
     <>
-      <Header />
 
       <main className="comercio-admin-page">
         <section className="comercio-admin-container">
@@ -235,7 +218,6 @@ export default function ComercioAdmin() {
         </section>
       </main>
 
-      <Footer />
     </>
   )
 }

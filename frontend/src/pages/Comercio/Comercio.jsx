@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
+import { useParams } from 'react-router'
 import './Comercio.css'
 
 const comercios = [
@@ -68,16 +67,13 @@ const productosPrueba = [
 export default function Comercio() {
   const [cantidadCarrito, setCantidadCarrito] = useState(0)
 
-  const id = Number(
-    new URLSearchParams(window.location.search).get('id')
-  )
+  const id = Number(useParams().id)
 
   const comercio = comercios.find((item) => item.id === id)
 
   if (!comercio) {
     return (
       <>
-        <Header />
 
         <main className="comercio-page">
           <section className="comercio-not-found">
@@ -87,7 +83,6 @@ export default function Comercio() {
           </section>
         </main>
 
-        <Footer />
       </>
     )
   }
@@ -136,7 +131,6 @@ export default function Comercio() {
 
   return (
     <>
-      <Header />
 
       <main className="comercio-page">
 
@@ -211,7 +205,6 @@ export default function Comercio() {
 
       </main>
 
-      <Footer />
     </>
   )
 }

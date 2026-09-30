@@ -1,25 +1,18 @@
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
+import { useNavigate } from 'react-router'
+import { useSesion } from '../../context/sesion'
 import './Perfil.css'
 
 export default function Perfil() {
-  const usuarioGuardado = localStorage.getItem('usuario')
-  const usuario = usuarioGuardado ? JSON.parse(usuarioGuardado) : null
+  const { usuario, salir } = useSesion()
+  const navigate = useNavigate()
 
-  if (!usuario) {
-    window.location.href = '/login'
-    return null
-  }
-
-  function cerrarSesion() {
-    localStorage.removeItem('token')
-    localStorage.removeItem('usuario')
-    window.location.href = '/'
+  async function cerrarSesion() {
+    navigate('/')
+    await salir()
   }
 
   return (
     <>
-      <Header />
 
       <main className="perfil-page">
         <section className="perfil-container">
@@ -46,7 +39,7 @@ export default function Perfil() {
 
               <div className="dato">
                 <span>Correo electrónico</span>
-                <strong>{usuario.correo}</strong>
+                <strong>{usuario.email}</strong>
               </div>
 
               <div className="dato">
@@ -80,7 +73,6 @@ export default function Perfil() {
         </section>
       </main>
 
-      <Footer />
     </>
   )
 }

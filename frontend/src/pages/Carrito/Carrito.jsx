@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
 import './Carrito.css'
 
 export default function Carrito() {
@@ -52,7 +50,6 @@ export default function Carrito() {
 
     return (
         <>
-            <Header />
 
             <main className="carrito-page">
                 <section className="carrito-container">
@@ -185,7 +182,6 @@ export default function Carrito() {
                 </section>
             </main>
 
-            <Footer />
         </>
     )
 }

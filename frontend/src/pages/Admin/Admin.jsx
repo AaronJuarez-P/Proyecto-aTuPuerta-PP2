@@ -1,23 +1,9 @@
 import { useState } from 'react'
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
+import { useSesion } from '../../context/sesion'
 import './Admin.css'
 
 export default function Admin() {
-  const usuarioGuardado = localStorage.getItem('usuario')
-  const usuario = usuarioGuardado
-    ? JSON.parse(usuarioGuardado)
-    : null
-
-  if (!usuario) {
-    window.location.href = '/login'
-    return null
-  }
-
-  if (usuario.rol !== 'administrador') {
-    window.location.href = '/'
-    return null
-  }
+  const { usuario } = useSesion()
 
   const pedidosGuardados = localStorage.getItem('pedidos')
   const pedidosIniciales = pedidosGuardados
@@ -58,7 +44,6 @@ export default function Admin() {
 
   return (
     <>
-      <Header />
 
       <main className="admin-page">
         <section className="admin-container">
@@ -276,7 +261,6 @@ export default function Admin() {
         </section>
       </main>
 
-      <Footer />
     </>
   )
 }

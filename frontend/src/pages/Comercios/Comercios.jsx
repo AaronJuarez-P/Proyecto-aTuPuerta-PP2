@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
 import './Comercios.css'
 
 const comerciosPrueba = [
@@ -69,7 +67,6 @@ export default function Comercios() {
       })
   return (
     <>
-      <Header />
 
       <main className="comercios-page">
 
@@ -151,7 +148,7 @@ export default function Comercios() {
 
                   <a
   className="comercio-button"
-  href={`/comercio?id=${comercio.id}`}
+  href={`/comercios/${comercio.id}`}
 >
   Ver comercio →
 </a>
@@ -165,7 +162,6 @@ export default function Comercios() {
 
       </main>
 
-      <Footer />
     </>
   )
 }

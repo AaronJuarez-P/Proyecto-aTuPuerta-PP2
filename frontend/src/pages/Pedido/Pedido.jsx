@@ -1,10 +1,8 @@
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
+import { useParams } from 'react-router'
 import './Pedido.css'
 
 export default function Pedido() {
-  const parametros = new URLSearchParams(window.location.search)
-  const idPedido = Number(parametros.get('id'))
+  const idPedido = Number(useParams().id)
 
   const pedidosGuardados = localStorage.getItem('pedidos')
   const pedidos = pedidosGuardados
@@ -16,7 +14,6 @@ export default function Pedido() {
   if (!pedido) {
     return (
       <>
-        <Header />
 
         <main className="pedido-page">
           <section className="pedido-container pedido-not-found">
@@ -28,14 +25,12 @@ export default function Pedido() {
           </section>
         </main>
 
-        <Footer />
       </>
     )
   }
 
   return (
     <>
-      <Header />
 
       <main className="pedido-page">
         <section className="pedido-container">
@@ -139,7 +134,6 @@ export default function Pedido() {
         </section>
       </main>
 
-      <Footer />
     </>
   )
 }

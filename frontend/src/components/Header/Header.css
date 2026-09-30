@@ -70,6 +70,30 @@
   .header-left a:hover {
     opacity: 0.6;
   }
+
+  /* La sección en la que se está (NavLink le pone .active) */
+  .header-left a.active,
+  .main-navigation a.active {
+    color: var(--brand);
+  }
+
+
+  /* =========================================
+     ROL DE LA SESIÓN (comercio, repartidor, administrador)
+     ========================================= */
+
+  .rol-sesion {
+    margin-left: 8px;
+    padding: 2px 8px;
+
+    border-radius: 999px;
+
+    background: var(--brand-light);
+    color: var(--brand);
+
+    font-size: 11px;
+    font-weight: 700;
+  }
   
   
   /* =========================================

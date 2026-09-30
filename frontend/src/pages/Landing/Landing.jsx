@@ -1,5 +1,3 @@
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
 import './Landing.css'
 
 const categories = [
@@ -27,7 +25,6 @@ export default function Landing() {
   return (
     <>
       <a className="skip-link" href="#contenido">Saltar al contenido</a>
-      <Header />
       <main id="contenido">
         <section className="landing-hero" id="inicio" aria-labelledby="hero-title">
           <div className="hero-content">
@@ -95,7 +92,6 @@ export default function Landing() {
           </div>
         </section>
       </main>
-      <Footer />
     </>
   )
 }
