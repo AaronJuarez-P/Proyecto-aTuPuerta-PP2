@@ -146,6 +146,7 @@ MP_MODO=mock
 MP_ACCESS_TOKEN=
 MP_WEBHOOK_SECRET=
 URL_PUBLICA=http://localhost:4000
+FRONT_URL=http://localhost:5173
 
 MAPS_MODO=mock
 MAPS_ACCESS_TOKEN=
@@ -195,6 +196,7 @@ TRUST_PROXY=
 | `MP_ACCESS_TOKEN` | Access token de prueba de la aplicación (empieza con `TEST-`). Solo con `MP_MODO=sandbox` |
 | `MP_WEBHOOK_SECRET` | Clave con la que MercadoPago firma las notificaciones. Es lo que autentica el webhook |
 | `URL_PUBLICA` | URL desde la que se llega al backend. Con `sandbox` tiene que ser la de ngrok, porque MercadoPago necesita alcanzar el webhook desde afuera |
+| `FRONT_URL` | URL del front. Al volver de MercadoPago, `GET /api/pagos/retorno` redirige al detalle del pedido ahí. Vacía, contesta un JSON |
 
 Para desarrollo y para la defensa alcanza con `MP_MODO=mock`: no hace falta cuenta,
 credenciales ni ngrok. Las credenciales de prueba de MercadoPago tampoco cuestan nada
@@ -426,7 +428,7 @@ Los casos de prueba de cada endpoint están en `postman/backend-productos.js`.
 | `POST` | `/api/pedidos/:id/pagar` | Registra el intento de pago y devuelve la URL de MercadoPago |
 | `GET` | `/api/pedidos/:id/pago` | Estado del pago del pedido propio |
 | `POST` | `/api/pagos/webhook` | Notificación de MercadoPago. **Público** |
-| `GET` | `/api/pagos/retorno` | Vuelta del navegador después de pagar (`back_urls`) |
+| `GET` | `/api/pagos/retorno` | Vuelta del navegador después de pagar (`back_urls`). Con `FRONT_URL` redirige a `FRONT_URL/pedidos/:id?pago=<status>` |
 | `POST` | `/api/pagos/simular` | Fuerza un resultado. Solo con `MP_MODO=mock` |
 
 Flujo: `confirmarCarrito` deja el pedido en `pago_espera` → `POST /pedidos/:id/pagar`

@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import Header from './Header/Header'
 import Footer from './Footer/Footer'
+import { Cargando } from './Comunes/Comunes'
 
 // Header y footer comunes a todas las pantallas menos el login.
 //
@@ -22,7 +23,9 @@ export default function Layout() {
   return (
     <>
       <Header />
-      <Outlet />
+      <Suspense fallback={<main className="pagina"><Cargando /></main>}>
+        <Outlet />
+      </Suspense>
       <Footer />
     </>
   )

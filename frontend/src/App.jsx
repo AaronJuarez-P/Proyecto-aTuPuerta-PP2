@@ -1,3 +1,4 @@
+import { lazy } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router'
 import SesionProvider from './context/SesionProvider'
 import AvisosProvider from './context/AvisosProvider'
@@ -14,12 +15,15 @@ import Comercio from './pages/Comercio/Comercio'
 import Carrito from './pages/Carrito/Carrito'
 import Checkout from './pages/Checkout/Checkout'
 import Pedidos from './pages/Pedidos/Pedidos'
-import Pedido from './pages/Pedido/Pedido'
 import Perfil from './pages/Perfil/Perfil'
 import ComercioAdmin from './pages/ComercioAdmin/ComercioAdmin'
 import RepartidorAdmin from './pages/RepartidorAdmin/RepartidorAdmin'
 import Admin from './pages/Admin/Admin'
 import NoEncontrado from './pages/NoEncontrado/NoEncontrado'
+
+// Las pantallas con mapa y socket (Leaflet y Socket.IO pesan) se bajan recién cuando se
+// abren: el resto de la app no las necesita. Layout pone el Suspense.
+const Pedido = lazy(() => import('./pages/Pedido/Pedido'))
 
 // Las notificaciones push del backend traen URLs propias (/cliente/pedidos/5,
 // /repartidor/pedidos...). Estas rutas las llevan a la pantalla que corresponde.

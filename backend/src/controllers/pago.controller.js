@@ -676,7 +676,22 @@ const simularPago = async (req, res) => {
 //
 // A donde vuelve el navegador despues de pagar en MercadoPago (back_urls). El estado
 // real no se toma de aca sino del webhook: esta pantalla es solo el "ya volviste".
+//
+// Con FRONT_URL definido redirige al detalle del pedido en el front, que muestra el
+// estado y se entera del resultado por el socket. MercadoPago agrega a la URL de vuelta
+// external_reference (el id del pedido, ver crearPreferencia) y status. Sin FRONT_URL
+// contesta el JSON de siempre, que es lo que usan las guias de Postman.
 const retornoPago = (req, res) => {
+    const frontUrl = (process.env.FRONT_URL || '').replace(/\/+$/, '');
+
+    if (frontUrl) {
+        const pedidoId = obtenerIdValido(req.query.external_reference);
+        const estadoPago = typeof req.query.status === 'string' ? req.query.status : '';
+        const destino = pedidoId ? `${frontUrl}/pedidos/${pedidoId}` : `${frontUrl}/pedidos`;
+
+        return res.redirect(302, estadoPago ? `${destino}?pago=${encodeURIComponent(estadoPago)}` : destino);
+    }
+
     return res.status(200).json({
         codigo: 200,
         estado: "exito",

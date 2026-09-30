@@ -464,6 +464,14 @@ const main = async () => {
     await esperar("aviso de pago rechazado", "GET", "/notificaciones", { token: maria }, 200,
         (datos) => datos.notificaciones.some((n) => n.tipo === "pago_rechazado"));
 
+    // Vuelta del navegador desde MercadoPago: con FRONT_URL redirige al pedido en el front,
+    // sin FRONT_URL contesta el JSON de siempre. Se acepta cualquiera de los dos.
+    const retorno = await fetch(`${BASE}/pagos/retorno?external_reference=8&status=rejected`, { redirect: "manual" });
+    const destinoRetorno = retorno.headers.get("location") || "";
+    verificar("vuelta de MercadoPago: JSON, o redirección al pedido en el front",
+        retorno.status === 200 || (retorno.status === 302 && destinoRetorno.endsWith("/pedidos/8?pago=rejected")),
+        `obtuvo ${retorno.status} ${destinoRetorno}`);
+
     // -----------------------------------------------------------------------
     seccion("Semana 14 - Limite de intentos (va ultimo: bloquea los logins un rato)");
     // -----------------------------------------------------------------------

@@ -1,0 +1,49 @@
+.mapa-seguimiento {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #eef2ef;
+}
+
+/* Leaflet necesita una altura explícita */
+.mapa-leaflet {
+  width: 100%;
+  height: 340px;
+}
+
+.mapa-vacio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  padding: 20px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.marcador-emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  font-size: 1.3rem;
+}
+
+/* El repartidor, que es lo que se mueve, con el color de acento */
+.marcador-repartidor {
+  border-color: var(--accent);
+}
+
+/* Por encima del header fijo no: Leaflet usa z-index altos por defecto */
+.mapa-seguimiento .leaflet-pane,
+.mapa-seguimiento .leaflet-control {
+  z-index: 1;
+}
+
+.mapa-seguimiento .leaflet-top,
+.mapa-seguimiento .leaflet-bottom {
+  z-index: 2;
+}
