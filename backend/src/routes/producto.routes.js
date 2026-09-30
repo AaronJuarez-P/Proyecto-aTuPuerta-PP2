@@ -3,6 +3,7 @@ const router = express.Router();
 const {
     buscarProductos,
     obtenerProducto,
+    listarProductosPropios,
     crearProducto,
     actualizarProducto,
     actualizarStock,
@@ -22,6 +23,10 @@ router.get('/productos', buscarProductos);
 router.get('/productos/:id', obtenerProducto);
 
 // CU13 a CU16 - Gestion del catalogo (solo el comercio dueño)
+//
+// El listado de gestion va en singular, /comercio/..., como el perfil y las ventas: es
+// lo del comercio autenticado, e incluye los productos dados de baja
+router.get('/comercio/productos', soloComercio, listarProductosPropios);
 router.post('/productos', soloComercio, crearProducto);
 router.put('/productos/:id', soloComercio, actualizarProducto);
 router.patch('/productos/:id/stock', soloComercio, actualizarStock);

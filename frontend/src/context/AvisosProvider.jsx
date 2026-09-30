@@ -3,6 +3,10 @@ import { AvisosContext } from './avisos'
 
 const DURACION_MS = 4000
 
+// Con varias acciones seguidas los avisos se apilaban y tapaban la pantalla: se ven los
+// últimos tres
+const MAXIMO_VISIBLES = 3
+
 export default function AvisosProvider({ children }) {
   const [avisos, setAvisos] = useState([])
   const siguienteId = useRef(0)
@@ -11,7 +15,7 @@ export default function AvisosProvider({ children }) {
     siguienteId.current += 1
     const id = siguienteId.current
 
-    setAvisos((actuales) => [...actuales, { id, mensaje, tipo }])
+    setAvisos((actuales) => [...actuales, { id, mensaje, tipo }].slice(-MAXIMO_VISIBLES))
     setTimeout(() => {
       setAvisos((actuales) => actuales.filter((aviso) => aviso.id !== id))
     }, DURACION_MS)

@@ -379,6 +379,11 @@ const main = async () => {
     seccion("Semana 13 - Trazabilidad");
     // -----------------------------------------------------------------------
     await esperar("cambio de precio", "PATCH", "/productos/1/precio", { token: ferreteria, body: { precio: 4600 } }, 200);
+    await esperar("catálogo de gestión del comercio, con sus categorías", "GET", "/comercio/productos", { token: ferreteria }, 200,
+        (datos) => datos.productos.length === 3 && datos.productos.every((p) => p.comercio_id === 1) &&
+                   datos.categorias.includes("Herramientas") && typeof datos.productos[0].precio === "number");
+    await esperar("filtro activo inválido", "GET", "/comercio/productos?activo=quizas", { token: ferreteria }, 400);
+    await esperar("un cliente no ve el catálogo de gestión", "GET", "/comercio/productos", { token: juan }, 403);
     await esperar("auditoria de productos del comercio", "GET", "/admin/auditoria/productos?comercioId=1", { token: admin }, 200,
         (datos) => datos.auditoria.length >= 1 && datos.auditoria[0].accion === "UPDATE" && datos.auditoria[0].usuario === "Ferretería Central");
     await esperar("auditoria del pedido 5", "GET", "/admin/auditoria/pedidos?pedidoId=5", { token: admin }, 200,

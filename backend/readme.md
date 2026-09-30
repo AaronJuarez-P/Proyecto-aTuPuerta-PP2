@@ -384,6 +384,7 @@ rol que viene adentro del token.
 | `PATCH` | `/api/productos/:id/precio` | Actualiza precio. Body: `{ precio }` |
 | `DELETE` | `/api/productos/:id` | Baja lógica (`activo = FALSE`) |
 | `GET` | `/api/productos/:id/auditoria` | Historial de cambios del producto |
+| `GET` | `/api/comercio/productos` | Los productos propios, **incluidos los dados de baja**, para gestionarlos. Filtros: `buscar`, `categoria`, `activo`, `pagina`, `limite`. Trae también `categorias` |
 
 Cadena de middlewares: `verificarToken` → `verificarRol('comercio')` → `resolverComercio`.
 
@@ -391,6 +392,9 @@ Cadena de middlewares: `verificarToken` → `verificarRol('comercio')` → `reso
   se acepta desde la semana 14).
 - El `comercio_id` sale siempre del token, nunca del body: un comercio no puede crear
   ni modificar productos de otro (`403`).
+- `GET /api/comercio/productos` es de la integración con el front: el catálogo público
+  (`/api/comercios/:id/productos`) muestra solo lo que está a la venta, así que el panel no
+  tenía cómo mostrar un producto dado de baja ni reactivarlo (`PUT` con `activo: true`).
 - Cada escritura corre dentro de una transacción junto con su fila en
   `auditoria_productos` (`INSERT` / `UPDATE` / `DELETE`, con el `usuario_id` del actor).
 - El borrado es lógico porque `items_pedido.producto_id` es `ON DELETE RESTRICT` y

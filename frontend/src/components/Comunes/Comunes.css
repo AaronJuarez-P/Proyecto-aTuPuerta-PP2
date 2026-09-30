@@ -112,6 +112,11 @@
   text-align: right;
 }
 
+.texto-apagado {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 /* =========================================
    BOTONES
    ========================================= */

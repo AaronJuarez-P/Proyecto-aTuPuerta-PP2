@@ -838,6 +838,21 @@
             ],
             "url": "{{baseUrl}}/productos/1/auditoria"
           }
+        },
+        {
+          "name": "Mis productos, incluidos los dados de baja",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_ferreteria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/comercio/productos",
+            "description": "El catálogo del propio comercio para gestionarlo. Filtros: buscar, categoria, activo (true | false), pagina, limite. Devuelve también las categorias del comercio."
+          }
         }
       ]
     },

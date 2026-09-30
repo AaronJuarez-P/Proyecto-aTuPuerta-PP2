@@ -1,0 +1,154 @@
+.productos-comercio .buscador-productos {
+  flex: 1;
+  min-width: 260px;
+}
+
+.productos-comercio .buscador-productos div {
+  display: flex;
+  gap: 8px;
+}
+
+.productos-comercio .producto-celda {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.productos-comercio .producto-celda > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 1.4rem;
+}
+
+.productos-comercio .producto-celda div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.productos-comercio .producto-celda strong {
+  color: #111827;
+}
+
+.productos-comercio .producto-celda small {
+  max-width: 320px;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Un producto dado de baja se ve apagado */
+.productos-comercio .fila-baja td {
+  background: #fafafa;
+  color: var(--muted);
+}
+
+.productos-comercio .fila-baja .producto-celda > span {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+
+/* Precio y stock se editan en la misma fila */
+.productos-comercio .celda-editable {
+  padding: 6px 10px;
+  border: 1px dashed transparent;
+  border-radius: 8px;
+  background: none;
+  color: #111827;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.productos-comercio .celda-editable:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.productos-comercio .celda-editable:disabled {
+  cursor: default;
+}
+
+.productos-comercio .celda-editable span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.productos-comercio .celda-edicion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.productos-comercio .celda-edicion input {
+  width: 110px;
+  padding: 7px 9px;
+  border: 1px solid var(--brand);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.productos-comercio .control-stock {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.productos-comercio .control-stock > button:not(.celda-editable) {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.productos-comercio .control-stock > button:not(.celda-editable):hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.productos-comercio .control-stock > button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.productos-comercio .acciones-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.productos-comercio .historial-producto {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.productos-comercio .historial-producto li {
+  display: grid;
+  grid-template-columns: 90px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.productos-comercio .historial-producto small {
+  color: var(--muted);
+}

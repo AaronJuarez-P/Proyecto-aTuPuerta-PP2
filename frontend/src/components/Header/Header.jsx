@@ -18,6 +18,7 @@ const NAVEGACION = {
   ],
   comercio: [
     { a: '/comercio', texto: 'Pedidos y ventas', exacto: true },
+    { a: '/comercio/productos', texto: 'Productos' },
   ],
   repartidor: [
     { a: '/repartidor', texto: 'Mis entregas' },

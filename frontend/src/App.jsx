@@ -17,6 +17,8 @@ import Checkout from './pages/Checkout/Checkout'
 import Pedidos from './pages/Pedidos/Pedidos'
 import Perfil from './pages/Perfil/Perfil'
 import ComercioAdmin from './pages/ComercioAdmin/ComercioAdmin'
+import ComercioVenta from './pages/ComercioVenta/ComercioVenta'
+import ComercioProductos from './pages/ComercioProductos/ComercioProductos'
 import RepartidorAdmin from './pages/RepartidorAdmin/RepartidorAdmin'
 import Admin from './pages/Admin/Admin'
 import NoEncontrado from './pages/NoEncontrado/NoEncontrado'
@@ -76,6 +78,9 @@ export default function App() {
 
             <Route element={<RutaProtegida roles={['comercio']} />}>
               <Route path="comercio" element={<ComercioAdmin />} />
+              <Route path="comercio/ventas/:id" element={<ComercioVenta />} />
+              <Route path="comercio/pedidos/:id" element={<Redirigir a="/comercio/ventas/:id" />} />
+              <Route path="comercio/productos" element={<ComercioProductos />} />
             </Route>
 
             <Route element={<RutaProtegida roles={['repartidor']} />}>
