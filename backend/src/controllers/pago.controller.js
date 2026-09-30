@@ -5,6 +5,7 @@ const { emitirEstadoDePedido } = require('../services/tiemporeal.service');
 const { obtenerIdValido } = require('../utils/validacion');
 const {
     enviarNotificaciones,
+    enviarNotificacionRol,
     enviarNotificacionRepartidores
 } = require('./notificaciones.controller');
 
@@ -95,16 +96,29 @@ const recortarMotivo = (motivo) => {
     return String(motivo).slice(0, LARGO_MAXIMO_MOTIVO);
 };
 
-const notificarNuevoPedido = async (notificaciones) => {
+// Avisos que deja el resultado de un pago (semana 11). Se mandan despues del commit:
+// lo que se anuncia ya tiene que estar en la base. Cada clave es opcional, porque no
+// todos los resultados avisan a todos.
+const notificarResultadoPago = async (notificaciones) => {
     if (!notificaciones) {
         return;
     }
 
-    await enviarNotificaciones(
-        notificaciones.comercio.usuarioId,
-        notificaciones.comercio
-    );
-    await enviarNotificacionRepartidores(notificaciones.repartidores);
+    if (notificaciones.cliente) {
+        await enviarNotificaciones(notificaciones.cliente.usuarioId, notificaciones.cliente);
+    }
+
+    if (notificaciones.comercio) {
+        await enviarNotificaciones(notificaciones.comercio.usuarioId, notificaciones.comercio);
+    }
+
+    if (notificaciones.repartidores) {
+        await enviarNotificacionRepartidores(notificaciones.repartidores);
+    }
+
+    if (notificaciones.administradores) {
+        await enviarNotificacionRol('administrador', notificaciones.administradores);
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -139,11 +153,16 @@ const aplicarResultadoPago = async (connection, { pedidoId, estadoExterno, motiv
     }
 
     // Se trae tambien el usuario_id del comercio: si el pago se aprueba, es el
-    // momento correcto para avisarle que tiene un pedido nuevo para preparar.
+    // momento correcto para avisarle que tiene un pedido nuevo para preparar. Y el del
+    // cliente, que se entera de como salio su pago (semana 11).
     const [pedidos] = await connection.query(
-        `SELECT p.id, p.estado, p.total, co.usuario_id AS comercio_usuario_id
+        `SELECT p.id, p.estado, p.total,
+                co.usuario_id AS comercio_usuario_id,
+                co.nombre AS comercio_nombre,
+                cl.usuario_id AS cliente_usuario_id
          FROM pedidos p
          INNER JOIN comercios co ON co.id = p.comercio_id
+         INNER JOIN clientes cl ON cl.id = p.cliente_id
          WHERE p.id = ? FOR UPDATE`,
         [pedidoId]
     );
@@ -166,6 +185,45 @@ const aplicarResultadoPago = async (connection, { pedidoId, estadoExterno, motiv
         return { resultado: "pendiente" };
     }
 
+    // El pedido ya no espera el pago: el cliente o un administrador lo cancelaron
+    // mientras el pago estaba en curso (semana 13). Se registra lo que paso con el
+    // dinero, que es la verdad, pero el pedido NO se mueve: un cancelado no vuelve a
+    // en_preparacion (ver TRANSICIONES_PEDIDO). Si el pago se aprobo, la devolucion es
+    // manual y se avisa a los administradores para que no se pierda.
+    //
+    // Sin esta guarda, cambiarEstadoPedido tiraria la transicion ilegal, el webhook
+    // contestaria 500 y MercadoPago lo reintentaria para siempre.
+    if (pedido.estado !== 'pago_espera') {
+        const aprobado = nuevoEstado === 'aprobado';
+
+        await connection.query(
+            `UPDATE pagos
+             SET estado = ?, motivo_rechazo = ?, referencia_externa = ?, fecha_pago = IF(? , NOW(), fecha_pago)
+             WHERE id = ?`,
+            [
+                nuevoEstado,
+                recortarMotivo(aprobado
+                    ? `El pedido ya estaba en estado "${pedido.estado}": requiere devolución manual`
+                    : motivo),
+                referenciaExterna,
+                aprobado,
+                pago.id
+            ]
+        );
+
+        return {
+            resultado: "pedido_no_pagable",
+            notificaciones: aprobado ? {
+                administradores: {
+                    tipo: "pago_a_devolver",
+                    titulo: "Pago a devolver",
+                    mensaje: `Se aprobó un pago de $${pedido.total} para el pedido #${pedidoId}, que ya estaba en estado "${pedido.estado}". Hay que devolver el dinero.`,
+                    url: `/admin/pedidos/${pedidoId}`
+                }
+            } : null
+        };
+    }
+
     // El monto lo decide la base, no la notificacion: si no coincide con el total del
     // pedido, alguien pago de menos y el pedido no se libera.
     if (nuevoEstado === 'aprobado' && Number(monto) !== Number(pedido.total)) {
@@ -178,10 +236,21 @@ const aplicarResultadoPago = async (connection, { pedidoId, estadoExterno, motiv
             ]
         );
 
-        await cambiarEstadoPedido(connection, { pedidoId, nuevoEstado: 'cancelado' });
+        await cambiarEstadoPedido(connection, { pedidoId, nuevoEstado: 'cancelado', detalle: 'el monto pagado no coincide' });
         await restaurarStockPedido(connection, pedidoId);
 
-        return { resultado: "monto_invalido" };
+        return {
+            resultado: "monto_invalido",
+            notificaciones: {
+                cliente: {
+                    usuarioId: pedido.cliente_usuario_id,
+                    tipo: "pago_rechazado",
+                    titulo: "Pago rechazado",
+                    mensaje: `El pago del pedido #${pedidoId} no coincide con el total y el pedido se canceló.`,
+                    url: `/cliente/pedidos/${pedidoId}`
+                }
+            }
+        };
     }
 
     if (nuevoEstado === 'aprobado') {
@@ -192,11 +261,18 @@ const aplicarResultadoPago = async (connection, { pedidoId, estadoExterno, motiv
             [referenciaExterna, pago.id]
         );
 
-        await cambiarEstadoPedido(connection, { pedidoId, nuevoEstado: 'en_preparacion' });
+        await cambiarEstadoPedido(connection, { pedidoId, nuevoEstado: 'en_preparacion', detalle: 'pago aprobado' });
 
         return {
             resultado: "aprobado",
             notificaciones: {
+                cliente: {
+                    usuarioId: pedido.cliente_usuario_id,
+                    tipo: "pago_aprobado",
+                    titulo: "Pago aprobado",
+                    mensaje: `Tu pago del pedido #${pedidoId} fue aprobado. ${pedido.comercio_nombre} ya lo está preparando.`,
+                    url: `/cliente/pedidos/${pedidoId}`
+                },
                 comercio: {
                     usuarioId: pedido.comercio_usuario_id,
                     titulo: "Nuevo pedido pagado",
@@ -220,10 +296,21 @@ const aplicarResultadoPago = async (connection, { pedidoId, estadoExterno, motiv
         [nuevoEstado, recortarMotivo(motivo), referenciaExterna, pago.id]
     );
 
-    await cambiarEstadoPedido(connection, { pedidoId, nuevoEstado: 'cancelado' });
+    await cambiarEstadoPedido(connection, { pedidoId, nuevoEstado: 'cancelado', detalle: `pago ${nuevoEstado}` });
     await restaurarStockPedido(connection, pedidoId);
 
-    return { resultado: nuevoEstado };
+    return {
+        resultado: nuevoEstado,
+        notificaciones: {
+            cliente: {
+                usuarioId: pedido.cliente_usuario_id,
+                tipo: "pago_rechazado",
+                titulo: "Pago rechazado",
+                mensaje: `El pago del pedido #${pedidoId} fue rechazado y el pedido se canceló. Podés volver a armarlo desde tu historial.`,
+                url: `/cliente/pedidos/${pedidoId}`
+            }
+        }
+    };
 };
 
 // ---------------------------------------------------------------------------
@@ -403,8 +490,11 @@ const recibirWebhook = async (req, res) => {
         const aplicacion = await aplicarResultadoPago(connection, datosPago);
         await connection.commit();
 
-        avisarCambioDeEstado(datosPago.pedidoId, resultado);
-        await notificarNuevoPedido(aplicacion.notificaciones);
+        // Antes decia "resultado" a secas, una variable que no existe en este
+        // handler: tiraba ReferenceError DESPUES del commit, el webhook contestaba 500
+        // y MercadoPago lo reintentaba aunque el pago ya estuviera aplicado.
+        avisarCambioDeEstado(datosPago.pedidoId, aplicacion.resultado);
+        await notificarResultadoPago(aplicacion.notificaciones);
 
         return res.status(200).json({
             codigo: 200,
@@ -555,7 +645,7 @@ const simularPago = async (req, res) => {
         await connection.commit();
 
         avisarCambioDeEstado(id, respuesta.resultado);
-        await notificarNuevoPedido(respuesta.notificaciones);
+        await notificarResultadoPago(respuesta.notificaciones);
 
         return res.status(200).json({
             codigo: 200,

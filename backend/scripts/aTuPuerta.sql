@@ -151,7 +151,7 @@ CREATE TABLE items_carrito (
 -- 9. PEDIDOS
 -- Ya NO incluye estado 'carrito': el carrito vive en su propia tabla,
 -- separada del ciclo de vida operativo. Un pedido nace directamente
--- en 'pendiente_pago' cuando se confirma el carrito, y sigue siendo
+-- en 'pago_espera' cuando se confirma el carrito, y sigue siendo
 -- 1 pedido = 1 comercio (necesario para repartidor/estado/pago).
 -- =====================================================================
 CREATE TABLE pedidos (
@@ -159,7 +159,8 @@ CREATE TABLE pedidos (
   cliente_id         INT NOT NULL,
   comercio_id        INT NOT NULL,
   repartidor_id      INT NULL,
-  estado             ENUM('pago_espera','en_preparacion', 'preparado','en_camino','entregado','cancelado'),
+  estado             ENUM('pago_espera','en_preparacion','preparado','en_camino','entregado','cancelado')
+                       NOT NULL DEFAULT 'pago_espera',
   direccion_entrega  VARCHAR(200) NOT NULL,
   total              DECIMAL(10,2) NOT NULL,
   codigo             VARCHAR(8) NULL,
@@ -173,23 +174,16 @@ CREATE TABLE pedidos (
     REFERENCES repartidores(id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
-<<<<<<< HEAD
 -- distancia_km, tiempo_estimado y comision se calculan al CREAR el pedido
--- (comercio -> cliente, vía API de Google Maps), NO al aceptar. Se guardan
+-- (comercio -> cliente, vía Mapbox desde la semana 9), NO al aceptar. Se guardan
 -- como una "foto fija" del momento del cálculo, no se recalculan después,
 -- para que el repartidor pueda ver y decidir con estos datos antes de
 -- tomar el pedido, y para que el pago no cambie según cuándo se consulte.
+-- (codigo NO se agrega acá: ya viene en el CREATE TABLE de arriba.)
 ALTER TABLE pedidos
   ADD COLUMN distancia_km     DECIMAL(4,1) NOT NULL,
   ADD COLUMN tiempo_estimado  INT NOT NULL COMMENT 'minutos',
   ADD COLUMN comision         DECIMAL(10,2) NOT NULL;
-=======
-ALTER TABLE pedidos
-  ADD COLUMN codigo VARCHAR(8) NULL AFTER estado,
-  ADD COLUMN distancia_km DECIMAL(6,2) NULL,
-  ADD COLUMN tiempo_estimado INT NULL COMMENT 'minutos',
-  ADD COLUMN comision DECIMAL(10,2) NULL;
->>>>>>> ramAaron
 
 -- =====================================================================
 -- 10. ITEMS_PEDIDO
@@ -320,7 +314,6 @@ CREATE TABLE notificaciones (
 ) ENGINE=InnoDB;
 
 -- =====================================================================
-<<<<<<< HEAD
 -- SEMANA 8 - REPARTIDORES Y ASIGNACIÓN DE PEDIDOS (CU19, CU20)
 -- Este archivo arranca con DROP DATABASE: para tener estos cambios hay que
 -- volver a importarlo entero.
@@ -379,7 +372,8 @@ ALTER TABLE pedidos
 -- tabla que crece con cada ping del repartidor.
 ALTER TABLE ubicaciones_repartidor
   ADD INDEX idx_ubicaciones_pedido (pedido_id, registrado_en);
-=======
+
+-- =====================================================================
 -- 17. SUSCRIPCIONES_PUSH
 -- Guarda las suscripciones que genera el navegador (Web Push API) para
 -- poder enviar notificaciones push a cada usuario. Es distinta de la
@@ -398,7 +392,6 @@ CREATE TABLE suscripciones_push (
   CONSTRAINT fk_suscripciones_push_usuario FOREIGN KEY (usuario_id)
     REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
->>>>>>> ramAaron
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -428,6 +421,53 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- =====================================================================
 
 -- =====================================================================
+-- SEMANAS 11 A 14 - NOTIFICACIONES, HISTORIAL, ADMINISTRACIÓN Y CIERRE
+-- Este archivo arranca con DROP DATABASE: para tener estos cambios hay que
+-- volver a importarlo entero. Para una base que ya tiene datos está
+-- scripts/migraciones/20260929_semanas_11_a_14.sql, que hace lo mismo sin
+-- borrar nada.
+-- =====================================================================
+
+-- Semana 11. Lecturas de las notificaciones GENERALES (las que van a todo un
+-- rol, con usuario_id NULL y destinatario_rol cargado). notificaciones.leida
+-- sirve para las personales, pero una general es una sola fila para todos los
+-- repartidores: si el primero que la lee la marcara, desaparecería para el
+-- resto. Por eso la lectura de una general se guarda aparte, por usuario.
+CREATE TABLE notificaciones_leidas (
+  notificacion_id  INT NOT NULL,
+  usuario_id       INT NOT NULL,
+  leida_en         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (notificacion_id, usuario_id),
+  KEY idx_notificaciones_leidas_usuario (usuario_id),
+  CONSTRAINT fk_notificaciones_leidas_notificacion FOREIGN KEY (notificacion_id)
+    REFERENCES notificaciones(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_notificaciones_leidas_usuario FOREIGN KEY (usuario_id)
+    REFERENCES usuarios(id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- Semana 13 (CU24). Por qué se canceló un pedido: lo escribe quien lo cancela
+-- (el cliente antes de pagar, o un administrador). NULL en los pedidos que no
+-- se cancelaron y en los que canceló un pago rechazado, que ya tienen el motivo
+-- en pagos.motivo_rechazo.
+ALTER TABLE pedidos
+  ADD COLUMN motivo_cancelacion VARCHAR(255) NULL AFTER estado;
+
+-- Semanas 7 y 13. accion solo dice INSERT / UPDATE / DELETE, y para la
+-- trazabilidad eso no alcanza: "UPDATE a las 10:15" no dice si el pedido pasó
+-- a en_camino o si lo canceló un administrador. detalle guarda la transición
+-- ("en_preparacion -> preparado") o el motivo.
+ALTER TABLE auditoria_pedidos
+  ADD COLUMN detalle VARCHAR(255) NULL AFTER accion;
+
+-- Semana 12 (CU09, CU17). Los dos historiales filtran por dueño y ordenan por
+-- fecha. Los índices de las FK ya existen, pero solo cubren el WHERE: sin la
+-- fecha en el índice, cada página del historial ordena en memoria todos los
+-- pedidos del cliente o del comercio.
+ALTER TABLE pedidos
+  ADD INDEX idx_pedidos_cliente_fecha (cliente_id, created_at),
+  ADD INDEX idx_pedidos_comercio_fecha (comercio_id, created_at);
+
+-- =====================================================================
 -- DATOS DE PRUEBA
 -- Contraseña en texto plano para TODOS los usuarios de prueba: Test1234!
 -- El valor almacenado es el hash bcrypt (costo 10) de esa contraseña, para que
@@ -442,7 +482,8 @@ INSERT INTO usuarios (id, nombre, email, contrasena, telefono, rol, activo) VALU
 (3, 'Ferretería Central',      'ferreteria.central@test.com','$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000003', 'comercio',      TRUE),
 (4, 'Librería del Sur',        'libreria.sur@test.com',      '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000004', 'comercio',      TRUE),
 (5, 'Carlos Rodríguez',        'carlos.repartidor@test.com', '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000005', 'repartidor',    TRUE),
-(6, 'Lucía Fernández',         'lucia.repartidor@test.com',  '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000006', 'repartidor',    TRUE);
+(6, 'Lucía Fernández',         'lucia.repartidor@test.com',  '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000006', 'repartidor',    TRUE),
+(7, 'Admin ATuPuerta',         'admin@test.com',             '$2b$10$PhAKBbYVLxzWp1Uad8EMiOepg81e9rV1WSb7aQM8cS69BgfbXQSXm', '3421000007', 'administrador', TRUE);
 
 -- ---------- CLIENTES ----------
 INSERT INTO clientes (id, usuario_id, direccion_entrega) VALUES
@@ -460,6 +501,14 @@ INSERT INTO comercios (id, usuario_id, nombre, cuit_cuil, categoria, direccion, 
 INSERT INTO repartidores (id, usuario_id, dni, tipo_vehiculo, patente, numero_licencia, disponible, latitud_actual, longitud_actual) VALUES
 (1, 5, '35123456', 'moto',    'A123BCD', 'LIC-000111', FALSE, -31.6730, -60.7830),
 (2, 6, '36987654', 'bicicleta','SINPAT1', 'LIC-000222', FALSE, -31.6710, -60.7810);
+
+-- ---------- ADMINISTRADORES (semana 13) ----------
+-- Es el primer administrador y la única forma de tener uno: el alta de
+-- administradores (POST /api/admin/usuarios con rol 'administrador') la hace
+-- otro administrador, nunca un registro público. Es una cuenta de staff, sin
+-- perfil de cliente, así que entra solo por POST /api/inicioSesionAdministrador.
+INSERT INTO administradores (id, usuario_id) VALUES
+(1, 7);
 
 -- ---------- PRODUCTOS ----------
 INSERT INTO productos (id, comercio_id, nombre, descripcion, categoria, precio, stock, activo) VALUES
@@ -481,19 +530,14 @@ INSERT INTO productos (id, comercio_id, nombre, descripcion, categoria, precio, 
 INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total, codigo, distancia_km, tiempo_estimado, comision) VALUES
 (1, 1, 1, 1, 'en_camino', 'San Martín 1234, Santo Tomé, Santa Fe', 36500.00, '12345678', 1.2, 8, 800.00);
 
--- Pedido 2: cliente 2 le compra a la librería, recién creado, pendiente de pago
-<<<<<<< HEAD
+-- Pedido 2: cliente 2 le compra a la librería, recién creado, esperando el pago
 INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total, distancia_km, tiempo_estimado, comision) VALUES
-(2, 2, 2, NULL, 'pendiente_pago', 'Belgrano 567, Santo Tomé, Santa Fe', 5300.00, 0.8, 6, 700.00);
+(2, 2, 2, NULL, 'pago_espera', 'Belgrano 567, Santo Tomé, Santa Fe', 5300.00, 0.8, 6, 700.00);
 
 -- Pedido 3: cliente 2 le compra a la librería, ya pagado, en preparación y sin repartidor.
 -- Es el que aparece en GET /api/pedido/listar para probar CU19 y CU20.
 INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total, distancia_km, tiempo_estimado, comision) VALUES
 (3, 2, 2, NULL, 'en_preparacion', 'Belgrano 567, Santo Tomé, Santa Fe', 4200.00, 0.8, 6, 700.00);
-=======
-INSERT INTO pedidos (id, cliente_id, comercio_id, repartidor_id, estado, direccion_entrega, total) VALUES
-(2, 2, 2, NULL, 'pago_espera', 'Belgrano 567, Santo Tomé, Santa Fe', 5300.00);
->>>>>>> ramAaron
 
 -- ---------- ITEMS_PEDIDO ----------
 INSERT INTO items_pedido (id, pedido_id, producto_id, cantidad, precio_unit, subtotal) VALUES
@@ -514,8 +558,11 @@ INSERT INTO ubicaciones_repartidor (id, repartidor_id, pedido_id, latitud, longi
 (2, 1, 1, -31.6720, -60.7818);
 
 -- ---------- RECLAMOS ----------
+-- Arranca en 'pendiente' y sin administrador: 'en_revision' significa que alguien
+-- lo tomó, y un reclamo en revisión sin nadie asignado no lo podría resolver nadie
+-- (PATCH /api/admin/reclamos/:id/resolver exige ser el asignado).
 INSERT INTO reclamos (id, usuario_id, pedido_id, descripcion, estado, admin_asignado_id, resolucion) VALUES
-(1, 2, 2, 'El pedido figura como pendiente de pago pero ya se descontó dinero de la tarjeta.', 'en_revision', NULL, NULL);
+(1, 2, 2, 'El pedido figura como pendiente de pago pero ya se descontó dinero de la tarjeta.', 'pendiente', NULL, NULL);
 
 -- ---------- NOTIFICACIONES ----------
 INSERT INTO notificaciones (id, usuario_id, tipo, mensaje, leida) VALUES
@@ -523,7 +570,6 @@ INSERT INTO notificaciones (id, usuario_id, tipo, mensaje, leida) VALUES
 (2, 1, 'pago_aprobado',    'Tu pago del pedido #1 fue aprobado.',                        TRUE),
 (3, 2, 'pedido_creado',    'Creaste el pedido #2, falta confirmar el pago.',            FALSE);
 
-<<<<<<< HEAD
 -- ---------- COORDENADAS (SEMANA 9) ----------
 -- Van como UPDATE y no dentro de los INSERT de arriba para no tocar los datos de
 -- prueba que ya venían de las semanas anteriores.
@@ -543,8 +589,7 @@ UPDATE pedidos p
   INNER JOIN clientes c ON c.id = p.cliente_id
   SET p.destino_latitud = c.latitud, p.destino_longitud = c.longitud
   WHERE p.destino_latitud IS NULL;
-=======
+
 -- Nota: no se insertan suscripciones_push de prueba a propósito. Son datos
 -- que genera el navegador real (endpoint/keys únicos por dispositivo), no
 -- tiene sentido simularlos a mano como al resto de las tablas.
->>>>>>> ramAaron

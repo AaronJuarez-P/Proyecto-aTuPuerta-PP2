@@ -66,12 +66,11 @@
 //```
 //
 //```
-//Authorization: <el token, sin la palabra Bearer>
+//Authorization: <el token, con o sin la palabra Bearer>
 //```
 //
-//> **Importante:** `verificarToken` lee el header crudo, **no** saca el prefijo `Bearer `.
-//> Si en Postman elegís Auth → Bearer Token, va a fallar con 401. Usar Headers →
-//> `Authorization` con el token pelado.
+//> **Desde la semana 14** `verificarToken` acepta el token pelado y también con el
+//> prefijo `Bearer ` (Auth → Bearer Token en Postman). Antes el prefijo daba `401`.
 //
 //---
 //---
@@ -581,7 +580,7 @@
 //- [ ] Base con los datos de la semana 9: `aTuPuerta.sql` recién importado
 //- [ ] `.env` con `MAPS_MODO=mock` y `MP_MODO=mock` (no hace falta ningún token ni tarjeta)
 //- [ ] Servidor levantado con `npm run dev` sin errores
-//- [ ] Tokens de María y Lucía, cada uno en el header `Authorization`, **sin** `Bearer`
+//- [ ] Tokens de María y Lucía, cada uno en el header `Authorization`, con o sin `Bearer`
 //- [ ] Correr los casos en orden (cada uno deja la base lista para el siguiente)
 //- [ ] Para los Casos 20 y 21 hay que tocar el `.env` y reiniciar; acordarse de volver a
 //      dejar `MAPS_MODO=mock` después

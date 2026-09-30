@@ -6,7 +6,10 @@ const {
 } = require('../services/repartidor.service');
 const { registrarUbicacion } = require('../services/ubicacion.service');
 const { emitirUbicacionDePedido } = require('../services/tiemporeal.service');
-const { obtenerLatitudValida, obtenerLongitudValida } = require('../utils/validacion');
+const { obtenerLatitudValida, obtenerLongitudValida, obtenerTextoValido } = require('../utils/validacion');
+
+// El ENUM de repartidores.tipo_vehiculo
+const TIPOS_VEHICULO = ['moto', 'bicicleta', 'auto', 'otro'];
 
 // GET /api/repartidor/disponibilidad
 //
@@ -206,8 +209,169 @@ const registrarUbicacionRepartidor = async (req, res) => {
     }
 };
 
+// ---------------------------------------------------------------------------
+// Semana 3 (CU18) - Perfil del repartidor
+// ---------------------------------------------------------------------------
+
+const buscarPerfilRepartidor = async (conexion, repartidorId) => {
+    const [repartidores] = await conexion.query(
+        `SELECT r.id, r.dni, r.tipo_vehiculo, r.patente, r.numero_licencia, r.disponible,
+                u.id AS usuario_id, u.nombre, u.email, u.telefono
+         FROM repartidores r
+         INNER JOIN usuarios u ON u.id = r.usuario_id
+         WHERE r.id = ?`,
+        [repartidorId]
+    );
+
+    const repartidor = repartidores[0];
+    return repartidor && { ...repartidor, disponible: Boolean(repartidor.disponible) };
+};
+
+// GET /api/repartidor/perfil
+const obtenerPerfilRepartidor = async (req, res) => {
+    try {
+        const repartidor = await buscarPerfilRepartidor(database, req.repartidorId);
+        const pedidoEnCurso = await buscarPedidoEnCurso(database, req.repartidorId);
+
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                repartidor,
+                pedido_en_curso: pedidoEnCurso
+            }
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    }
+};
+
+// Campos editables y el largo maximo de cada columna. El DNI no esta: identifica a la
+// persona, no a su vehiculo.
+const CAMPOS_REPARTIDOR = {
+    patente: 10,
+    numero_licencia: 30
+};
+
+// PATCH /api/repartidor/perfil
+// Body: cualquier subconjunto de { tipo_vehiculo, patente, numero_licencia }
+const actualizarPerfilRepartidor = async (req, res) => {
+    let connection;
+    try {
+        const cambios = {};
+
+        if (req.body?.tipo_vehiculo !== undefined) {
+            if (!TIPOS_VEHICULO.includes(req.body.tipo_vehiculo)) {
+                return res.status(400).json({
+                    codigo: 400,
+                    estado: "error",
+                    datos: { mensaje: `El tipo de vehículo tiene que ser uno de: ${TIPOS_VEHICULO.join(', ')}` }
+                });
+            }
+            cambios.tipo_vehiculo = req.body.tipo_vehiculo;
+        }
+
+        for (const [campo, largoMaximo] of Object.entries(CAMPOS_REPARTIDOR)) {
+            if (req.body?.[campo] === undefined) {
+                continue;
+            }
+
+            const valor = obtenerTextoValido(req.body[campo], { max: largoMaximo });
+            if (valor === null) {
+                return res.status(400).json({
+                    codigo: 400,
+                    estado: "error",
+                    datos: { mensaje: `${campo} tiene que ser un texto de entre 1 y ${largoMaximo} caracteres` }
+                });
+            }
+            cambios[campo] = valor;
+        }
+
+        const columnas = Object.keys(cambios);
+
+        if (columnas.length === 0) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "Mandá al menos un campo para actualizar: tipo_vehiculo, patente, numero_licencia" }
+            });
+        }
+
+        connection = await database.getConnection();
+        await connection.beginTransaction();
+
+        // Mismo lock que aceptar y entregar: si acepta un pedido mientras cambia el
+        // vehiculo, una operacion espera a la otra.
+        await bloquearRepartidor(connection, req.repartidorId);
+
+        // Con un pedido en camino no se cambia el vehiculo: el perfil de ruta de Mapbox
+        // y el ETA en memoria del seguimiento salen de tipo_vehiculo.
+        const pedidoEnCurso = await buscarPedidoEnCurso(connection, req.repartidorId);
+
+        if (pedidoEnCurso !== null) {
+            await connection.rollback();
+            return res.status(409).json({
+                codigo: 409,
+                estado: "error",
+                datos: { mensaje: `Tenés el pedido #${pedidoEnCurso} en camino. Podés cambiar los datos del vehículo cuando lo entregues` }
+            });
+        }
+
+        // Los nombres de columna salen de las listas de arriba, nunca del body
+        await connection.query(
+            `UPDATE repartidores SET ${columnas.map((columna) => `${columna} = ?`).join(', ')} WHERE id = ?`,
+            [...columnas.map((columna) => cambios[columna]), req.repartidorId]
+        );
+
+        await connection.commit();
+
+        const repartidor = await buscarPerfilRepartidor(database, req.repartidorId);
+
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                mensaje: "Perfil del repartidor actualizado",
+                repartidor
+            }
+        });
+
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+            }
+        }
+
+        // repartidores.patente es UNIQUE
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({
+                codigo: 409,
+                estado: "error",
+                datos: { mensaje: "Esa patente ya está registrada por otro repartidor" }
+            });
+        }
+
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
 module.exports = {
     consultarDisponibilidad,
     cambiarDisponibilidad,
-    registrarUbicacionRepartidor
+    registrarUbicacionRepartidor,
+    obtenerPerfilRepartidor,
+    actualizarPerfilRepartidor
 };

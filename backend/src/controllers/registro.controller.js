@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const database = require('../database/database');
 const { geocodificarDireccion } = require('../services/maps.service');
-const { esEmailValido } = require('../utils/validacion');
+const { esEmailValido, esTelefonoValido, esContrasenaValida } = require('../utils/validacion');
 
 const registro = async (req, res) => {
     let connection;
@@ -37,6 +37,40 @@ const registro = async (req, res) => {
             });
         }
 
+        // Semana 14: largos y formatos. Los maximos son los de las columnas: pasarse
+        // era un 500 con MySQL en modo estricto y un recorte silencioso en XAMPP.
+        if (nombre.trim().length > 100) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El nombre no puede superar los 100 caracteres" }
+            });
+        }
+
+        if (!esTelefonoValido(telefono)) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El teléfono tiene que tener entre 6 y 20 caracteres: números, espacios, +, - o paréntesis" }
+            });
+        }
+
+        if (direccion_entrega.trim().length > 200) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "La dirección de entrega no puede superar los 200 caracteres" }
+            });
+        }
+
+        if (!esContrasenaValida(contrasena)) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "La contraseña tiene que tener entre 8 y 72 caracteres" }
+            });
+        }
+
         // Geocodificacion ANTES de abrir la transaccion (semana 9): es una llamada de
         // red y no puede quedar adentro. Si falla devuelve null y el usuario se crea
         // igual con las coordenadas en NULL; se completan solas la primera vez que
@@ -48,7 +82,7 @@ const registro = async (req, res) => {
 
         const [existentes] = await connection.query(
             `SELECT id FROM usuarios WHERE email = ? FOR UPDATE`,
-            [email]
+            [email.trim()]
         );
         if (existentes.length > 0) {
             await connection.rollback();
@@ -62,9 +96,11 @@ const registro = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const contrasenaHash = await bcrypt.hash(contrasena, salt);
 
+        // Se guardan recortados (semana 14): un espacio de mas al principio del email
+        // haria que despues el login no lo encuentre
         const [resultado] = await connection.query(
             `INSERT INTO usuarios (nombre, email, contrasena, telefono, rol) VALUES (?, ?, ?, ?, ?)`,
-            [nombre, email, contrasenaHash, telefono, 'cliente']
+            [nombre.trim(), email.trim(), contrasenaHash, telefono.trim(), 'cliente']
         );
         const usuarioId = resultado.insertId;
 
@@ -72,7 +108,7 @@ const registro = async (req, res) => {
         // nunca puede usar el carrito ni crear pedidos.
         await connection.query(
             `INSERT INTO clientes (usuario_id, direccion_entrega, latitud, longitud) VALUES (?, ?, ?, ?)`,
-            [usuarioId, direccion_entrega, punto?.latitud ?? null, punto?.longitud ?? null]
+            [usuarioId, direccion_entrega.trim(), punto?.latitud ?? null, punto?.longitud ?? null]
         );
 
         await connection.commit();

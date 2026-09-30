@@ -173,11 +173,11 @@
 //protegidas por `verificarToken`. Va en el header **crudo**:
 //
 //```
-//Authorization: <el token, sin la palabra Bearer>
+//Authorization: <el token, con o sin la palabra Bearer>
 //```
 //
-//> **Importante:** `verificarToken` lee el header tal cual, **no** saca el prefijo `Bearer `.
-//> Si usás Auth → Bearer Token en Postman, todo te va a dar `401`.
+//> **Desde la semana 14** `verificarToken` acepta el token pelado y también con el
+//> prefijo `Bearer ` (Auth → Bearer Token en Postman). Antes el prefijo daba `401`.
 //
 //---
 //
@@ -318,4 +318,4 @@
 //- [ ] Script `aTuPuerta.sql` importado desde phpMyAdmin.
 //- [ ] `.env` creado a partir de `.env.example`, con `DATABASE=aTuPuerta`.
 //- [ ] Servidor corriendo (`npm run dev`) y `GET /health` respondiendo `200`.
-//- [ ] Acordarse de que el header `Authorization` va **sin** `Bearer`.
+//- [ ] El header `Authorization` acepta el token pelado o con `Bearer ` (semana 14).

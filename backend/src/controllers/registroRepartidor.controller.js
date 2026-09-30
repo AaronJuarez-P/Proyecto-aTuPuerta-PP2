@@ -66,6 +66,16 @@ const registroRepartidor = async (req, res) => {
             });
         }
 
+        // Semana 14: largos maximos de las columnas de repartidores. La contraseña no se
+        // valida por largo: es la de una cuenta que ya existe, no una nueva.
+        if (patente.trim().length > 10 || numero_licencia.trim().length > 30) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "La patente no puede superar los 10 caracteres ni la licencia los 30" }
+            });
+        }
+
         connection = await database.getConnection();
         await connection.beginTransaction();
 
@@ -123,7 +133,7 @@ const registroRepartidor = async (req, res) => {
             `INSERT INTO repartidores
              (usuario_id, dni, tipo_vehiculo, patente, numero_licencia)
              VALUES (?, ?, ?, ?, ?)`,
-            [usuarios[0].id, dni, tipo_vehiculo, patente, numero_licencia]
+            [usuarios[0].id, dni, tipo_vehiculo, patente.trim(), numero_licencia.trim()]
         );
 
         await connection.query(

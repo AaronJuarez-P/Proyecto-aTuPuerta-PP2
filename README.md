@@ -25,9 +25,17 @@ frontend: Creado con JavaScript, HTML y CSS.
 - Node.js + Express
 - MySQL / MariaDB
 - JWT — autenticación
-- bcrypt — hash de contraseñas
+- bcryptjs — hash de contraseñas
+- Socket.IO — seguimiento en tiempo real
+- Web Push — notificaciones al navegador
+- helmet + express-rate-limit — cabeceras de seguridad y límite de intentos
 
 ## Changelog
+
+> **Esto es el registro histórico de las primeras semanas.** Varias cosas cambiaron después
+> (el registro ya crea el perfil de cliente, hay login y alta de administradores, perfiles,
+> historial, reclamos, etc.). La documentación al día de toda la API —endpoints, variables de
+> entorno, cómo probar— está en [`backend/readme.md`](backend/readme.md).
 
 ## Registro usuarios
 
@@ -139,7 +147,7 @@ El `INNER JOIN clientes` del punto 3 acota el daño: antes, **cualquier** usuari
 ### Dependencias dentro de esta lógica
 
 - `usuarios.rol` es `ENUM('cliente','comercio','repartidor','administrador') DEFAULT NULL` — nulable a propósito, porque el registro base no define el rol.
-- El alta de `administrador` **no** se hace por API: se inserta manualmente en la base por un super usuario, directo en las tablas `usuarios` + `administradores`. No existe (ni debe existir) un endpoint público para este rol.
+- El alta de `administrador` **no** tiene un endpoint público, ni debe tenerlo. *(Actualizado en la semana 13:)* el primer administrador viene en la semilla de `aTuPuerta.sql` y los demás los da de alta otro administrador con `POST /api/admin/usuarios` y `rol: 'administrador'`.
 - Las tablas de rol (`clientes`, `comercios`, `repartidores`, `administradores`) están definidas en el schema pero **todavía no se completan desde el registro** — se conectarán en una etapa posterior del proyecto, cada una vía su propio endpoint. `comercios` ya está conectada vía `/api/registroComercio`.
 
 ---

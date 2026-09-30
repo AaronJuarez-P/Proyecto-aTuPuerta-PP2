@@ -61,6 +61,21 @@ const registroComercio = async (req, res) => {
             });
         }
 
+        // Semana 14: largos maximos de las columnas de comercios. Pasarse era un 500 con
+        // MySQL en modo estricto y un recorte silencioso en XAMPP. La contraseña no se
+        // valida por largo: es la de una cuenta que ya existe, no una nueva.
+        const largosMaximos = { nombre: 100, categoria: 50, direccion: 200, horario_atencion: 100 };
+
+        for (const [campo, maximo] of Object.entries(largosMaximos)) {
+            if (req.body[campo].trim().length > maximo) {
+                return res.status(400).json({
+                    codigo: 400,
+                    estado: "error",
+                    datos: { mensaje: `${campo} no puede superar los ${maximo} caracteres` }
+                });
+            }
+        }
+
         // Geocodificacion ANTES de abrir la transaccion (semana 9): es una llamada de
         // red y no puede quedar adentro. Solo necesita el string del body, que ya esta
         // validado arriba.
@@ -133,8 +148,8 @@ const registroComercio = async (req, res) => {
              (usuario_id, nombre, cuit_cuil, categoria, direccion, horario_atencion, latitud, longitud)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                usuarios[0].id, nombre, cuit_cuil, categoria, direccion, horario_atencion,
-                punto?.latitud ?? null, punto?.longitud ?? null
+                usuarios[0].id, nombre.trim(), cuit_cuil, categoria.trim(), direccion.trim(),
+                horario_atencion.trim(), punto?.latitud ?? null, punto?.longitud ?? null
             ]
         );
 

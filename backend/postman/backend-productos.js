@@ -34,12 +34,11 @@
 //protegido:
 //
 //```
-//Authorization: <el token, sin la palabra Bearer>
+//Authorization: <el token, con o sin la palabra Bearer>
 //```
 //
-//> **Importante:** `verificarToken` lee el header crudo, **no** saca el prefijo `Bearer `.
-//> Si en Postman elegís Auth → Bearer Token, va a fallar con 401. Usar Headers →
-//> `Authorization` con el token pelado.
+//> **Desde la semana 14** `verificarToken` acepta el token pelado y también con el
+//> prefijo `Bearer ` (Auth → Bearer Token en Postman). Antes el prefijo daba `401`.
 //
 //Decodificando el token en jwt.io tiene que verse:
 //```json
@@ -677,4 +676,4 @@
 //- [ ] `.env` creado a partir de `.env.example`, con `DATABASE=aTuPuerta` y la contraseña
 //      de MySQL que corresponda a tu instalación (en XAMPP por defecto `root` va sin contraseña).
 //- [ ] Servidor corriendo (`npm run dev`) y `GET /health` respondiendo `200`.
-//- [ ] Login de comercio hecho y token copiado en el header `Authorization` (sin `Bearer `).
+//- [ ] Login de comercio hecho y token copiado en el header `Authorization` (con o sin `Bearer `).

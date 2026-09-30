@@ -56,12 +56,11 @@
 //```
 //
 //```
-//Authorization: <el token, sin la palabra Bearer>
+//Authorization: <el token, con o sin la palabra Bearer>
 //```
 //
-//> **Importante:** `verificarToken` lee el header crudo, **no** saca el prefijo `Bearer `.
-//> Si en Postman elegís Auth → Bearer Token, va a fallar con 401. Usar Headers →
-//> `Authorization` con el token pelado.
+//> **Desde la semana 14** `verificarToken` acepta el token pelado y también con el
+//> prefijo `Bearer ` (Auth → Bearer Token en Postman). Antes el prefijo daba `401`.
 //
 //Todos los endpoints de repartidor pasan por `verificarToken` → `verificarRol('repartidor')`
 //→ `resolverRepartidor`. Este último busca el repartidor del usuario en la base (no en el
@@ -196,10 +195,10 @@
 //**Respuesta esperada:** `404 Not Found` → `"Pedido no encontrado"`
 //
 //### Caso 8 — Pedido que todavía no se pagó
-//**Request:** `PATCH /api/pedido/asignar/2` (el pedido 2 está en `pendiente_pago`)
+//**Request:** `PATCH /api/pedido/asignar/2` (el pedido 2 está en `pago_espera`)
 //**Respuesta esperada:** `409 Conflict`
 //```json
-//{ "codigo": 409, "estado": "error", "datos": { "mensaje": "El pedido está en estado \"pendiente_pago\" y no se puede asignar" } }
+//{ "codigo": 409, "estado": "error", "datos": { "mensaje": "El pedido está en estado \"pago_espera\" y no se puede asignar" } }
 //```
 //
 //### Caso 9 — ENTREGABLE: aceptar un pedido
@@ -433,7 +432,8 @@
 //```json
 //{ "codigo": 401, "estado": "error", "datos": { "mensaje": "Token no proporcionado" } }
 //```
-//Con un token inventado o con el prefijo `Bearer ` → `401` y `"Token inválido o expirado"`.
+//Con un token inventado → `401` y `"Token inválido o expirado"`. Con el prefijo `Bearer ` ya
+//no falla: desde la semana 14 `verificarToken` lo acepta.
 //
 //### Caso 22 — Rol equivocado
 //**Request:** `GET /api/pedido/listar` con el token de María (rol `cliente`)
@@ -450,8 +450,10 @@
 //**Request:** `GET /api/pedido/listar` con el token de Carlos (el token sigue vigente)
 //**Respuesta esperada:** `403 Forbidden`
 //```json
-//{ "codigo": 403, "estado": "error", "datos": { "mensaje": "No tenés un perfil de repartidor activo asociado a tu cuenta" } }
+//{ "codigo": 403, "estado": "error", "datos": { "mensaje": "Tu cuenta está suspendida o dada de baja" } }
 //```
+//> Desde la semana 14 lo corta `verificarToken`, antes de llegar a `resolverRepartidor`: la
+//> cuenta inactiva se chequea contra la base en TODAS las rutas, no solo en las de repartidor.
 //Volver a dejarlo activo: `UPDATE usuarios SET activo = TRUE WHERE id = 5;`
 //
 //> Por esto `resolverRepartidor` resuelve contra la base y no contra el `repartidorId` del
@@ -470,16 +472,20 @@
 //**Precondición:** `POST /api/cerrarSesionRepartidor` con el token de Lucía → `200`.
 //Eso la deja en `rol = 'cliente'`, pero el token sigue diciendo `repartidor` hasta que vence.
 //**Request:** `GET /api/pedido/listar` con ese mismo token
-//**Respuesta esperada:** `403 Forbidden`
+//**Respuesta esperada:** `401 Unauthorized`
 //```json
-//{ "codigo": 403, "estado": "error", "datos": { "mensaje": "No tenés un perfil de repartidor activo asociado a tu cuenta" } }
+//{ "codigo": 401, "estado": "error", "datos": { "mensaje": "La sesión ya no es válida: iniciá sesión de nuevo" } }
 //```
+//> Desde la semana 14 `verificarToken` compara el rol del token con la sesión abierta en la
+//> base, así que cerrar sesión invalida el token en todas las rutas y no solo en las que
+//> pasan por `resolverRepartidor`.
 //Para volver al estado anterior: `POST /api/inicioSesionRepartidor` otra vez (deja `rol =
 //'repartidor'` y devuelve un token nuevo).
 //
-//> `resolverRepartidor` filtra por `u.rol = 'repartidor'`, así que el mismo 403 cubre los tres
-//> casos: nunca fue repartidor, lo dieron de baja, o cerró sesión. `verificarRol` solo mira el
-//> rol que viene adentro del token y por eso no alcanza.
+//> Hasta la semana 13 los tres casos (nunca fue repartidor, lo dieron de baja o cerró sesión)
+//> daban el mismo 403 de `resolverRepartidor`. Desde la semana 14 la baja y la sesión cerrada
+//> las corta antes `verificarToken`, con su propio mensaje, en todas las rutas de la API.
+//> `resolverRepartidor` sigue cubriendo el primero: una cuenta sin perfil de repartidor.
 //
 //---
 //
@@ -488,7 +494,7 @@
 //- [ ] XAMPP con MySQL prendido
 //- [ ] Base con los datos de la semana 8: `aTuPuerta.sql` recién importado
 //- [ ] Servidor levantado con `npm run dev` sin errores
-//- [ ] Tokens de Lucía, Carlos y María, cada uno en el header `Authorization`, **sin** `Bearer`
+//- [ ] Tokens de Lucía, Carlos y María, cada uno en el header `Authorization`, con o sin `Bearer`
 //- [ ] Correr los casos en orden (cada uno deja la base lista para el siguiente)
 //
 //> Si ya conocés los casos y solo querés volver a correrlos para ver que nada se rompió,

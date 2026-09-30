@@ -59,12 +59,12 @@
 //El token va así:
 //
 //```
-//Authorization: <el token, sin la palabra Bearer>
+//Authorization: <el token, con o sin la palabra Bearer>
 //```
 //
-//> **Si en Postman usás Auth → Bearer Token, todo va a dar 401.** `verificarToken` lee el
-//> header crudo y no saca el prefijo. Hay que ponerlo en Headers → `Authorization` con el
-//> token pelado. Lo más cómodo es guardarlos como variables de entorno de Postman
+//> **Desde la semana 14** `verificarToken` acepta el token pelado y también con el
+//> prefijo `Bearer ` (Auth → Bearer Token en Postman). Antes el prefijo daba `401`.
+//> Lo más cómodo es guardarlos como variables de entorno de Postman
 //> (`{{token_lucia}}`, `{{token_carlos}}`, `{{token_maria}}`) y pegar el valor una sola vez.
 //
 //---
@@ -81,7 +81,7 @@
 //| 8.5 ⭐ | `GET /pedido/listar` | Lucía | `200` · un solo pedido: `id 3`, `distancia_km "0.80"`, `tiempo_estimado 6`, `comision "700.00"`, `comercio "Librería del Sur"`, `cantidad_items 1`. **No** trae `direccion_entrega` |
 //| 8.6 | `PATCH /pedido/asignar/abc` | Lucía | `400` · "El id del pedido no es válido" |
 //| 8.7 | `PATCH /pedido/asignar/999999` | Lucía | `404` · "Pedido no encontrado" |
-//| 8.8 | `PATCH /pedido/asignar/2` | Lucía | `409` · `El pedido está en estado "pendiente_pago" y no se puede asignar` |
+//| 8.8 | `PATCH /pedido/asignar/2` | Lucía | `409` · `El pedido está en estado "pago_espera" y no se puede asignar` |
 //| 8.9 ⭐ | `PATCH /pedido/asignar/3` | Lucía | `200` · `estado: "en_camino"`, ahora **sí** aparece `direccion_entrega`, `comision "700.00"`. El código de entrega **no** viaja en la respuesta: es del cliente |
 //| 8.10 | `PATCH /pedido/asignar/3` de nuevo | Lucía | `409` · "Ya tenés un pedido en curso o estás fuera de servicio" |
 //| 8.11 | `PATCH /repartidor/disponibilidad` → `{ "disponible": true }`, y después `GET /repartidor/disponibilidad` | Lucía | `409` · "Tenés el pedido #3 en camino. Vas a quedar disponible cuando confirmes la entrega". La consulta devuelve `pedido_en_curso: 3` |
@@ -94,11 +94,11 @@
 //| 8.18 ⭐ | `PATCH /pedido/asignar/3` | Carlos | `409` · "El pedido ya no está disponible: lo tomó otro repartidor". Carlos **no** queda bloqueado: sigue disponible |
 //| 8.19 | `PATCH /pedido/entrega/3` → `{ "codigoPedido": "<el de 8.12>" }` | Lucía | `200` · "Pedido entregado correctamente" |
 //| 8.20 | `GET /pedido/listar` | Lucía | `200` · `pedidos: []` y `total: 0`. Que no haya pedidos es una lista vacía, no un 404 |
-//| 8.21 | `GET /pedido/listar` sin header, y después con `Bearer <token>` | — / Lucía | `401` · "Token no proporcionado" el primero, `401` · "Token inválido o expirado" el segundo |
+//| 8.21 | `GET /pedido/listar` sin header, y después con `Bearer <token>` | — / Lucía | `401` · "Token no proporcionado" el primero, `200` el segundo: desde la semana 14 se acepta `Bearer` |
 //| 8.22 | `GET /pedido/listar` | María | `403` · "No tenés permisos para acceder a este recurso" |
-//| 8.23 🔧 | `GET /pedido/listar` | Carlos | `403` · "No tenés un perfil de repartidor activo asociado a tu cuenta" |
+//| 8.23 🔧 | `GET /pedido/listar` | Carlos | `403` · "Tu cuenta está suspendida o dada de baja" (semana 14: lo corta `verificarToken`) |
 //| 8.24 🔧 | `PATCH /pedido/asignar/3` | Lucía | `500` · "Error interno del servidor" |
-//| 8.25 | `POST /cerrarSesionRepartidor` → `200`, y después `GET /pedido/listar` con **ese mismo** token | Lucía | `403` · "No tenés un perfil de repartidor activo asociado a tu cuenta". Para seguir, volver a loguear a Lucía |
+//| 8.25 | `POST /cerrarSesionRepartidor` → `200`, y después `GET /pedido/listar` con **ese mismo** token | Lucía | `401` · "La sesión ya no es válida: iniciá sesión de nuevo" (semana 14). Para seguir, volver a loguear a Lucía |
 //
 //---
 //---
@@ -242,7 +242,7 @@
 //- [ ] `npm install` corrido (la semana 10 suma `socket.io` y `socket.io-client`)
 //- [ ] `.env` con `MAPS_MODO=mock` y `MP_MODO=mock`
 //- [ ] `npm run dev` sin errores, y con las **dos** líneas en la consola
-//- [ ] Tokens de Lucía, Carlos, María y Juan en `Authorization`, **sin** `Bearer`
+//- [ ] Tokens de Lucía, Carlos, María y Juan en `Authorization`, con o sin `Bearer`
 //- [ ] Semana 8: casos 8.1 a 8.25, en orden
 //- [ ] Reimportar la base
 //- [ ] Semana 9: casos 9.1 a 9.23, en orden

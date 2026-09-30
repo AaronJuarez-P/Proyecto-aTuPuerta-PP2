@@ -37,8 +37,9 @@ const DISTANCIA_MINIMA_KM = 0.05;
 // persona entienda, y vive aca y no en el controlador porque el socket manda el mismo
 // texto en estado_actualizado.
 const MENSAJES_POR_ESTADO = {
-    pendiente_pago:  "Todavía no pagaste este pedido.",
+    pago_espera:     "Todavía no pagaste este pedido.",
     en_preparacion:  "El comercio está preparando tu pedido.",
+    preparado:       "Tu pedido está listo y espera a un repartidor.",
     en_camino:       "Tu pedido está en camino.",
     entregado:       "Tu pedido fue entregado.",
     cancelado:       "Este pedido fue cancelado."
@@ -301,7 +302,7 @@ const armarSeguimiento = async (pool, pedido) => {
         mensaje: mensajeDeEstado(pedido.estado)
     };
 
-    // En pendiente_pago, en_preparacion y cancelado no hay nadie moviendose y no tiene
+    // En pago_espera, en_preparacion, preparado y cancelado no hay nadie moviendose y no tiene
     // sentido leer el historico. En entregado si: la ultima posicion registrada es el
     // punto donde se entrego, y es lo que cierra el recorrido en el mapa.
     if (!activo && pedido.estado !== 'entregado') {

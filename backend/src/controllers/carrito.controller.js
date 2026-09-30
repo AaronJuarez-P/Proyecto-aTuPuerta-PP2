@@ -2,6 +2,9 @@ const database = require("../database/database");
 const { calcularRuta, geocodificarDireccion, estimarMinutos } = require("../services/maps.service");
 const { asegurarCoordenadasComercio, asegurarCoordenadasCliente } = require("../services/ubicacion.service");
 const { calcularComision } = require("../services/pedido.service");
+const { registrarAuditoriaPedido } = require("../services/auditoria.service");
+const { enviarNotificaciones } = require("./notificaciones.controller");
+const { obtenerIdValido } = require("../utils/validacion");
 
 // Tope de pedidos.distancia_km, que es DECIMAL(6,2). Una direccion mal geocodificada
 // del otro lado del mundo daria miles de km y MySQL en modo estricto cortaria el
@@ -44,7 +47,6 @@ const calcularEnvio = async (origen, destino) => {
         origen_datos: ruta.origenDatos
     };
 };
-const { enviarNotificaciones } = require("./notificaciones.controller");
 
 const agregarAlCarrito = async (req, res) => {
     let connection;
@@ -329,9 +331,10 @@ const eliminarProductoCarrito = async (req, res) => {
     let connection;
     try {
         const idUsuario = req.usuario.id;
-        const { id_producto } = req.params;
+        const id_producto = obtenerIdValido(req.params.id_producto);
 
-        if (!id_producto || isNaN(Number(id_producto))) {
+        // obtenerIdValido y no isNaN(Number()): "1.5", "-3" o "1e2" pasaban como ids
+        if (id_producto === null) {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
@@ -538,6 +541,7 @@ const confirmarCarrito = async (req, res) => {
                 p.stock,
                 p.activo AS producto_activo,
                 p.comercio_id,
+                c.nombre AS comercio_nombre,
                 c.activo AS comercio_activo,
                 c.usuario_id AS comercio_usuario_id
              FROM items_carrito ic
@@ -616,20 +620,33 @@ const confirmarCarrito = async (req, res) => {
             // adentro.
             const envio = envioPorComercio.get(String(comercioId)) ?? await calcularEnvio(null, null);
 
+            // Nace en 'pago_espera': el pago lo mueve a en_preparacion o a cancelado
+            // (ver TRANSICIONES_PEDIDO en pedido.service.js). Hasta la semana 13 aca
+            // decia 'pendiente_pago', un valor que ya no estaba en el ENUM: MySQL en
+            // modo estricto cortaba el INSERT y XAMPP, que no lo usa, guardaba el
+            // estado vacio y el pedido despues no se podia pagar.
             const [resultadoPedido] = await connection.query(
                 `INSERT INTO pedidos
                     (cliente_id, comercio_id, estado, direccion_entrega,
                      destino_latitud, destino_longitud, total,
                      distancia_km, tiempo_estimado, comision)
-                 VALUES (?, ?, 'pendiente_pago', ?, ?, ?, ?, ?, ?, ?)`,
+                 VALUES (?, ?, 'pago_espera', ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     cliente.id, comercioId, direccionEntrega,
                     destino?.latitud ?? null, destino?.longitud ?? null,
                     totalComercio,
                     envio.distancia_km, envio.tiempo_estimado, envio.comision
-                ])
-            
+                ]);
+
             const pedidoId = resultadoPedido.insertId;
+
+            // Semana 7: el alta tambien queda en la auditoria, no solo los cambios
+            await registrarAuditoriaPedido(connection, {
+                pedidoId,
+                usuarioId: idUsuario,
+                accion: 'INSERT',
+                detalle: 'Pedido creado en pago_espera'
+            });
 
             for (const item of itemsDelComercio) {
                 const subtotal = Number((Number(item.precio) * item.cantidad).toFixed(2));
@@ -649,13 +666,13 @@ const confirmarCarrito = async (req, res) => {
             pedidosCreados.push({
                 pedidoId,
                 comercioId,
+                comercio: itemsDelComercio[0].comercio_nombre,
                 total: totalComercio,
                 distancia_km: envio.distancia_km,
                 tiempo_estimado: envio.tiempo_estimado,
                 comision: envio.comision,
                 origen_datos: envio.origen_datos
             });
-            pedidosCreados.push({ pedidoId, comercioId, total: totalComercio });
 
             // Sin notificación al comercio acá: todavía no hay pago confirmado.
         }
@@ -664,6 +681,17 @@ const confirmarCarrito = async (req, res) => {
         await connection.query(`DELETE FROM carritos WHERE id = ?`, [carritoId]);
 
         await connection.commit();
+
+        // Semana 11 (CU27): "pedido confirmado". Al cliente si, al comercio todavia no:
+        // el comercio se entera cuando se aprueba el pago (ver pago.controller.js).
+        for (const pedido of pedidosCreados) {
+            await enviarNotificaciones(idUsuario, {
+                tipo: "pedido_creado",
+                titulo: "Pedido creado",
+                mensaje: `Creaste el pedido #${pedido.pedidoId} en ${pedido.comercio}. Pagalo para que el comercio lo empiece a preparar.`,
+                url: `/cliente/pedidos/${pedido.pedidoId}`
+            });
+        }
 
         return res.status(201).json({
             codigo: 201,

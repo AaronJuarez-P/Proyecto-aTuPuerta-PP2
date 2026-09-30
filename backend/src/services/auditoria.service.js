@@ -25,11 +25,14 @@ const registrarAuditoriaProducto = async (conexion, { productoId, usuarioId, adm
 // Queda en null cuando el cambio lo dispara el flujo normal y no una persona (un pago
 // aprobado que llega por el webhook).
 // administradorId: solo cuando el cambio lo hace un administrador (panel, semana 13)
-const registrarAuditoriaPedido = async (conexion, { pedidoId, usuarioId = null, administradorId = null, accion }) => {
+// detalle: que cambio, en texto (semana 13). accion solo dice INSERT / UPDATE / DELETE,
+// y para la trazabilidad hace falta saber si fue "en_preparacion -> preparado" o una
+// cancelacion con su motivo. auditoria_pedidos.detalle es VARCHAR(255).
+const registrarAuditoriaPedido = async (conexion, { pedidoId, usuarioId = null, administradorId = null, accion, detalle = null }) => {
     await conexion.query(
-        `INSERT INTO auditoria_pedidos (pedido_id, usuario_id, administrador_id, accion, fecha, hora)
-        VALUES (?, ?, ?, ?, CURDATE(), CURTIME())`,
-        [pedidoId, usuarioId, administradorId, accion]
+        `INSERT INTO auditoria_pedidos (pedido_id, usuario_id, administrador_id, accion, detalle, fecha, hora)
+        VALUES (?, ?, ?, ?, ?, CURDATE(), CURTIME())`,
+        [pedidoId, usuarioId, administradorId, accion, detalle ? String(detalle).slice(0, 255) : null]
     );
 };
 

@@ -21,10 +21,10 @@
 // El canal es best-effort. La fila en la base y la respuesta HTTP son la verdad; esto
 // es un aviso que puede perderse sin que nada quede inconsistente.
 
-const jwt = require("jsonwebtoken");
 const { Server } = require("socket.io");
 const database = require("../database/database");
 const { obtenerIdValido } = require("../utils/validacion");
+const { validarSesion, extraerToken } = require("../middlewares/autenticacion.middleware");
 const {
     buscarPedidoParaSeguimiento,
     autorizarSeguimiento,
@@ -54,42 +54,57 @@ const salaDePedido = (pedidoId) => `pedido:${pedidoId}`;
 // Arranque
 // ---------------------------------------------------------------------------
 
+// Origenes del handshake: SOCKET_ORIGEN si esta, si no los mismos de CORS_ORIGEN que
+// usa Express (semana 14), y si no hay ninguno, cualquiera. Los dos aceptan una lista
+// separada por comas.
+const origenesDelSocket = () => {
+    const lista = (process.env.SOCKET_ORIGEN || process.env.CORS_ORIGEN || '*')
+        .split(',')
+        .map((origen) => origen.trim())
+        .filter(Boolean);
+
+    return lista.length === 0 || lista.includes('*') ? '*' : lista;
+};
+
 const inicializarTiempoReal = (servidor) => {
     io = new Server(servidor, {
         // Socket.IO NO hereda el cors() de Express: son dos capas distintas. Sin esto,
         // un front servido desde otro puerto falla en el handshake con un error que ni
         // siquiera menciona CORS, y es la causa numero uno de "el socket no conecta".
         cors: {
-            origin: process.env.SOCKET_ORIGEN || '*',
+            origin: origenesDelSocket(),
             credentials: false
         }
     });
 
-    // Autenticacion del handshake. Mismo criterio que verificarToken: el token viaja
-    // CRUDO, sin prefijo Bearer, porque asi lo lee la API y no tiene sentido que el
-    // socket invente una convencion propia.
+    // Autenticacion del handshake. Mismas reglas que verificarToken, porque usa la
+    // misma funcion (validarSesion): el token tiene que ser valido, la cuenta tiene que
+    // seguir activa y la sesion tiene que ser la abierta (semana 14). Antes solo se
+    // verificaba la firma, asi que un usuario suspendido seguia pudiendo mirar pedidos
+    // en vivo hasta que le venciera el token.
     //
     // Va por handshake.auth y no por query string para que el token no termine en los
     // logs del servidor ni en el historial del navegador.
-    io.use((socket, next) => {
-        const token = socket.handshake.auth?.token;
-
-        if (!token) {
-            const error = new Error("Token no proporcionado");
-            error.data = { codigo: 401 };
-            return next(error);
-        }
-
+    io.use(async (socket, next) => {
         try {
-            socket.data.usuario = jwt.verify(token, process.env.JWT_SECRET);
+            const { payload, error } = await validarSesion(extraerToken(socket.handshake.auth?.token));
+
+            if (error) {
+                // Socket.IO manda err.message y err.data al cliente en connect_error. El
+                // codigo viaja en data para que el front pueda distinguir un 401 sin
+                // tener que comparar textos.
+                const errorSocket = new Error(error.mensaje);
+                errorSocket.data = { codigo: error.codigo };
+                return next(errorSocket);
+            }
+
+            socket.data.usuario = payload;
             return next();
-        } catch (errorToken) {
-            // Socket.IO manda err.message y err.data al cliente en connect_error. El
-            // codigo viaja en data para que el front pueda distinguir un 401 sin
-            // tener que comparar textos.
-            const error = new Error("Token inválido o expirado");
-            error.data = { codigo: 401 };
-            return next(error);
+
+        } catch (errorInterno) {
+            const errorSocket = new Error("Error interno del servidor");
+            errorSocket.data = { codigo: 500 };
+            return next(errorSocket);
         }
     });
 

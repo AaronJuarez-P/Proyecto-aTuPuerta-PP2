@@ -3,7 +3,7 @@
 //Cubre CU07 (realizar pago): registro del intento de pago, integración con MercadoPago,
 //persistencia en `pagos` y actualización automática del estado del pedido.
 //
-//Entregable de la semana: **un pedido pagado pasa de `pendiente_pago` a `en_preparacion`;
+//Entregable de la semana: **un pedido pagado pasa de `pago_espera` a `en_preparacion`;
 //un pago rechazado queda registrado con motivo.**
 //
 //Base URL local: `http://localhost:4000/api`
@@ -43,18 +43,17 @@
 //```
 //
 //```
-//Authorization: <el token, sin la palabra Bearer>
+//Authorization: <el token, con o sin la palabra Bearer>
 //```
 //
-//> **Importante:** `verificarToken` lee el header crudo, **no** saca el prefijo `Bearer `.
-//> Si en Postman elegís Auth → Bearer Token, va a fallar con 401. Usar Headers →
-//> `Authorization` con el token pelado.
+//> **Desde la semana 14** `verificarToken` acepta el token pelado y también con el
+//> prefijo `Bearer ` (Auth → Bearer Token en Postman). Antes el prefijo daba `401`.
 //
 //---
 //
 //## Cómo llegar a un pedido pagable
 //
-//El pago necesita un pedido en `pendiente_pago`. Se consigue con el flujo del carrito:
+//El pago necesita un pedido en `pago_espera`. Se consigue con el flujo del carrito:
 //
 //1. `POST /api/carrito/agregar` → `{ "id_producto": 1, "cantidad": 2 }`
 //2. `POST /api/carrito/confirmar`
@@ -79,7 +78,7 @@
 //## POST /api/pedidos/:id/pagar
 //
 //### Caso 1 — Iniciar el pago de un pedido propio
-//**Precondición:** pedido 3 en `pendiente_pago`, token de `juan.perez@test.com`.
+//**Precondición:** pedido 3 en `pago_espera`, token de `juan.perez@test.com`.
 //**Request:** `POST /api/pedidos/3/pagar` (sin body)
 //**Respuesta esperada:** `201 Created`
 //```json
@@ -104,7 +103,7 @@
 //SELECT pedido_id, metodo, estado, monto, referencia_externa FROM pagos WHERE pedido_id = 3;
 //-- mercadopago | pendiente | 9000.00 | MOCK-3-...
 //SELECT estado FROM pedidos WHERE id = 3;
-//-- pendiente_pago  (todavía no cambió: el pago recién arranca)
+//-- pago_espera  (todavía no cambió: el pago recién arranca)
 //```
 //
 //> En `MP_MODO=sandbox` el `url_pago` es el `sandbox_init_point` de MercadoPago y ahí sí
@@ -372,7 +371,7 @@
 //- [ ] `npm install` corrido (tiene que estar el paquete `mercadopago`)
 //- [ ] `.env` con `MP_MODO=mock` para los casos 1 a 15
 //- [ ] Servidor levantado con `npm run dev` sin errores
-//- [ ] Token de `juan.perez@test.com` en el header `Authorization`, **sin** `Bearer`
+//- [ ] Token de `juan.perez@test.com` en el header `Authorization`, con o sin `Bearer`
 //- [ ] Stock del producto anotado antes de empezar, para poder comparar
 //- [ ] Para los casos 16 y 17 en adelante: `MP_MODO=sandbox`, ngrok corriendo y
 //      credenciales cargadas

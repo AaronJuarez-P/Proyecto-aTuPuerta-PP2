@@ -1,7 +1,7 @@
 const database = require('../database/database');
 const { registrarAuditoriaProducto } = require('../services/auditoria.service');
 const { obtenerPaginacion } = require('../utils/paginacion');
-const { obtenerIdValido } = require('../utils/validacion');
+const { obtenerIdValido, obtenerTextoQuery } = require('../utils/validacion');
 
 // La columna precio es DECIMAL(10,2), o sea que no entra un valor mas grande que este
 const PRECIO_MAXIMO = 99999999.99;
@@ -95,22 +95,34 @@ const buscarProductoDelComercio = async (conexion, productoId, comercioId) => {
 // GET /api/productos?buscar=&categoria=&comercioId=&precioMin=&precioMax=&pagina=&limite=
 const buscarProductos = async (req, res) => {
     try {
-        const { buscar, categoria, comercioId, precioMin, precioMax } = req.query;
+        const { comercioId, precioMin, precioMax } = req.query;
         const { limite, pagina, offset } = obtenerPaginacion(req.query);
+
+        // Semana 14: ?buscar[]=x llega como array y antes terminaba en un 500 en el .trim()
+        const buscar = obtenerTextoQuery(req.query.buscar);
+        const categoria = obtenerTextoQuery(req.query.categoria);
+
+        if (buscar === null || categoria === null) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "Los filtros buscar y categoria tienen que ser texto" }
+            });
+        }
 
         // Solo productos activos de comercios activos: un comercio dado de baja
         // no tiene que seguir apareciendo en el catalogo
         const condiciones = ['p.activo = TRUE', 'c.activo = TRUE'];
         const parametros = [];
 
-        if (buscar && buscar.trim() !== "") {
+        if (buscar !== "") {
             condiciones.push('(p.nombre LIKE ? OR p.descripcion LIKE ?)');
-            parametros.push(`%${buscar.trim()}%`, `%${buscar.trim()}%`);
+            parametros.push(`%${buscar}%`, `%${buscar}%`);
         }
 
-        if (categoria && categoria.trim() !== "") {
+        if (categoria !== "") {
             condiciones.push('p.categoria = ?');
-            parametros.push(categoria.trim());
+            parametros.push(categoria);
         }
 
         if (comercioId !== undefined && comercioId !== "") {

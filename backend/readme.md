@@ -9,56 +9,76 @@ Backend del proyecto anual Practica Profesionalizante 2. Node.js + Express + MyS
 ```
 backend/
 ├── scripts/
-│   ├── aTuPuerta.sql
+│   ├── aTuPuerta.sql               <- esquema completo + datos de prueba (arranca con DROP DATABASE)
+│   ├── migraciones/                <- para actualizar una base que ya tiene datos
+│   ├── prueba-flujos.js            <- prueba automática de punta a punta (semana 14)
 │   └── cliente-seguimiento.js      <- cliente de socket para probar el tiempo real a mano
 ├── postman/
+│   ├── ATuPuerta.postman_collection.json <- colección importable con TODOS los endpoints
 │   ├── backend-registro.js         <- guía de pruebas: registro y login
 │   ├── backend-productos.js        <- guía de pruebas: catálogo y stock
 │   ├── backend-pagos.js            <- guía de pruebas: pagos (CU07)
 │   ├── backend-repartidores.js     <- guía de pruebas: repartidores (CU19, CU20)
 │   ├── backend-geolocalizacion.js  <- guía de pruebas: ubicación y rutas (CU21, CU22)
 │   ├── backend-seguimiento.js      <- guía de pruebas: tiempo real (CU08, CU26)
-│   └── lista-semanas-8-10.js       <- las semanas 8, 9 y 10 en una sola lista, para ir tildando
+│   ├── lista-semanas-8-10.js       <- las semanas 8, 9 y 10 en una sola lista, para ir tildando
+│   └── lista-semanas-11-14.js      <- perfiles, notificaciones, historial, administración y seguridad
 ├── src/
+│   ├── config/
+│   │   └── webPush.js              <- claves VAPID; sin ellas el push queda apagado
 │   ├── controllers/
 │   │   ├── registro.controller.js
 │   │   ├── registroComercio.controller.js
 │   │   ├── registroRepartidor.controller.js
-│   │   ├── comercio.controller.js
+│   │   ├── perfil.controller.js        <- perfil propio, contraseña y baja (semana 3)
+│   │   ├── comercio.controller.js      <- catálogo público, perfil y ventas del comercio
 │   │   ├── producto.controller.js
 │   │   ├── carrito.controller.js
 │   │   ├── pago.controller.js
-│   │   ├── pedido.controller.js
+│   │   ├── pedido.controller.js        <- lado repartidor del pedido
+│   │   ├── pedidoCliente.controller.js <- lado cliente: historial, repetir y cancelar (semana 12)
 │   │   ├── repartidor.controller.js
-│   │   ├── notificacion.controller.js
-│   │   └── seguimiento.controller.js
+│   │   ├── notificacion.controller.js  <- listar y marcar como leídas
+│   │   ├── notificaciones.controller.js <- Web Push: suscripción y envío
+│   │   ├── seguimiento.controller.js
+│   │   ├── administrador.controller.js <- login de administrador, usuarios y comercios (CU23)
+│   │   ├── supervision.controller.js   <- pedidos y auditoría (CU24)
+│   │   └── reclamo.controller.js       <- reclamos (CU25)
 │   ├── database/
 │   │   └── database.js
 │   ├── middlewares/
-│   │   ├── autenticacion.middleware.js
+│   │   ├── autenticacion.middleware.js <- token + sesión viva contra la base
 │   │   ├── cliente.middleware.js
 │   │   ├── comercio.middleware.js
-│   │   └── repartidor.middleware.js
+│   │   ├── repartidor.middleware.js
+│   │   ├── administrador.middleware.js
+│   │   └── limites.middleware.js       <- rate limiting (semana 14)
 │   ├── routes/
 │   │   ├── registro.routes.js
 │   │   ├── registroComercio.routes.js
 │   │   ├── registroRepartidor.routes.js
+│   │   ├── perfil.routes.js
 │   │   ├── comercio.routes.js
 │   │   ├── producto.routes.js
 │   │   ├── carrito.routes.js
 │   │   ├── pago.routes.js
 │   │   ├── pedido.routes.js
+│   │   ├── pedidoCliente.routes.js
 │   │   ├── repartidor.routes.js
 │   │   ├── notificacion.routes.js
-│   │   └── seguimiento.routes.js
+│   │   ├── notificaciones.routes.js
+│   │   ├── seguimiento.routes.js
+│   │   ├── administrador.routes.js
+│   │   └── reclamo.routes.js
 │   ├── services/
 │   │   ├── auditoria.service.js
-│   │   ├── pedido.service.js       <- estados del pedido, stock, asignación, entrega y comisión
+│   │   ├── pedido.service.js       <- máquina de estados, stock, cancelación, asignación, entrega y comisión
 │   │   ├── pago.service.js         <- adaptador de MercadoPago
 │   │   ├── maps.service.js         <- adaptador de Mapbox (Directions + Geocoding)
 │   │   ├── ubicacion.service.js    <- posiciones del repartidor y coordenadas guardadas
 │   │   ├── repartidor.service.js   <- disponibilidad del repartidor
-│   │   ├── notificacion.service.js
+│   │   ├── usuario.service.js      <- cuentas: perfiles, pedidos en curso y baja lógica
+│   │   ├── notificacion.service.js <- filas de notificaciones y envío push
 │   │   ├── seguimiento.service.js  <- negocio del seguimiento: autorización, ETA y su caché
 │   │   └── tiemporeal.service.js   <- adaptador de Socket.IO (handshake, salas, emisión)
 │   ├── utils/
@@ -92,15 +112,32 @@ backend/
 > queda como *Librer├¡a del Sur* en la base y no hay forma de darse cuenta hasta que
 > falla una comparación.
 
+> **Para no perder los datos de una base existente**, en vez de reimportar se pueden correr
+> las migraciones de `scripts/migraciones/`, en orden de fecha. La del 29/09
+> (`20260929_semanas_11_a_14.sql`) explica en su encabezado qué hace falta antes. Normaliza
+> el estado "esperando el pago" a `pago_espera` venga la base de la rama que venga (en
+> `ramaSanti` se llamaba `pendiente_pago`, y XAMPP guardaba el estado vacío cuando no
+> coincidía con el ENUM).
+
+La semilla trae un usuario de cada rol, todos con la contraseña `Test1234!`:
+
+| Rol | Email | Login |
+|---|---|---|
+| Cliente | `juan.perez@test.com`, `maria.gomez@test.com` | `POST /api/inicioSesion` |
+| Comercio | `ferreteria.central@test.com` (CUIL `20304050607`), `libreria.sur@test.com` (CUIL `20405060708`) | `POST /api/inicioSesionComercio` |
+| Repartidor | `carlos.repartidor@test.com`, `lucia.repartidor@test.com` | `POST /api/inicioSesionRepartidor` |
+| Administrador | `admin@test.com` | `POST /api/inicioSesionAdministrador` |
+
 ### 2 — Variables de entorno
 
 Crear `.env` en la raíz de `backend/` copiando `.env.example`:
 
 ```
-HOST=localhost
-DATABASE=aTuPuerta
-USER=root
-PASSWORD=
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=aTuPuerta
+DB_USER=root
+DB_PASSWORD=
 JWT_SECRET=ClaveSecretaProyecto2026
 JWT_EXPIRES_IN=8h
 PORT=4000
@@ -122,11 +159,30 @@ MAPS_DISTANCIA_FALLBACK_KM=3
 
 COMISION_BASE=500
 COMISION_POR_KM=80
+
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:ATuPuerta@gmail.org
+
+CORS_ORIGEN=http://localhost:5173
+RATE_LIMIT_VENTANA_MINUTOS=15
+RATE_LIMIT_MAX=1000
+RATE_LIMIT_LOGIN_MAX=10
+TRUST_PROXY=
 ```
 
-> `PASSWORD` es la contraseña del usuario de MySQL. En XAMPP recién instalado `root` va
-> **sin** contraseña, o sea `PASSWORD=` vacío. Si al arrancar aparece
+> `DB_PASSWORD` es la contraseña del usuario de MySQL. En XAMPP recién instalado `root` va
+> **sin** contraseña, o sea `DB_PASSWORD=` vacío. Si al arrancar aparece
 > `Access denied for user 'root'@'localhost'`, el problema es este valor.
+
+> **`DB_*` desde la semana 14.** Los nombres viejos (`HOST`, `DATABASE`, `USER`,
+> `PASSWORD`) siguen funcionando para no romper los `.env` que ya existen, pero conviene
+> pasarse: en Mac y Linux `USER` es una variable del sistema operativo y dotenv no la pisa,
+> así que el `USER=root` del `.env` se ignoraba y la conexión salía con el usuario de la
+> computadora.
+
+> **Si falta `JWT_SECRET` o el nombre de la base, el servidor no arranca** y dice qué
+> falta. Antes arrancaba igual y cada login contestaba un `500`.
 
 > **`.env` no se versiona.** Cada uno tiene el suyo, porque la contraseña de MySQL
 > cambia de máquina en máquina. Si al pullear no lo tenés, copiá `.env.example`.
@@ -175,6 +231,27 @@ dirección da siempre la misma coordenada y los números no cambian entre corrid
 Las cuatro tienen valor por defecto en el código: el seguimiento funciona sin tocar el
 `.env`.
 
+#### Variables de notificaciones push (semana 11)
+
+| Variable | Para qué sirve |
+|---|---|
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Identifican al servidor ante el servicio de push del navegador. Se generan una sola vez con `npx web-push generate-vapid-keys` |
+| `VAPID_SUBJECT` | Contacto del dueño de las claves (`mailto:...`) |
+
+Son opcionales. Sin ellas el push queda apagado —el servidor lo avisa al arrancar— y todo lo
+demás funciona igual: las notificaciones se guardan en la base y se leen con
+`GET /api/notificaciones`. Antes, sin estas claves el servidor directamente no arrancaba.
+
+#### Variables de seguridad (semana 14)
+
+| Variable | Para qué sirve |
+|---|---|
+| `CORS_ORIGEN` | Orígenes que pueden llamar a la API desde un navegador, separados por coma. Vacío = cualquiera (se avisa al arrancar). El socket usa este mismo valor si no hay `SOCKET_ORIGEN` |
+| `RATE_LIMIT_VENTANA_MINUTOS` | Ventana de los dos límites de abajo |
+| `RATE_LIMIT_MAX` | Pedidos totales a `/api` por IP en la ventana. Generoso: alcanza para correr las guías enteras |
+| `RATE_LIMIT_LOGIN_MAX` | Intentos **fallidos** de login, registro y contraseña por IP en la ventana |
+| `TRUST_PROXY` | Solo detrás de un proxy (ngrok, un despliegue): cuántos saltos creerle para sacar la IP real |
+
 ### 3 — Instalar y correr
 
 ```bash
@@ -186,12 +263,36 @@ Servidor en `http://localhost:4000`
 
 ### 4 — Probar
 
-Todo se prueba desde Postman con las guías de `postman/`. Cada guía explica, caso por caso,
+**Prueba automática (semana 14).** Con la base recién importada y el servidor corriendo:
+
+```bash
+node scripts/prueba-flujos.js
+```
+
+Recorre todos los flujos de punta a punta —registro, perfiles, carrito, pago, preparación,
+reparto, entrega, historial, repetición, notificaciones, administración, reclamos,
+auditoría, sesiones, socket y límites— y verifica los códigos y los datos clave de cada
+respuesta (159 verificaciones). Termina con código distinto de 0 si algo falla, así que
+sirve como prueba de regresión antes de entregar o de mergear. Otra URL:
+`BASE_URL=http://localhost:4100/api node scripts/prueba-flujos.js`.
+
+> El último bloque agota a propósito el límite de logins fallidos, así que por
+> `RATE_LIMIT_VENTANA_MINUTOS` los logins desde esa máquina dan `429`. Reiniciar el servidor
+> lo resetea: los contadores viven en memoria.
+
+**Postman.** `postman/ATuPuerta.postman_collection.json` es una colección importable con
+todos los endpoints, agrupados por módulo. Los requests de login guardan el token solos en
+las variables de la colección (`{{token_maria}}`, `{{token_admin}}`...), así que alcanza con
+correr primero la carpeta "00 · Sesiones".
+
+Además están las guías de `postman/`. Cada guía explica, caso por caso,
 qué request mandar, qué tiene que contestar y por qué el endpoint hace lo que hace.
 
 Para las semanas 8, 9 y 10 hay además `postman/lista-semanas-8-10.js`: las tres guías
 resumidas en una sola lista ordenada, para ir tildando mientras se prueba. Sirve como
 checklist de regresión antes de entregar; el detalle sigue estando en las guías largas.
+`postman/lista-semanas-11-14.js` hace lo mismo con los pendientes de las semanas 3 y 7 y
+con las semanas 11 a 14.
 
 La parte de tiempo real de la semana 10 es la única que no se corre con Postman: necesita
 un cliente de Socket.IO, y para eso está `scripts/cliente-seguimiento.js`.
@@ -221,29 +322,45 @@ rama tomar y saca el texto de `datos.mensaje`. Vale también para los errores de
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `POST` | `/api/registro` | Alta de usuario base en `usuarios` (sin rol) |
-| `POST` | `/api/inicioSesion` | Login genérico. Devuelve JWT |
+| `POST` | `/api/registro` | Alta de usuario con perfil de cliente. Contraseña de 8 a 72 caracteres |
+| `POST` | `/api/inicioSesion` | Login de cliente. Devuelve JWT |
 | `POST` | `/api/registroComercio` | Alta de usuario + comercio en una transacción |
 | `POST` | `/api/inicioSesionComercio` | Login de comercio (email + contraseña + CUIL) |
 | `POST` | `/api/cerrarSesionComercio` | Cierra la sesión de comercio |
 | `POST` | `/api/registroRepartidor` | Alta del perfil de repartidor para un usuario ya registrado (pide su contraseña) |
 | `POST` | `/api/inicioSesionRepartidor` | Login de repartidor. Body: `{ email, contrasena }` |
 | `POST` | `/api/cerrarSesionRepartidor` | Cierra la sesión de repartidor |
+| `POST` | `/api/inicioSesionAdministrador` | Login de administrador. Body: `{ email, contrasena }` |
 
 Los dos logins firman el mismo payload: `{ id, rol, comercioId }` (el `comercioId`
 solo aparece si el usuario es un comercio). El login de repartidor firma
-`{ id, rol: 'repartidor', repartidorId }`.
+`{ id, rol: 'repartidor', repartidorId }` y el de administrador
+`{ id, rol: 'administrador', administradorId }`.
+
+No hay registro público de administradores: si lo hubiera, cualquiera podría darse
+permisos. El primero viene en la semilla y los demás los da de alta otro administrador
+(`POST /api/admin/usuarios` con `rol: 'administrador'`).
+
+Los siete endpoints que verifican una contraseña (los cuatro logins y los tres registros,
+porque los de comercio y repartidor comparan la contraseña de una cuenta que ya existe)
+tienen límite de intentos fallidos: ver [Seguridad](#seguridad--semana-14).
 
 `usuarios.rol` funciona como "qué sesión tenés abierta", una sola a la vez: cada login
 la escribe y cerrar sesión de comercio o de repartidor vuelve a dejarla en `cliente`.
 Por eso `resolverComercio` y `resolverRepartidor` filtran por `usuarios.rol` y no por el
 rol que viene adentro del token.
 
-> **Limitación conocida:** cerrar sesión no invalida el JWT, porque el token no tiene
-> estado del lado del servidor. Deja de servir para lo que pasa por `resolverComercio` o
-> `resolverRepartidor`, pero donde solo corre `verificarToken` (por ejemplo
-> `GET /api/notificaciones`) vale hasta que expira, a las 8 horas. La solución real es
-> expiración corta con refresh token, o una lista de tokens revocados.
+> **Cerrar sesión invalida el token en todas las rutas (semana 14).** Hasta la semana 13
+> el token de una sesión cerrada dejaba de servir solo donde pasaba `resolverComercio` o
+> `resolverRepartidor`, y en el resto (por ejemplo `GET /api/notificaciones`) valía hasta
+> que expiraba. Ahora `verificarToken` compara el rol del token con `usuarios.rol` en cada
+> request y contesta `401` · "La sesión ya no es válida: iniciá sesión de nuevo". Por la
+> misma consulta, una cuenta suspendida o dada de baja queda afuera al instante (`403`).
+>
+> Consecuencia del modelo de una sesión por cuenta: si alguien es cliente y repartidor y
+> entra como cliente, su token de repartidor deja de servir. Y `registroComercio` /
+> `registroRepartidor` dejan la cuenta en la sesión nueva, así que el token de cliente que
+> tenía hasta ese momento también: hay que volver a iniciar sesión.
 
 ### Catálogo — CU03, CU04 (públicos)
 
@@ -268,7 +385,8 @@ rol que viene adentro del token.
 
 Cadena de middlewares: `verificarToken` → `verificarRol('comercio')` → `resolverComercio`.
 
-- El token va en el header `Authorization` **sin** el prefijo `Bearer `.
+- El token va en el header `Authorization`, pelado o con el prefijo `Bearer ` (este último
+  se acepta desde la semana 14).
 - El `comercio_id` sale siempre del token, nunca del body: un comercio no puede crear
   ni modificar productos de otro (`403`).
 - Cada escritura corre dentro de una transacción junto con su fila en
@@ -288,7 +406,7 @@ Los casos de prueba de cada endpoint están en `postman/backend-productos.js`.
 | `GET` | `/api/pagos/retorno` | Vuelta del navegador después de pagar (`back_urls`) |
 | `POST` | `/api/pagos/simular` | Fuerza un resultado. Solo con `MP_MODO=mock` |
 
-Flujo: `confirmarCarrito` deja el pedido en `pendiente_pago` → `POST /pedidos/:id/pagar`
+Flujo: `confirmarCarrito` deja el pedido en `pago_espera` → `POST /pedidos/:id/pagar`
 crea la preferencia y la fila en `pagos` → el cliente paga en MercadoPago →
 la notificación llega al webhook → el pedido avanza o se cancela.
 
@@ -307,10 +425,18 @@ la notificación llega al webhook → el pedido avanza o se cancela.
 - **Un pago rechazado cancela el pedido y devuelve el stock.** El stock se descuenta al
   confirmar el carrito (semana 5), no al pagar, así que si nadie lo devolviera quedaría
   reservado para siempre. Como contrapartida, no se puede reintentar sobre el mismo
-  pedido: hay que rearmar el carrito.
+  pedido: hay que rearmarlo, y `POST /api/pedidos/:id/repetir` lo hace de un solo paso.
 - El cambio de estado del pedido vive en `services/pedido.service.js`, no suelto en el
-  controlador, para que la semana 7 lo reemplace en un solo lugar. Cada cambio queda en
-  `auditoria_pedidos`.
+  controlador, y pasa por la máquina de estados (ver
+  [Ciclo de vida del pedido](#ciclo-de-vida-del-pedido--semana-7)). Cada cambio queda en
+  `auditoria_pedidos` con la transición en `detalle`.
+- **Un pago que llega para un pedido que ya no lo espera** (el cliente o un administrador
+  lo cancelaron mientras el pago estaba en curso) se registra tal cual en `pagos` pero no
+  mueve el pedido: un cancelado no vuelve atrás. Si se aprobó, queda con el motivo
+  "requiere devolución manual" y les llega un aviso a los administradores. Sin esta
+  guarda, el webhook contestaría `500` y MercadoPago lo reintentaría para siempre.
+- Al cliente le llega una notificación con el resultado (`pago_aprobado` o
+  `pago_rechazado`), y al comercio y a los repartidores la de pedido nuevo.
 - `pagos` tiene `UNIQUE KEY uq_pagos_pedido`: una sola fila por pedido, así que un
   reintento actualiza la que ya existe.
 
@@ -320,7 +446,7 @@ Los casos de prueba están en `postman/backend-pagos.js`.
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `GET` | `/api/pedido/listar` | Pedidos disponibles: `en_preparacion` y sin repartidor. Filtros: `pagina`, `limite` |
+| `GET` | `/api/pedido/listar` | Pedidos disponibles: pagados (`en_preparacion` o `preparado`) y sin repartidor, con su `estado`. Filtros: `pagina`, `limite` |
 | `PATCH` | `/api/pedido/asignar/:idPedido` | Acepta el pedido: `repartidor_id`, `en_camino` y código de entrega |
 | `PATCH` | `/api/pedido/entrega/:idPedido` | Confirma la entrega. Body: `{ codigoPedido }` y, opcional, `{ latitud, longitud }` |
 | `GET` | `/api/repartidor/disponibilidad` | `{ disponible, pedido_en_curso }` |
@@ -329,13 +455,18 @@ Los casos de prueba están en `postman/backend-pagos.js`.
 Cadena de middlewares: `verificarToken` → `verificarRol('repartidor')` → `resolverRepartidor`
 (busca el repartidor en la base y exige que el usuario siga activo).
 
-Flujo: el pago aprobado deja el pedido en `en_preparacion` → el repartidor disponible lo
-ve en `/pedido/listar` y lo acepta → el cliente recibe el código por notificación → el
-repartidor confirma la entrega con ese código y vuelve a quedar disponible.
+Flujo: el pago aprobado deja el pedido en `en_preparacion` → el comercio lo marca
+`preparado` cuando lo tiene listo → el repartidor disponible lo ve en `/pedido/listar` y lo
+acepta → el cliente recibe el código por notificación → el repartidor confirma la entrega
+con ese código y vuelve a quedar disponible.
 
+- **Se puede tomar antes de que esté listo.** El repartidor acepta pedidos en
+  `en_preparacion` o en `preparado`; el listado le dice cuál es cuál, para que decida si le
+  conviene ir ya o esperar. Hasta la semana 13 solo se aceptaba `en_preparacion`, y un
+  pedido que el comercio marcaba listo ya no lo podía tomar nadie.
 - **Doble asignación.** Aceptar es un único `UPDATE ... WHERE repartidor_id IS NULL AND
-  estado = 'en_preparacion'`: si dos repartidores aceptan a la vez, el segundo afecta 0
-  filas y recibe `409`. Vive en `services/pedido.service.js`.
+  estado IN ('en_preparacion', 'preparado')`: si dos repartidores aceptan a la vez, el
+  segundo afecta 0 filas y recibe `409`. Vive en `services/pedido.service.js`.
 - **`disponible` = puede tomar un pedido nuevo.** `FALSE` al aceptar, `TRUE` al entregar,
   y además a mano. Sin estar disponible no se ve el listado (`403`) ni se acepta (`409`),
   y con un pedido en camino no se puede volver a estar disponible (`409`).
@@ -414,17 +545,45 @@ al confirmar la entrega puede mandar la posición final, que cierra el rastro de
 
 Los casos de prueba están en `postman/backend-geolocalizacion.js`.
 
-### Notificaciones (cualquier usuario logueado)
+### Notificaciones — CU27, semana 11 (cualquier usuario logueado)
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `GET` | `/api/notificaciones` | Notificaciones propias, las más recientes primero. Filtros: `pagina`, `limite` |
+| `GET` | `/api/notificaciones` | Propias y generales del rol de la sesión, las más recientes primero. Filtros: `no_leidas=true`, `pagina`, `limite`. Devuelve siempre `no_leidas` |
+| `PATCH` | `/api/notificaciones/:id/leida` | Marca una como leída. Idempotente; una ajena da `404` |
+| `PATCH` | `/api/notificaciones/leidas` | Marca todas como leídas |
+| `GET` | `/api/notificaciones/clave-publica` | Clave VAPID pública para suscribirse. **Pública** |
+| `POST` | `/api/notificaciones/suscribir` | Guarda la `PushSubscription` del navegador |
 
-Versión mínima de la semana 8: las notificaciones se guardan en la tabla `notificaciones`
-(`services/notificacion.service.js`, dentro de la transacción que las origina) y se leen
-con este endpoint. Marcarlas como leídas y el envío en tiempo real quedan para la semana 11.
+Eventos que generan una notificación:
 
-Los casos de prueba están en `postman/backend-repartidores.js`.
+| Evento | A quién |
+|---|---|
+| Pedido creado (`confirmarCarrito`) | Cliente |
+| Pago aprobado | Cliente, comercio y repartidores (general) |
+| Pago rechazado o con monto inválido | Cliente |
+| Pedido preparado | Cliente y repartidores (general) |
+| Repartidor asignado / en camino, con el código de entrega | Cliente |
+| Pedido entregado | Cliente |
+| Pedido cancelado por un administrador | Cliente, comercio y repartidor |
+| Reclamo nuevo | Administradores (general) |
+| Reclamo en revisión, resuelto o rechazado | Quien reclamó |
+| Pago aprobado de un pedido ya cancelado | Administradores (general) |
+
+- **Personales y generales.** Una personal tiene `usuario_id`. Una general va a todo un
+  rol: una sola fila con `usuario_id` NULL y `destinatario_rol`. Se muestra según el rol de
+  la sesión abierta: quien usa la app como cliente no ve los avisos para repartidores
+  aunque también lo sea.
+- **La lectura de una general va en su propia tabla** (`notificaciones_leidas`, una fila
+  por usuario). La columna `leida` sirve para las personales, pero en una general el
+  primero que la leyera la marcaría para todos.
+- **La fila es la verdad; el push es best-effort.** La fila se guarda aunque el usuario no
+  tenga suscripción, el push esté apagado por falta de claves VAPID o el servicio de push
+  falle. El push sale después del commit y sin `await`, con la misma regla que las
+  emisiones del socket.
+- Las notificaciones de asignar y entregar se guardan **dentro** de la transacción que las
+  origina (`registrarNotificacion`): si no se puede avisar el código de entrega, el pedido
+  no queda asignado con un código que nadie conoce.
 
 ### Seguimiento en tiempo real — CU08, CU26
 
@@ -507,3 +666,182 @@ Se deja corriendo en una terminal aparte mientras se mandan las requests desde P
 propio por encima.
 
 Los casos de prueba están en `postman/backend-seguimiento.js`.
+
+### Ciclo de vida del pedido — semana 7
+
+```
+pago_espera -> en_preparacion -> preparado -> en_camino -> entregado
+                     |                            ^
+                     +----------------------------+
+
+y desde cualquier estado no terminal -> cancelado
+```
+
+| Transición | Quién la dispara | Dónde |
+|---|---|---|
+| `pago_espera` → `en_preparacion` | Pago aprobado | `aplicarResultadoPago` |
+| `en_preparacion` → `preparado` | El comercio (`PATCH /api/comercios/pedidos/:id/subir`) | `subirPedido` |
+| `en_preparacion` / `preparado` → `en_camino` | Un repartidor lo toma | `asignarPedidoARepartidor` |
+| `en_camino` → `entregado` | El repartidor, con el código del cliente | `confirmarEntregaPedido` |
+| `pago_espera` → `cancelado` | Pago rechazado, o el cliente antes de pagar | `aplicarResultadoPago`, `cancelarMiPedido` |
+| cualquiera no terminal → `cancelado` | Un administrador (CU24) | `cancelarPedidoAdmin` |
+
+- **Las reglas viven en un solo lugar:** `TRANSICIONES_PEDIDO` en
+  `services/pedido.service.js`. `cambiarEstadoPedido` lee el estado con `FOR UPDATE`, valida
+  la transición y contesta `409` si no es legal. Asignar y entregar no pasan por ahí
+  porque son `UPDATE` condicionales atómicos (la defensa contra la doble asignación), pero
+  sus `WHERE` respetan el mismo mapa.
+- **Toda transición queda en `auditoria_pedidos`**, con quién la hizo (`usuario_id` y, si fue
+  un administrador, `administrador_id`) y qué pasó en `detalle`: `"en_preparacion ->
+  preparado"`, o el motivo de una cancelación. El alta del pedido también se audita.
+- **Cancelar siempre devuelve el stock** (se descuenta al confirmar el carrito, no al pagar)
+  y, si el pedido iba en camino, deja al repartidor disponible otra vez. No toca `pagos`: si
+  ya estaba pagado, la devolución del dinero es manual.
+- **El cliente puede cancelar solo antes de pagar** (`PATCH /api/pedidos/:id/cancelar`). Sin
+  esto, un pedido que nunca se paga dejaba su stock reservado para siempre. Después de
+  pagar ya hay un comercio preparándolo: la vía es un reclamo, y lo cancela un
+  administrador.
+
+### Perfiles — semana 3 (CU11, CU12, CU18)
+
+| Método | Ruta | Quién | Descripción |
+|---|---|---|---|
+| `GET` | `/api/perfil` | Cualquier sesión | Cuenta y perfiles que tiene: cliente, comercio, repartidor, administrador |
+| `PATCH` | `/api/perfil` | Cualquier sesión | `nombre`, `telefono` y, si es cliente, `direccion_entrega` |
+| `PATCH` | `/api/perfil/contrasena` | Cualquier sesión | `{ contrasena_actual, contrasena_nueva }` |
+| `DELETE` | `/api/perfil` | Cualquier sesión | Baja lógica de la propia cuenta. Body: `{ contrasena }` |
+| `GET` / `PATCH` | `/api/comercio/perfil` | Comercio | `nombre`, `categoria`, `direccion`, `horario_atencion` |
+| `GET` / `PATCH` | `/api/repartidor/perfil` | Repartidor | `tipo_vehiculo`, `patente`, `numero_licencia` |
+
+- El usuario sale siempre del token: no hay forma de pedir ni de tocar el perfil de otro.
+- **El email no se cambia desde el perfil**: es con lo que se inicia sesión, y cambiarlo sin
+  verificar la casilla nueva es una forma fácil de quedarse afuera. Lo corrige un
+  administrador. Tampoco se editan el CUIT del comercio ni el DNI del repartidor.
+- **Cambiar la dirección la vuelve a geocodificar**, fuera de la transacción. Si no se
+  puede ubicar, las coordenadas quedan en NULL y se completan solas cuando hagan falta: lo
+  que no puede pasar es que queden las de la dirección vieja.
+- El repartidor no puede cambiar el vehículo con un pedido en camino: el perfil de ruta de
+  Mapbox y el ETA del seguimiento salen de `tipo_vehiculo`.
+- **La baja pide la contraseña** y no se permite con pedidos pagados en curso, ni si es el
+  último administrador activo. Cancela los pedidos que el cliente nunca pagó y devuelve su
+  stock (ver `darDeBajaCuenta` en `services/usuario.service.js`).
+
+### Historial y repetición — semana 12 (CU09, CU10, CU17)
+
+| Método | Ruta | Quién | Descripción |
+|---|---|---|---|
+| `GET` | `/api/pedidos` | Cliente | Historial propio. Filtros: `estado`, `desde`, `hasta` (AAAA-MM-DD), `pagina`, `limite` |
+| `GET` | `/api/pedidos/:id` | Cliente | Detalle: ítems, comercio, pago, repartidor y, si va en camino, el código de entrega |
+| `POST` | `/api/pedidos/:id/repetir` | Cliente | Vuelve a cargar en el carrito los productos de un pedido anterior |
+| `PATCH` | `/api/pedidos/:id/cancelar` | Cliente | Cancela un pedido que todavía no pagó |
+| `GET` | `/api/comercio/ventas` | Comercio | Pedidos pagados del comercio + `resumen` (cantidad, entregados, cancelados, en curso, total vendido, ticket promedio). Mismos filtros |
+| `GET` | `/api/comercio/ventas/:id` | Comercio | Detalle de una venta propia |
+
+- **Repetir suma, no reemplaza**: lo que el cliente ya tenía en el carrito se queda. Usa los
+  precios de hoy (el carrito no guarda precio) e informa el anterior y el actual. Un
+  producto o comercio dado de baja va a `omitidos`; si el stock no alcanza, se agrega lo
+  que hay (descontando lo que ya está en el carrito) y se marca como `parcial`. Si no se
+  puede agregar nada, `409` y el carrito queda como estaba. No crea el pedido: el cliente
+  revisa el carrito y confirma como siempre.
+- **Un pedido sin pagar no es una venta**: `/comercio/ventas` excluye `pago_espera`, que es
+  además el momento en que el comercio todavía no se enteró de que el pedido existe. Con
+  `?estado=en_preparacion` es la bandeja de pedidos que el comercio tiene que preparar.
+- El `resumen` se calcula sobre el filtro completo, no sobre la página.
+- `hasta` es inclusivo: "hasta el 31" incluye todo el día 31. Una fecha que no existe
+  (`2026-02-31`) da `400`, no un resultado corrido a marzo.
+- Van en singular (`/comercio/...`), igual que `/repartidor/...`: en plural chocarían con
+  `/comercios/:id`, que es público y se tragaría `/comercios/ventas` con "ventas" como id.
+
+### Administración — semana 13 (CU23, CU24)
+
+Todas las rutas `/api/admin/*` pasan por `verificarToken` → `verificarRol('administrador')`
+→ `resolverAdministrador`, que resuelve contra la base el id de `administradores` (es lo
+que guardan las auditorías y los reclamos).
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/api/admin/usuarios` | Filtros: `rol` (según los perfiles que tiene), `activo`, `buscar` (nombre o email) |
+| `GET` | `/api/admin/usuarios/:id` | Cuenta, perfiles, conteo de pedidos por rol, pedidos en curso y reclamos |
+| `POST` | `/api/admin/usuarios` | Alta de un cliente o de un **administrador** (`rol: 'cliente' \| 'administrador'`) |
+| `PATCH` | `/api/admin/usuarios/:id` | `nombre`, `telefono`, `email` |
+| `PATCH` | `/api/admin/usuarios/:id/estado` | `{ activo: false }` suspende, `{ activo: true }` reactiva |
+| `DELETE` | `/api/admin/usuarios/:id` | Baja lógica |
+| `PATCH` | `/api/admin/comercios/:id/estado` | Suspende o reactiva solo el comercio |
+| `GET` | `/api/admin/pedidos` | Vista global. Filtros: `estado`, `activos`, `comercioId`, `clienteId`, `repartidorId`, `desde`, `hasta`. Incluye `resumen_por_estado` |
+| `GET` | `/api/admin/pedidos/:id` | Ítems, pago, los tres actores, última ubicación, auditoría y reclamos |
+| `PATCH` | `/api/admin/pedidos/:id/cancelar` | `{ motivo }`. Desde cualquier estado no terminal |
+| `GET` | `/api/admin/auditoria/productos` | Filtros: `productoId`, `comercioId`, `usuarioId`, `accion`, `desde`, `hasta` |
+| `GET` | `/api/admin/auditoria/pedidos` | Filtros: `pedidoId`, `usuarioId`, `accion`, `desde`, `hasta` |
+
+- **Suspender corta el acceso al instante**, porque `verificarToken` consulta
+  `usuarios.activo` en cada request: el token que la persona ya tenía deja de servir. Es
+  reversible tal cual.
+- **La baja además** saca el comercio del catálogo, deja al repartidor fuera de servicio,
+  cancela los pedidos que el cliente nunca pagó y borra sus suscripciones push. Es lógica:
+  pedidos, reclamos y auditoría siguen apuntando a la cuenta.
+- **Suspensión por rol:** `/admin/comercios/:id/estado` suspende solo el comercio. La persona
+  sigue pudiendo comprar como cliente.
+- Suspender o dar de baja da `409` si hay pedidos pagados que dependen de esa cuenta (el
+  repartidor que lleva uno en camino, el comercio que tiene pedidos por preparar, el
+  cliente con pedidos en curso), si es la propia cuenta, o si es el último administrador
+  activo.
+- Comercio y repartidor no se dan de alta desde el panel: se registran desde su propio
+  formulario, sobre una cuenta que ya existe, con datos que solo tiene la persona.
+- **Cancelar un pedido pagado** avisa en la respuesta (`reembolso_manual: true`) que la
+  devolución del dinero se hace a mano: el pago sigue `aprobado` en `pagos`, porque es lo
+  que pasó.
+- `resumen_por_estado` es global y no respeta los filtros: son los números del tablero.
+
+### Reclamos — semana 13 (CU25)
+
+```
+pendiente -> en_revision -> resuelto
+                         -> rechazado
+```
+
+| Método | Ruta | Quién | Descripción |
+|---|---|---|---|
+| `POST` | `/api/reclamos` | Cliente, comercio o repartidor | `{ descripcion, pedido_id? }` |
+| `GET` | `/api/reclamos` | Cliente, comercio o repartidor | Los propios. Filtro: `estado` |
+| `GET` | `/api/reclamos/:id` | Cliente, comercio o repartidor | Uno propio (uno ajeno da `404`) |
+| `GET` | `/api/admin/reclamos` | Administrador | Cola de atención: abiertos primero, los más viejos adelante. Filtros: `estado`, `asignado=yo\|ninguno` |
+| `GET` | `/api/admin/reclamos/:id` | Administrador | Con el usuario y el pedido |
+| `PATCH` | `/api/admin/reclamos/:id/asignar` | Administrador | `{ administrador_id? }`, por defecto quien lo pide. Pasa a `en_revision` |
+| `PATCH` | `/api/admin/reclamos/:id/resolver` | Administrador | `{ estado: 'resuelto' \| 'rechazado', resolucion }` |
+
+- Si el reclamo es sobre un pedido, el pedido tiene que ser del usuario: como cliente que lo
+  compró, comercio que lo vendió o repartidor que lo llevó. Y no puede tener otro reclamo
+  abierto sobre el mismo pedido.
+- **Solo lo cierra el administrador asignado.** Sin esa regla, dos administradores podrían
+  contestarle cosas distintas a la misma persona. Asignar y resolver son `UPDATE`
+  condicionales, igual que la asignación de pedidos.
+- Un reclamo cerrado no se reabre: si el problema sigue, se hace uno nuevo.
+
+### Seguridad — semana 14
+
+- **Cabeceras** con `helmet`: `nosniff`, `frameguard`, HSTS, sin `X-Powered-By`, etc.
+- **CORS restringido** a `CORS_ORIGEN`. Sin definir queda abierto y el servidor lo avisa.
+- **Límites por IP** (`express-rate-limit`, `middlewares/limites.middleware.js`):
+  - general para toda la API (`RATE_LIMIT_MAX`), generoso a propósito;
+  - de intentos **fallidos** (`RATE_LIMIT_LOGIN_MAX`) en todo lo que verifica una
+    contraseña: los cuatro logins, los tres registros, cambiar la contraseña y dar de baja
+    la cuenta. Quien entra bien nunca se lo cruza.
+  - Los dos contestan `429` con el formato de siempre.
+- **Sesión viva contra la base** en cada request (`verificarToken`) y en el handshake del
+  socket: cuenta activa y sesión abierta. Ver la nota de
+  [Autenticación y registro](#autenticación-y-registro).
+- **Rutas protegidas por rol** en todos los routers. El carrito, que solo pedía token,
+  ahora exige ser cliente, igual que pagos y seguimiento.
+- **Validación de entradas**: largos de cada columna (antes pasarse daba `500` en MySQL
+  estricto y un recorte silencioso en XAMPP), formato de teléfono, contraseñas nuevas de 8
+  a 72 caracteres (bcrypt solo mira los primeros 72 bytes), fechas que existan, y filtros
+  de query string que tienen que ser texto: `?buscar[]=x` llegaba como array y daba `500`.
+- **SQL**: todos los valores van con placeholders. Donde el SQL se arma dinámicamente
+  (filtros, columnas de un `UPDATE` parcial), los fragmentos salen de listas fijas del
+  código, nunca del request.
+- **Errores centralizados**: un JSON mal escrito da `400` y un cuerpo de más de 100 kb
+  `413`, en vez de `500`. Una promesa rechazada sin manejar se loguea en vez de tirar el
+  proceso.
+- **Dependencias**: `npm audit` en 0. Se sacó `bcrypt` (el nativo), que no se usaba —el
+  proyecto usa `bcryptjs`— y traía una vulnerabilidad crítica a través de `tar`.
+- `/health` además dice si la base responde (`503` si no).

@@ -50,7 +50,7 @@
 //| Quién / qué | Estado |
 //|---|---|
 //| Pedido 1 | `en_camino`, cliente Juan, repartidor Carlos, código `12345678` |
-//| Pedido 2 | `pendiente_pago`, cliente María |
+//| Pedido 2 | `pago_espera`, cliente María |
 //| Pedido 3 | `en_preparacion`, cliente María, sin repartidor |
 //| Última ubicación del pedido 1 | `-31.6720, -60.7818` (fila 2 de `ubicaciones_repartidor`) |
 //| Destino del pedido 1 | `-31.6715, -60.7690` (San Martín 1234) |
@@ -76,11 +76,11 @@
 //| Carlos (repartidor del pedido 1, moto) | `POST /inicioSesionRepartidor` | `{ "email": "carlos.repartidor@test.com", "contrasena": "Test1234!" }` |
 //
 //```
-//Authorization: <el token, sin la palabra Bearer>
+//Authorization: <el token, con o sin la palabra Bearer>
 //```
 //
-//> **Si en Postman usás Auth → Bearer Token, todo va a dar 401.** `verificarToken` lee el
-//> header crudo y no saca el prefijo. Va en Headers → `Authorization` con el token pelado.
+//> **Desde la semana 14** `verificarToken` acepta el token pelado y también con el
+//> prefijo `Bearer ` (Auth → Bearer Token en Postman). Antes el prefijo daba `401`.
 //>
 //> El socket usa el mismo criterio: el token viaja crudo en `auth.token` del handshake.
 //
@@ -202,13 +202,13 @@
 //
 //---
 //
-//## Caso 10.7 — Pedido en `pendiente_pago`
+//## Caso 10.7 — Pedido en `pago_espera`
 //
 //`GET /api/pedidos/2/seguimiento` con el token de **María**. 200, todo vacío:
 //
 //```json
 //{ "codigo": 200, "estado": "exito", "datos": {
-//    "pedido": { "id": 2, "estado": "pendiente_pago", "total": 5300, "...": "..." },
+//    "pedido": { "id": 2, "estado": "pago_espera", "total": 5300, "...": "..." },
 //    "repartidor": null,
 //    "seguimiento_activo": false,
 //    "ubicacion": null, "destino": null, "eta": null, "ruta": null,
@@ -421,8 +421,9 @@
 //
 //## Qué NO entra en esta semana
 //
-//- **La máquina de estados** (validar que de `pendiente_pago` solo se pueda ir a
-//  `en_preparacion` o `cancelado`) sigue siendo el entregable pendiente de la semana 7.
+//- **La máquina de estados** (validar que de `pago_espera` solo se pueda ir a
+//  `en_preparacion` o `cancelado`) era el entregable pendiente de la semana 7. Quedó hecha
+//  junto con las semanas 11 a 14: ver `TRANSICIONES_PEDIDO` en `services/pedido.service.js`.
 //  Esta semana toca los tres lugares donde el pedido cambia de estado, pero solo para
 //  avisar, no para validar.
 //- **Las notificaciones en tiempo real** son la semana 11. El canal de acá se agrupa por

@@ -1,8 +1,12 @@
 ﻿const crypto = require('crypto');
 const database = require('../database/database');
-const { asignarPedidoARepartidor, confirmarEntregaPedido } = require('../services/pedido.service');
+const {
+    asignarPedidoARepartidor,
+    confirmarEntregaPedido,
+    ESTADOS_PARA_REPARTIR
+} = require('../services/pedido.service');
 const { bloquearRepartidor, actualizarDisponibilidad } = require('../services/repartidor.service');
-const { registrarNotificacion } = require('../services/notificacion.service');
+const { registrarNotificacion, enviarPush } = require('../services/notificacion.service');
 const { emitirEstadoDePedido } = require('../services/tiemporeal.service');
 const { calcularRuta } = require('../services/maps.service');
 const {
@@ -154,9 +158,10 @@ const buscarPedidoParaRuta = async (conexion, pedidoId) => {
 
 // GET /api/pedido/listar?pagina=&limite=
 //
-// Disponible = pagado (en_preparacion) y sin repartidor. Muestra lo que el repartidor
-// necesita para decidir si le conviene (comercio, distancia, tiempo, comision), pero
-// NO la direccion_entrega del cliente: esa la ve solo quien toma el pedido.
+// Disponible = pagado (en_preparacion o preparado) y sin repartidor. Muestra lo que el
+// repartidor necesita para decidir si le conviene (comercio, distancia, tiempo,
+// comision, y si el comercio ya lo tiene listo), pero NO la direccion_entrega del
+// cliente: esa la ve solo quien toma el pedido.
 const listarPedidos = async (req, res) => {
     try {
         if (!req.repartidorDisponible) {
@@ -173,12 +178,15 @@ const listarPedidos = async (req, res) => {
             `SELECT COUNT(*) AS cantidad
              FROM pedidos
              WHERE repartidor_id IS NULL
-               AND estado = 'en_preparacion'`
+               AND estado IN (?)`,
+            [ESTADOS_PARA_REPARTIR]
         );
 
-        // Los que esperan hace mas tiempo primero
+        // Los que esperan hace mas tiempo primero. estado dice si el comercio ya lo
+        // marco listo ('preparado') o si todavia lo esta armando ('en_preparacion').
         const [pedidos] = await database.query(
             `SELECT pe.id,
+                    pe.estado,
                     pe.distancia_km,
                     pe.tiempo_estimado,
                     pe.comision,
@@ -191,12 +199,12 @@ const listarPedidos = async (req, res) => {
              INNER JOIN items_pedido ipe
                 ON ipe.pedido_id = pe.id
              WHERE pe.repartidor_id IS NULL
-               AND pe.estado = 'en_preparacion'
-             GROUP BY pe.id, pe.distancia_km, pe.tiempo_estimado,
+               AND pe.estado IN (?)
+             GROUP BY pe.id, pe.estado, pe.distancia_km, pe.tiempo_estimado,
                       pe.comision, co.nombre, co.direccion
              ORDER BY pe.id ASC
              LIMIT ? OFFSET ?`,
-            [limite, offset]
+            [ESTADOS_PARA_REPARTIR, limite, offset]
         );
 
         // Que no haya pedidos para repartir es una respuesta valida, no un 404: la lista
@@ -276,15 +284,25 @@ const asignarPedido = async (req, res) => {
 
         const { usuario_cliente, ...pedido } = await buscarDetallePedido(connection, pedidoId);
 
+        const mensajeCliente = `Un repartidor tomó tu pedido #${pedidoId} de ${pedido.comercio}. Tu código de entrega es ${codigo}: dáselo cuando te lo entregue.`;
+
         // Dentro de la transaccion a proposito: si no se puede avisar al cliente, el
         // pedido no queda asignado con un codigo de entrega que nadie conoce.
         await registrarNotificacion(connection, {
             usuarioId: usuario_cliente,
             tipo: 'pedido_en_camino',
-            mensaje: `Un repartidor tomó tu pedido #${pedidoId} de ${pedido.comercio}. Tu código de entrega es ${codigo}: dáselo cuando te lo entregue.`
+            mensaje: mensajeCliente
         });
 
         await connection.commit();
+
+        // Semana 11: el mismo aviso por push. Despues del commit y sin await, como las
+        // emisiones del socket: es una llamada de red y la conexion sigue tomada.
+        enviarPush(usuario_cliente, {
+            titulo: "Tu pedido está en camino",
+            mensaje: mensajeCliente,
+            url: `/cliente/pedidos/${pedidoId}`
+        }).catch(() => {});
 
         // CU26 (semana 10): el cliente que tenga la pantalla de seguimiento abierta ve
         // el cambio sin tener que refrescar. Despues del commit y sin await, igual que
@@ -400,13 +418,21 @@ const entregaPedido = async (req, res) => {
 
         const { usuario_cliente, comercio } = await buscarDetallePedido(connection, pedidoId);
 
+        const mensajeCliente = `Tu pedido #${pedidoId} de ${comercio} fue entregado.`;
+
         await registrarNotificacion(connection, {
             usuarioId: usuario_cliente,
             tipo: 'pedido_entregado',
-            mensaje: `Tu pedido #${pedidoId} de ${comercio} fue entregado.`
+            mensaje: mensajeCliente
         });
 
         await connection.commit();
+
+        enviarPush(usuario_cliente, {
+            titulo: "Pedido entregado",
+            mensaje: mensajeCliente,
+            url: `/cliente/pedidos/${pedidoId}`
+        }).catch(() => {});
 
         // Ultimo evento del pedido. El emisor se encarga ademas de olvidar la sesion de
         // ETA en memoria: entregado es terminal, no va a haber mas pings.

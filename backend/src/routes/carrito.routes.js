@@ -6,21 +6,26 @@ const {
     eliminarProductoCarrito,
     confirmarCarrito
 } = require('../controllers/carrito.controller');
-const { verificarToken } = require('../middlewares/autenticacion.middleware');
+const { verificarToken, verificarRol } = require('../middlewares/autenticacion.middleware');
+const { resolverCliente } = require('../middlewares/cliente.middleware');
 
-// El carrito es siempre del cliente autenticado (se resuelve por req.usuario.id),
-// por eso todas las rutas pasan primero por verificarToken.
+// El carrito es siempre del cliente autenticado (se resuelve por req.usuario.id).
+//
+// Semana 14: antes solo pasaba por verificarToken, asi que un token de comercio o de
+// repartidor tambien entraba, y ninguna ruta chequeaba que la cuenta siguiera activa.
+// Ahora usa la misma cadena que pagos y seguimiento, los otros routers del cliente.
+const soloCliente = [verificarToken, verificarRol('cliente'), resolverCliente];
 
-// CU07 - Agregar producto al carrito
-router.post('/carrito/agregar', verificarToken, agregarAlCarrito);
+// CU05 - Agregar producto al carrito
+router.post('/carrito/agregar', soloCliente, agregarAlCarrito);
 
 // Listar productos del carrito
-router.get('/carrito/listar', verificarToken, listarProductosCarrito);
+router.get('/carrito/listar', soloCliente, listarProductosCarrito);
 
-// CU08 - Quitar producto del carrito
-router.delete('/carrito/:id_producto', verificarToken, eliminarProductoCarrito);
+// Quitar producto del carrito
+router.delete('/carrito/:id_producto', soloCliente, eliminarProductoCarrito);
 
-// CU09 - Confirmar carrito (crea el/los pedidos, descuenta stock, vacía el carrito)
-router.post('/carrito/confirmar', verificarToken, confirmarCarrito);
+// CU06 - Confirmar carrito (crea el/los pedidos, descuenta stock, vacía el carrito)
+router.post('/carrito/confirmar', soloCliente, confirmarCarrito);
 
 module.exports = router;
