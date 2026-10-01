@@ -37,7 +37,7 @@ const TEXTO_VUELTA_DE_PAGO = {
 
 // Un ping nuevo del repartidor. Pueden llegar desordenados (el que recalculó la ruta
 // tarda más), así que el id de la ubicación decide cuál es el último.
-function aplicarPing(seguimiento, { ubicacion, eta, ruta }) {
+function aplicarPing(seguimiento, { ubicacion, eta, ruta, retirado }) {
   if (!seguimiento) {
     return seguimiento
   }
@@ -52,6 +52,7 @@ function aplicarPing(seguimiento, { ubicacion, eta, ruta }) {
     eta: eta ?? seguimiento.eta,
     // null cuando no hubo refresco: se conserva la polilínea anterior
     ruta: ruta ? { ...seguimiento.ruta, ...ruta } : seguimiento.ruta,
+    retirado: retirado ?? seguimiento.retirado,
   }
 }
 
@@ -350,7 +351,7 @@ export default function Pedido() {
                 )}
 
                 <MapaSeguimiento
-                  comercio={datosSeguimiento?.pedido?.comercio}
+                  comercio={datosSeguimiento?.retirado ? null : datosSeguimiento?.pedido?.comercio}
                   destino={datosSeguimiento?.destino}
                   repartidor={datosSeguimiento?.ubicacion}
                   polilinea={datosSeguimiento?.ruta?.polilinea}

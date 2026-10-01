@@ -298,6 +298,11 @@
 //> Sin este parámetro, una vez que el repartidor pasó por la tienda la ruta lo seguiría
 //> mandando de vuelta. Modelarlo como un estado real del pedido (`retirado_en`) sería más
 //> prolijo, pero es un estado nuevo que CU22 no pide: queda para la semana 10.
+//>
+//> **Actualizado en la integración con el front:** ya está modelado.
+//> `PATCH /api/pedido/retiro/:idPedido` con `{ "retirado": true }` guarda
+//> `pedidos.retirado_en`, y sin el parámetro la ruta usa eso. El parámetro sigue
+//> andando para pedir cualquiera de las dos rutas a mano, que es lo que hacen estos casos.
 //
 //---
 //---

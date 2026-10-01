@@ -1277,6 +1277,35 @@
           }
         },
         {
+          "name": "Marcar el retiro en el comercio",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_lucia}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/pedido/retiro/3",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"retirado\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "\"Ya retiré\": el pedido salió del comercio y la ruta del repartidor y la del seguimiento del cliente dejan de pasar por ahí. false lo deshace. 403 si el pedido es de otro repartidor, 409 si no está en camino."
+          }
+        },
+        {
           "name": "Ruta al destino",
           "request": {
             "method": "GET",
@@ -1288,7 +1317,7 @@
               }
             ],
             "url": "{{baseUrl}}/pedido/ruta/3?retirado=false",
-            "description": "retirado=false pasa por el comercio; true va derecho al cliente."
+            "description": "Sin retirado usa lo que marcó el repartidor con PATCH /pedido/retiro. retirado=false pasa por el comercio; true va derecho al cliente."
           }
         }
       ]

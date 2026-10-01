@@ -161,8 +161,8 @@
 //| 10.3 | `GET /pedidos/2/seguimiento` | Juan | `403` · "Ese pedido no es tuyo" |
 //| 10.4 | `GET /pedidos/9999/seguimiento` | Juan | `404` · "Pedido no encontrado" |
 //| 10.5 | `GET /pedidos/abc/seguimiento` | Juan | `400` · "El id del pedido no es válido" |
-//| 10.6 ⭐ | `GET /pedidos/1/seguimiento` | Juan | `200` · `seguimiento_activo: true`, `ubicacion -31.672 / -60.7818`, `destino -31.6715 / -60.769`, `eta.minutos 4`, `ruta.distancia_km 1.58`, `repartidor { "Carlos Rodríguez", "moto" }`, mensaje "Tu pedido está en camino." |
-//| 10.6b | `GET /pedido/ruta/1` | Carlos | `200` · `2.81 km / 8 min`. **Mostrar los dos juntos**: la del cliente va derecho a la puerta, la del repartidor pasa por el comercio |
+//| 10.6 ⭐ | `GET /pedidos/1/seguimiento` | Juan | `200` · `seguimiento_activo: true`, `retirado: false`, `ubicacion -31.672 / -60.7818`, `destino -31.6715 / -60.769`, `eta.minutos 8`, `ruta.distancia_km 2.81`, `repartidor { "Carlos Rodríguez", "moto" }`, mensaje "Tu pedido está en camino." |
+//| 10.6b | `GET /pedido/ruta/1` | Carlos | `200` · `3.02 km / 8 min`, con la parada en el comercio. **Mostrar los dos juntos**: mientras Carlos no retiró el pedido, las dos rutas pasan por el comercio. La diferencia con los `2.81 km` del seguimiento viene de la semilla: Carlos figura en `-31.6730 / -60.7830` y la última posición registrada del pedido es `-31.672 / -60.7818`. Desde que Carlos manda su ubicación, las dos coinciden |
 //| 10.7 | `GET /pedidos/2/seguimiento` y `GET /pedidos/3/seguimiento` | María | `200` los dos · todo en `null` y `seguimiento_activo: false`. Mensajes "Todavía no pagaste este pedido." y "El comercio está preparando tu pedido." |
 //
 //> Este endpoint **nunca devuelve 409**, a diferencia de `GET /pedido/ruta/:idPedido`. El

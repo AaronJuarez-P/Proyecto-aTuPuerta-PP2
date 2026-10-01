@@ -44,6 +44,7 @@ const numeroDelEntorno = (nombre, porDefecto) => {
 const centroLat = () => numeroDelEntorno('MAPS_CENTRO_LAT', -31.6667);
 const centroLng = () => numeroDelEntorno('MAPS_CENTRO_LNG', -60.7667);
 const radioMockKm = () => numeroDelEntorno('MAPS_RADIO_MOCK_KM', 5);
+const radioZonaKm = () => numeroDelEntorno('MAPS_RADIO_ZONA_KM', 15);
 const velocidadKmh = () => numeroDelEntorno('MAPS_VELOCIDAD_KMH', 25) || 25;
 const factorRuta = () => numeroDelEntorno('MAPS_FACTOR_RUTA', 1.3);
 
@@ -176,6 +177,34 @@ const perfilDeRuta = (vehiculo) => (vehiculo === 'bicicleta' ? 'cycling' : 'driv
 // ACA se da vuelta el orden. Mapbox espera {longitud},{latitud} en el path.
 const comoCoordenada = (punto) => `${punto.longitud},${punto.latitud}`;
 
+// Recuadro de la zona de reparto: MAPS_RADIO_ZONA_KM alrededor del centro, en el
+// formato del parametro bbox de Mapbox (minLongitud,minLatitud,maxLongitud,maxLatitud).
+// Con 0 no se limita.
+//
+// country=ar solo no alcanza: hay un Santo Tome en Santa Fe y otro en Corrientes, y
+// "Av. Rivadavia 800, Santo Tome" caia en el de Corrientes, a 570 km. Pedir resultados
+// cercanos con proximity tampoco sirvio: Rivadavia seguia en Corrientes y "Mitre 450,
+// Santo Tome" se iba a Entre Rios. El recuadro descarta todo lo que queda afuera. La
+// contra es que una direccion de otra ciudad termina en la coincidencia mas parecida
+// de adentro, que para un delivery que solo reparte en esta zona es razonable.
+const zonaDeBusqueda = () => {
+    const radioKm = radioZonaKm();
+
+    if (radioKm <= 0) {
+        return null;
+    }
+
+    const deltaLat = radioKm / KM_POR_GRADO;
+    const deltaLng = radioKm / (KM_POR_GRADO * Math.cos(aRadianes(centroLat())));
+
+    return [
+        centroLng() - deltaLng,
+        centroLat() - deltaLat,
+        centroLng() + deltaLng,
+        centroLat() + deltaLat
+    ].map((grados) => grados.toFixed(4)).join(',');
+};
+
 const metrosAKm = (metros) => redondear2((Number(metros) || 0) / 1000);
 
 // Segundos -> minutos, siempre para arriba y nunca menos de 1: un ETA de "0 minutos"
@@ -268,6 +297,12 @@ const geocodificarDireccion = async (direccion) => {
 
         if (geocodificacionPermanente()) {
             parametros.set('permanent', 'true');
+        }
+
+        const zona = zonaDeBusqueda();
+
+        if (zona) {
+            parametros.set('bbox', zona);
         }
 
         const respuesta = await fetch(`${GEOCODING_URL}?${parametros}`, {

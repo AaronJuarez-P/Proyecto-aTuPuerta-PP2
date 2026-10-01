@@ -31,6 +31,12 @@ export const confirmarEntrega = (id, { codigo, latitud, longitud }) =>
 export const enviarUbicacion = ({ latitud, longitud }) =>
   pedir('/repartidor/ubicacion', { metodo: 'POST', body: { latitud, longitud } })
 
+// "Ya retiré": el pedido salió del comercio (false lo deshace). Lo usan la ruta del
+// repartidor y el seguimiento del cliente.
+// -> { pedido: { id, estado, retirado, retirado_en } }
+export const marcarRetiro = (id, retirado) =>
+  pedir(`/pedido/retiro/${id}`, { metodo: 'PATCH', body: { retirado } })
+
 // retirado: false pasa por el comercio; true va derecho al cliente.
 // -> { pedido, retirado, ruta: { distancia_km, duracion_minutos, polilinea, tramos, puntos, origen_datos } }
 export const obtenerRuta = (id, retirado) => pedir(`/pedido/ruta/${id}`, { query: { retirado } })

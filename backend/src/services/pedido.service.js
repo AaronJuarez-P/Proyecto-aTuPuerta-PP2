@@ -268,6 +268,45 @@ const confirmarEntregaPedido = async (conexion, { pedidoId, repartidorId, codigo
     return true;
 };
 
+// "Ya retire" del repartidor: el pedido salio del comercio. No es un estado nuevo (sigue
+// en_camino), pero desde aca la ruta deja de pasar por la tienda, tanto la que ve el
+// repartidor (CU21) como la del seguimiento del cliente (CU08). Se puede deshacer con
+// retirado false, por si lo marco sin querer. Marcarlo dos veces conserva la hora del
+// primero y no se audita de nuevo.
+//
+// Devuelve { registrado: false } si el pedido no es de ese repartidor o no esta en
+// camino (el por que lo averigua quien llama), o { registrado: true, retiradoEn }.
+const registrarRetiroPedido = async (conexion, { pedidoId, repartidorId, retirado, usuarioId }) => {
+    const [resultado] = await conexion.query(
+        `UPDATE pedidos
+         SET retirado_en = IF(?, COALESCE(retirado_en, NOW()), NULL)
+         WHERE id = ?
+           AND repartidor_id = ?
+           AND estado = 'en_camino'`,
+        [retirado, pedidoId, repartidorId]
+    );
+
+    if (resultado.affectedRows === 0) {
+        return { registrado: false };
+    }
+
+    if (resultado.changedRows > 0) {
+        await registrarAuditoriaPedido(conexion, {
+            pedidoId,
+            usuarioId,
+            accion: 'UPDATE',
+            detalle: retirado ? 'retirado del comercio' : 'retiro deshecho'
+        });
+    }
+
+    const [pedidos] = await conexion.query(
+        `SELECT retirado_en FROM pedidos WHERE id = ?`,
+        [pedidoId]
+    );
+
+    return { registrado: true, retiradoEn: pedidos[0].retirado_en };
+};
+
 // ---------------------------------------------------------------------------
 // Tarifa (semana 9)
 // ---------------------------------------------------------------------------
@@ -299,5 +338,6 @@ module.exports = {
     cancelarPedido,
     asignarPedidoARepartidor,
     confirmarEntregaPedido,
+    registrarRetiroPedido,
     calcularComision
 };

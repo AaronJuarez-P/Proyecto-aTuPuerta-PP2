@@ -177,11 +177,12 @@
 //    },
 //    "repartidor": { "nombre": "Carlos Rodríguez", "tipo_vehiculo": "moto" },
 //    "seguimiento_activo": true,
+//    "retirado": false,
 //    "ubicacion": { "latitud": -31.672, "longitud": -60.7818, "registrado_en": "..." },
 //    "destino": { "latitud": -31.6715, "longitud": -60.769 },
-//    "eta": { "minutos": 4, "hora_estimada": "...", "calculado_en": "...",
+//    "eta": { "minutos": 8, "hora_estimada": "...", "calculado_en": "...",
 //             "origen_datos": "mock" },
-//    "ruta": { "polilinea": null, "distancia_km": 1.58, "duracion_minutos": 4,
+//    "ruta": { "polilinea": null, "distancia_km": 2.81, "duracion_minutos": 8,
 //              "origen_datos": "mock" },
 //    "mensaje": "Tu pedido está en camino."
 //  }
@@ -194,11 +195,16 @@
 //  controlador los convierte. Lo mismo con las coordenadas del comercio.
 //- **`repartidor` trae solo nombre y vehículo.** Ni teléfono, ni email, ni `usuario_id`: lo
 //  que no hace falta para ver dónde está el pedido, no se expone.
-//- **La ruta va derecho del repartidor a la puerta**, sin pasar por el comercio. `1.58 km`
-//  y 4 minutos acá, contra los `2.81 km` y 8 minutos que da `GET /pedido/ruta/1` para el
-//  mismo pedido en el mismo momento, justamente porque CU21 mete la parada. Son dos
-//  preguntas distintas: el cliente pregunta cuándo le llega, el repartidor pregunta qué
-//  vuelta tiene que dar. Vale la pena mostrar los dos endpoints uno al lado del otro.
+//- **La ruta pasa por el comercio, porque Carlos todavía no retiró el pedido** (`retirado:
+//  false`), con la misma parada que mete CU21. `GET /pedido/ruta/1` da `3.02 km` con la
+//  semilla recién importada porque sale de otro punto: Carlos figura en `-31.6730 /
+//  -60.7830`, y la última posición registrada del pedido, que es la que usa el
+//  seguimiento, es `-31.672 / -60.7818`. Desde que Carlos manda su ubicación, las dos rutas
+//  coinciden. Hasta la integración con el front la ruta del cliente iba siempre derecho a
+//  la puerta (`1.58 km` y 4 minutos acá): el ETA salía corto y el mapa mostraba una línea
+//  por la que el repartidor no iba. Después de `PATCH /api/pedido/retiro/1` con
+//  `{ "retirado": true }`, el próximo ping recalcula la ruta derecho a la puerta y
+//  `retirado` pasa a `true`.
 //
 //---
 //

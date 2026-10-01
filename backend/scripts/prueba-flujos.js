@@ -236,16 +236,30 @@ const main = async () => {
         (datos) => datos.notificaciones.some((n) => n.tipo === "pedido_en_camino" && n.mensaje.includes(codigo)));
     await esperar("ubicacion del repartidor", "POST", "/repartidor/ubicacion",
         { token: lucia, body: { latitud: -31.672, longitud: -60.77 } }, 201);
-    await esperar("seguimiento del cliente", "GET", "/pedidos/5/seguimiento", { token: maria }, 200,
-        (datos) => datos.pedido.estado === "en_camino");
+    const sinRetirar = await esperar("seguimiento del cliente: sin retirar, la ruta pasa por el comercio", "GET", "/pedidos/5/seguimiento", { token: maria }, 200,
+        (datos) => datos.pedido.estado === "en_camino" && datos.retirado === false);
+    const rutaSinRetirar = sinRetirar.json?.datos?.ruta?.distancia_km;
+    await esperar("la del repartidor es la misma, con la parada", "GET", "/pedido/ruta/5", { token: lucia }, 200,
+        (datos) => datos.retirado === false && datos.ruta.tramos.length === 2 && datos.ruta.distancia_km === rutaSinRetirar);
+    await esperar("retiro sin decir si retiró", "PATCH", "/pedido/retiro/5", { token: lucia, body: {} }, 400);
+    await esperar("otro repartidor no marca el retiro", "PATCH", "/pedido/retiro/5", { token: carlos, body: { retirado: true } }, 403);
+    await esperar("Lucía retira el pedido del comercio", "PATCH", "/pedido/retiro/5", { token: lucia, body: { retirado: true } }, 200,
+        (datos) => datos.pedido.retirado === true && Boolean(datos.pedido.retirado_en));
+    await esperar("marcarlo de nuevo no cambia nada", "PATCH", "/pedido/retiro/5", { token: lucia, body: { retirado: true } }, 200);
+    await esperar("la ruta del repartidor ya no pasa por el comercio", "GET", "/pedido/ruta/5", { token: lucia }, 200,
+        (datos) => datos.retirado === true && datos.ruta.tramos.length === 1 && !datos.ruta.puntos.comercio);
+    await esperar("la del cliente tampoco, y es más corta", "GET", "/pedidos/5/seguimiento", { token: maria }, 200,
+        (datos) => datos.retirado === true && datos.ruta.distancia_km < rutaSinRetirar);
     await esperar("codigo incorrecto", "PATCH", "/pedido/entrega/5", { token: lucia, body: { codigoPedido: "00000000" } }, 400);
     await esperar("entrega", "PATCH", "/pedido/entrega/5", { token: lucia, body: { codigoPedido: codigo } }, 200);
+    await esperar("entregado, el retiro ya no se toca", "PATCH", "/pedido/retiro/5", { token: lucia, body: { retirado: false } }, 409);
     await esperar("las entregas de Lucía: sin pedido en curso y con la 5 entregada", "GET", "/repartidor/entregas", { token: lucia }, 200,
         (datos) => datos.en_curso === null && datos.entregas.some((e) => e.id === 5 && e.estado === "entregado") &&
                    datos.resumen.entregados === 1 && datos.resumen.comisiones > 0);
     await esperar("el pedido en curso de Carlos trae las direcciones y los ítems", "GET", "/repartidor/entregas", { token: carlos }, 200,
         (datos) => datos.en_curso?.id === 1 && datos.en_curso.direccion_entrega.includes("San Martín") &&
-                   datos.en_curso.items.length === 2 && typeof datos.en_curso.comision === "number");
+                   datos.en_curso.items.length === 2 && typeof datos.en_curso.comision === "number" &&
+                   datos.en_curso.retirado_en === null);
     await esperar("estado de entrega inventado", "GET", "/repartidor/entregas?estado=perdido", { token: lucia }, 400);
 
     // -----------------------------------------------------------------------
@@ -333,8 +347,9 @@ const main = async () => {
         (datos) => datos.pedidos.map((p) => p.id).sort().join(",") === "1,2,3" &&
                    datos.resumen_por_estado.total === 6 && datos.resumen_por_estado.cancelado === 2);
     await esperar("detalle con la auditoria completa", "GET", "/admin/pedidos/5", { token: admin }, 200,
-        (datos) => datos.pedido.auditoria.length === 5 && datos.pedido.pago.estado === "aprobado" &&
-                   datos.pedido.auditoria.some((a) => a.detalle === "en_preparacion -> preparado"));
+        (datos) => datos.pedido.auditoria.length === 6 && datos.pedido.pago.estado === "aprobado" &&
+                   datos.pedido.auditoria.some((a) => a.detalle === "en_preparacion -> preparado") &&
+                   datos.pedido.auditoria.some((a) => a.detalle === "retirado del comercio"));
     await esperar("cancelar un pedido en camino", "PATCH", "/admin/pedidos/1/cancelar",
         { token: admin, body: { motivo: "Prueba de cancelación" } }, 200,
         (datos) => datos.repartidor_liberado === true && datos.reembolso_manual === true);
@@ -394,7 +409,7 @@ const main = async () => {
     await esperar("auditoria de productos del comercio", "GET", "/admin/auditoria/productos?comercioId=1", { token: admin }, 200,
         (datos) => datos.auditoria.length >= 1 && datos.auditoria[0].accion === "UPDATE" && datos.auditoria[0].usuario === "Ferretería Central");
     await esperar("auditoria del pedido 5", "GET", "/admin/auditoria/pedidos?pedidoId=5", { token: admin }, 200,
-        (datos) => datos.paginacion.total === 5);
+        (datos) => datos.paginacion.total === 6);
     await esperar("accion invalida", "GET", "/admin/auditoria/pedidos?accion=BORRAR", { token: admin }, 400);
 
     // -----------------------------------------------------------------------

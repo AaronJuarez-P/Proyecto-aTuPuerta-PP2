@@ -117,7 +117,9 @@ backend/
 > (`20260929_semanas_11_a_14.sql`) explica en su encabezado qué hace falta antes. Normaliza
 > el estado "esperando el pago" a `pago_espera` venga la base de la rama que venga (en
 > `ramaSanti` se llamaba `pendiente_pago`, y XAMPP guardaba el estado vacío cuando no
-> coincidía con el ENUM).
+> coincidía con el ENUM). La del 01/10 (`20261001_pedidos_retirado_en.sql`) agrega la
+> columna del retiro en el comercio: sin ella, el seguimiento, la ruta y las entregas del
+> repartidor responden `500`.
 
 La semilla trae un usuario de cada rol, todos con la contraseña `Test1234!`:
 
@@ -154,6 +156,7 @@ MAPS_GEOCODING_PERMANENT=false
 MAPS_CENTRO_LAT=-31.6667
 MAPS_CENTRO_LNG=-60.7667
 MAPS_RADIO_MOCK_KM=5
+MAPS_RADIO_ZONA_KM=15
 MAPS_VELOCIDAD_KMH=25
 MAPS_FACTOR_RUTA=1.3
 MAPS_DISTANCIA_FALLBACK_KM=3
@@ -210,8 +213,9 @@ para poder recibir el webhook.
 | `MAPS_MODO` | `mock` no llama a Mapbox: geocodifica de forma determinística y estima la distancia con Haversine. `real` usa la Directions API y la Geocoding API |
 | `MAPS_ACCESS_TOKEN` | Access token de Mapbox. Solo con `MAPS_MODO=real` |
 | `MAPS_GEOCODING_PERMANENT` | En `true` pide derechos de almacenamiento permanente al geocodificar, que es lo que habilita a guardar las coordenadas en la base. Cuesta más por request y exige una tarjeta cargada en la cuenta, así que viene en `false` |
-| `MAPS_CENTRO_LAT` / `MAPS_CENTRO_LNG` | Centro alrededor del cual el modo mock reparte las direcciones (por defecto, Santo Tomé) |
+| `MAPS_CENTRO_LAT` / `MAPS_CENTRO_LNG` | Centro de la zona de reparto (por defecto, Santo Tomé). El modo mock reparte las direcciones alrededor; el real busca las direcciones cerca |
 | `MAPS_RADIO_MOCK_KM` | Radio en el que el mock las dispersa |
+| `MAPS_RADIO_ZONA_KM` | Solo con `MAPS_MODO=real`: radio de la zona en la que la geocodificación busca las direcciones. Por defecto 15; `0` = sin límite |
 | `MAPS_VELOCIDAD_KMH` | Velocidad promedio del repartidor, para estimar el tiempo de viaje sin Mapbox |
 | `MAPS_FACTOR_RUTA` | Factor calle / línea recta que se le aplica al Haversine |
 | `MAPS_DISTANCIA_FALLBACK_KM` | Distancia que se usa cuando no hay ni coordenadas para estimar |
@@ -478,9 +482,10 @@ Los casos de prueba están en `postman/backend-pagos.js`.
 | `GET` | `/api/pedido/listar` | Pedidos disponibles: pagados (`en_preparacion` o `preparado`) y sin repartidor, con su `estado`. Filtros: `pagina`, `limite` |
 | `PATCH` | `/api/pedido/asignar/:idPedido` | Acepta el pedido: `repartidor_id`, `en_camino` y código de entrega |
 | `PATCH` | `/api/pedido/entrega/:idPedido` | Confirma la entrega. Body: `{ codigoPedido }` y, opcional, `{ latitud, longitud }` |
+| `PATCH` | `/api/pedido/retiro/:idPedido` | "Ya retiré": el pedido salió del comercio. Body: `{ retirado: true }` (`false` lo deshace). Devuelve `retirado_en` |
 | `GET` | `/api/repartidor/disponibilidad` | `{ disponible, pedido_en_curso }` |
 | `PATCH` | `/api/repartidor/disponibilidad` | Entrar o salir de servicio. Body: `{ disponible }` |
-| `GET` | `/api/repartidor/entregas` | `en_curso` (el pedido en camino con direcciones, cliente, ítems y comisión), el historial paginado y `resumen` (entregas y comisión ganada). Filtros: `estado`, `pagina`, `limite` |
+| `GET` | `/api/repartidor/entregas` | `en_curso` (el pedido en camino con direcciones, cliente, ítems, comisión y `retirado_en`), el historial paginado y `resumen` (entregas y comisión ganada). Filtros: `estado`, `pagina`, `limite` |
 
 Cadena de middlewares: `verificarToken` → `verificarRol('repartidor')` → `resolverRepartidor`
 (busca el repartidor en la base y exige que el usuario siga activo).
@@ -513,6 +518,14 @@ con ese código y vuelve a quedar disponible.
   solo el id del pedido en curso y las direcciones venían únicamente en la ruta, que da `409`
   mientras el repartidor no mandó su ubicación: al recargar la página no tenía cómo saber a
   dónde iba. No expone el teléfono ni el email del cliente.
+- **El retiro en el comercio se guarda en el pedido** (`pedidos.retirado_en`, también de la
+  integración con el front). El pedido pasa a `en_camino` al aceptarlo, antes de retirarlo,
+  así que el estado solo no dice si el repartidor todavía tiene que pasar por la tienda.
+  Antes ese dato vivía en el navegador del repartidor y viajaba como `?retirado=` en la
+  ruta: el seguimiento del cliente no lo conocía y le dibujaba la ruta derecho a su casa
+  mientras el repartidor iba a buscar el pedido. No es un estado nuevo: se puede deshacer
+  (por si lo marcó sin querer), repetirlo conserva la primera hora y queda en
+  `auditoria_pedidos` como "retirado del comercio".
 - **Errores precisos en el camino de error.** Cuando el `UPDATE` condicional no afecta
   filas, se consulta el pedido para responder `404` (no existe), `403` (es de otro
   repartidor), `409` (estado que no corresponde) o `400` (código incorrecto). Para la
@@ -524,7 +537,7 @@ con ese código y vuelve a quedar disponible.
 | Método | Ruta | Descripción |
 |---|---|---|
 | `POST` | `/api/repartidor/ubicacion` | Registra la posición actual. Body: `{ latitud, longitud }` |
-| `GET` | `/api/pedido/ruta/:idPedido` | Ruta optimizada hacia el destino + ETA. Query: `retirado=true\|false` |
+| `GET` | `/api/pedido/ruta/:idPedido` | Ruta optimizada hacia el destino + ETA. Pasa por el comercio hasta que el repartidor marca el retiro (`PATCH /pedido/retiro`). Query opcional: `retirado=true\|false` pide una de las dos rutas a mano |
 
 Misma cadena de middlewares que el resto de repartidores. `resolverRepartidor` deja además
 `req.repartidorVehiculo`, que es lo que define el perfil de ruta con el que se le pide la
@@ -561,6 +574,13 @@ al confirmar la entrega puede mandar la posición final, que cierra el rastro de
   segunda habilita a guardar las coordenadas en una base de datos. Como este proyecto las
   guarda, para un despliegue real hay que prender el flag y cargar una tarjeta en la
   cuenta. Para el trabajo de cátedra queda documentado y apagado.
+- **La geocodificación solo busca dentro de la zona de reparto.** Con `country=ar` solo,
+  "Av. Rivadavia 800, Santo Tomé" caía en el Santo Tomé de Corrientes, a 570 km: hay uno
+  en cada provincia. Pedirle a Mapbox resultados cercanos (`proximity`) no lo arregló, y
+  además mandó "Mitre 450, Santo Tomé" a Entre Ríos. Lo que sí funciona es el parámetro
+  `bbox`: un recuadro de `MAPS_RADIO_ZONA_KM` alrededor de `MAPS_CENTRO_LAT/LNG` fuera del
+  cual Mapbox no busca. La contra es que una dirección de otra ciudad termina en la
+  coincidencia más parecida de adentro, razonable para un delivery que solo reparte acá.
 - **Nada de esto puede tirar abajo un pedido.** Si Mapbox no contesta, expira el timeout o
   falta el access token, `maps.service.js` degrada a un cálculo local con Haversine y lo
   avisa con un `console.error`. El campo `origen_datos` de la respuesta dice de dónde salió
@@ -631,7 +651,7 @@ Y un canal de Socket.IO sobre **el mismo puerto que la API**:
 |---|---|---|
 | cliente → servidor | `seguir_pedido` | `{ pedidoId }`, con ack `{ codigo, estado, datos }` |
 | cliente → servidor | `dejar_pedido` | `{ pedidoId }`, con ack |
-| servidor → sala | `ubicacion_actualizada` | `{ pedido_id, ubicacion, eta, ruta, emitido_en }` |
+| servidor → sala | `ubicacion_actualizada` | `{ pedido_id, ubicacion, eta, ruta, retirado, emitido_en }` |
 | servidor → sala | `estado_actualizado` | `{ pedido_id, estado, seguimiento_activo, mensaje, ocurrido_en }` |
 
 Flujo: el cliente abre la pantalla y pide `GET /pedidos/:id/seguimiento` para dibujar el
@@ -673,9 +693,14 @@ entregado, cancelado) llegan por el mismo canal.
   que sí le contesta `409` al repartidor sin ubicación registrada —él puede arreglarlo
   mandando un ping—, el cliente no puede arreglar nada: siempre `200`, con los campos en
   `null` y un `mensaje` que explica qué está pasando.
-- **La ruta del cliente va derecho a la puerta**, sin la parada en el comercio que sí mete
-  CU21. Son dos preguntas distintas: el cliente pregunta cuándo le llega, el repartidor
-  pregunta qué vuelta tiene que dar.
+- **La ruta del cliente pasa por el comercio hasta que el repartidor lo retira**
+  (`PATCH /pedido/retiro`), igual que la de CU21, y después va derecho a la puerta. Hasta
+  la integración con el front iba siempre derecho, con la idea de que el cliente pregunta
+  cuándo le llega y no qué vuelta da el repartidor. Pero mientras el repartidor va a
+  buscar el pedido, "cuándo me llega" incluye esa vuelta: el ETA salía corto y el mapa
+  dibujaba una línea por la que el repartidor no iba. Marcar o deshacer el retiro fuerza un
+  refresco de la ruta en el próximo ping, y `retirado` viaja en la respuesta y en
+  `ubicacion_actualizada` para que el mapa deje de mostrar el comercio.
 - **El evento de `en_camino` no lleva el código de entrega**, aunque la asignación lo
   genere: en la sala están el cliente y el repartidor.
 - **Socket.IO reconecta solo, pero no vuelve a entrar a las salas.** La sala es estado del

@@ -101,6 +101,7 @@ Una ruta protegida sin sesión manda al login y, después de entrar, vuelve a do
   navegador al pedido si tiene `FRONT_URL` en su `.env`.
 - **Mapas (`MAPS_MODO=mock`)**: no llega una ruta real y el mapa dibuja una línea recta
   punteada. El panel del repartidor muestra "Simular avance" para la demo sin GPS (también
-  aparece siempre en desarrollo).
+  aparece siempre en desarrollo). Con `MAPS_MODO=real` el mapa dibuja la ruta de Mapbox y
+  "Simular avance" avanza por esas mismas calles.
 - **Push**: el botón para activar las notificaciones del navegador aparece solo si el backend
   tiene `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY`. Las ventanas de incógnito no las permiten.
