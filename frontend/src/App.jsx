@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router'
 import SesionProvider from './context/SesionProvider'
 import AvisosProvider from './context/AvisosProvider'
 import CarritoProvider from './context/CarritoProvider'
+import NotificacionesProvider from './context/NotificacionesProvider'
 import Layout from './components/Layout'
 import RutaProtegida from './components/RutaProtegida'
 import Landing from './pages/Landing/Landing'
@@ -16,6 +17,9 @@ import Carrito from './pages/Carrito/Carrito'
 import Checkout from './pages/Checkout/Checkout'
 import Pedidos from './pages/Pedidos/Pedidos'
 import Perfil from './pages/Perfil/Perfil'
+import Notificaciones from './pages/Notificaciones/Notificaciones'
+import Reclamos from './pages/Reclamos/Reclamos'
+import Reclamo from './pages/Reclamos/Reclamo'
 import ComercioAdmin from './pages/ComercioAdmin/ComercioAdmin'
 import ComercioVenta from './pages/ComercioVenta/ComercioVenta'
 import ComercioProductos from './pages/ComercioProductos/ComercioProductos'
@@ -34,12 +38,14 @@ function Redirigir({ a }) {
   return <Navigate to={a.replace(/:(\w+)/g, (_, clave) => parametros[clave])} replace />
 }
 
-// El carrito depende de la sesión (es el del cliente logueado) y los avisos los usan todos
+// El carrito y la campanita dependen de la sesión; los avisos los usan todos
 function Proveedores({ children }) {
   return (
     <SesionProvider>
       <AvisosProvider>
-        <CarritoProvider>{children}</CarritoProvider>
+        <CarritoProvider>
+          <NotificacionesProvider>{children}</NotificacionesProvider>
+        </CarritoProvider>
       </AvisosProvider>
     </SesionProvider>
   )
@@ -74,6 +80,12 @@ export default function App() {
 
             <Route element={<RutaProtegida />}>
               <Route path="perfil" element={<Perfil />} />
+              <Route path="notificaciones" element={<Notificaciones />} />
+            </Route>
+
+            <Route element={<RutaProtegida roles={['cliente', 'comercio', 'repartidor']} />}>
+              <Route path="reclamos" element={<Reclamos />} />
+              <Route path="reclamos/:id" element={<Reclamo />} />
             </Route>
 
             <Route element={<RutaProtegida roles={['comercio']} />}>

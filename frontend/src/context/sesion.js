@@ -4,7 +4,7 @@ import { createContext, useContext } from 'react'
 // (lo pide la regla only-export-components de oxlint, por el hot reload de Vite).
 export const SesionContext = createContext(null)
 
-// { sesion, usuario, entrar, salir, olvidarSesion, avisoSesion, limpiarAvisoSesion }
+// { sesion, usuario, entrar, salir, olvidarSesion, actualizarUsuario, avisoSesion, limpiarAvisoSesion }
 export function useSesion() {
   const contexto = useContext(SesionContext)
 

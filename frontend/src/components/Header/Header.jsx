@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router'
 import { useCarrito } from '../../context/carrito'
+import { useNotificaciones } from '../../context/notificaciones'
 import { useSesion } from '../../context/sesion'
 import { etiquetaDelRol } from '../../utils/roles'
 import './Header.css'
@@ -15,13 +16,16 @@ const NAVEGACION = {
   cliente: [
     { a: '/comercios', texto: 'Comercios' },
     { a: '/pedidos', texto: 'Mis pedidos' },
+    { a: '/reclamos', texto: 'Reclamos' },
   ],
   comercio: [
     { a: '/comercio', texto: 'Pedidos y ventas', exacto: true },
     { a: '/comercio/productos', texto: 'Productos' },
+    { a: '/reclamos', texto: 'Reclamos' },
   ],
   repartidor: [
     { a: '/repartidor', texto: 'Mis entregas' },
+    { a: '/reclamos', texto: 'Reclamos' },
   ],
   administrador: [
     { a: '/admin', texto: 'Panel', exacto: true },
@@ -32,6 +36,7 @@ export default function Header() {
   const [menuAbierto, setMenuAbierto] = useState(false)
   const { usuario, salir } = useSesion()
   const { cantidad: cantidadCarrito } = useCarrito()
+  const { noLeidas } = useNotificaciones()
   const navigate = useNavigate()
 
   const cerrarMenu = () => setMenuAbierto(false)
@@ -52,6 +57,11 @@ export default function Header() {
 
   const acciones = usuario ? (
     <>
+      <Link to="/notificaciones" className="cart-link" onClick={cerrarMenu} aria-label={noLeidas > 0 ? `Notificaciones: ${noLeidas} sin leer` : 'Notificaciones'}>
+        🔔
+        {noLeidas > 0 && <span className="cart-counter campanita-contador">{noLeidas > 99 ? '99+' : noLeidas}</span>}
+      </Link>
+
       {usuario.rol === 'cliente' && (
         <Link to="/carrito" className="cart-link" onClick={cerrarMenu}>
           🛒 Carrito

@@ -1,0 +1,75 @@
+.notificaciones-pagina .lista-notificaciones {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.notificaciones-pagina .lista-notificaciones li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: white;
+}
+
+/* Las nuevas se distinguen con el borde de la marca */
+.notificaciones-pagina .lista-notificaciones li.sin-leer {
+  border-left: 4px solid var(--brand);
+  background: #fbfefc;
+}
+
+.notificaciones-pagina .notificacion-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 1.3rem;
+}
+
+.notificaciones-pagina .notificacion-cuerpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.notificaciones-pagina .notificacion-cuerpo p {
+  color: #111827;
+  line-height: 1.5;
+}
+
+.notificaciones-pagina .sin-leer .notificacion-cuerpo p {
+  font-weight: 600;
+}
+
+.notificaciones-pagina .notificacion-cuerpo small {
+  color: var(--muted);
+}
+
+.notificaciones-pagina .notificacion-acciones {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+.notificaciones-pagina .panel-push {
+  margin-top: 28px;
+}
+
+@media (max-width: 600px) {
+  .notificaciones-pagina .lista-notificaciones li {
+    flex-wrap: wrap;
+  }
+
+  .notificaciones-pagina .notificacion-acciones {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

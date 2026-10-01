@@ -10,6 +10,10 @@ export const inicioDelRol = (rol) => ROLES[rol]?.inicio ?? '/'
 
 export const etiquetaDelRol = (rol) => ROLES[rol]?.etiqueta ?? rol
 
+const PLURALES = { cliente: 'clientes', comercio: 'comercios', repartidor: 'repartidores', administrador: 'administradores' }
+
+export const pluralDelRol = (rol) => PLURALES[rol] ?? rol
+
 // Solo se vuelve a rutas internas: un ?volver=https://otro-sitio no tiene que llevar afuera
 export const esRutaInterna = (ruta) =>
   typeof ruta === 'string' && ruta.startsWith('/') && !ruta.startsWith('//')

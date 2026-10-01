@@ -1,22 +1,22 @@
 .perfil-page {
     min-height: calc(100vh - 160px);
     padding: 140px 20px 70px;
-    background: var(--background);
+    background: #ffffff;
   }
   
-  .perfil-container {
+  .perfil-page .perfil-container {
     width: min(900px, 100%);
     margin: 0 auto;
   }
   
-  .perfil-header {
+  .perfil-page .perfil-header {
     display: flex;
     align-items: center;
     gap: 20px;
     margin-bottom: 30px;
   }
   
-  .perfil-avatar {
+  .perfil-page .perfil-avatar {
     width: 80px;
     height: 80px;
     border-radius: 50%;
@@ -28,43 +28,43 @@
     font-size: 34px;
   }
   
-  .perfil-label {
+  .perfil-page .perfil-label {
     margin: 0 0 5px;
     color: var(--muted);
     font-size: 14px;
     font-weight: 600;
   }
   
-  .perfil-header h1 {
+  .perfil-page .perfil-header h1 {
     margin: 0;
     font-size: 32px;
-    color: var(--text);
+    color: #111827;
   }
   
-  .perfil-rol {
+  .perfil-page .perfil-rol {
     margin: 5px 0 0;
     color: var(--muted);
   }
   
-  .perfil-card {
+  .perfil-page .perfil-card {
     padding: 30px;
     background: white;
     border: 1px solid #e5e5e5;
     border-radius: 12px;
   }
   
-  .perfil-card h2 {
+  .perfil-page .perfil-card h2 {
     margin: 0 0 25px;
-    color: var(--text);
+    color: #111827;
   }
   
-  .perfil-datos {
+  .perfil-page .perfil-datos {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 20px;
   }
   
-  .dato {
+  .perfil-page .dato {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -73,24 +73,24 @@
     border-radius: 8px;
   }
   
-  .dato span {
+  .perfil-page .dato span {
     font-size: 13px;
     color: var(--muted);
   }
   
-  .dato strong {
-    color: var(--text);
+  .perfil-page .dato strong {
+    color: #111827;
     font-size: 16px;
   }
   
-  .perfil-acciones {
+  .perfil-page .perfil-acciones {
     display: flex;
     gap: 12px;
     margin-top: 25px;
     flex-wrap: wrap;
   }
   
-  .perfil-button {
+  .perfil-page .perfil-button {
     display: inline-block;
     padding: 13px 20px;
     border: none;
@@ -103,40 +103,72 @@
     cursor: pointer;
   }
   
-  .perfil-button.secondary {
+  .perfil-page .perfil-button.secondary {
     background: #eeeeee;
-    color: var(--text);
+    color: #111827;
   }
   
-  .perfil-button.logout {
+  .perfil-page .perfil-button.logout {
     background: transparent;
     color: #c0392b;
     border: 1px solid #c0392b;
   }
   
-  .perfil-button:hover {
+  .perfil-page .perfil-button:hover {
     opacity: 0.85;
   }
   
   @media (max-width: 650px) {
-    .perfil-datos {
+    .perfil-page .perfil-datos {
       grid-template-columns: 1fr;
     }
   
-    .perfil-header h1 {
+    .perfil-page .perfil-header h1 {
       font-size: 26px;
     }
   
-    .perfil-card {
+    .perfil-page .perfil-card {
       padding: 20px;
     }
   
-    .perfil-acciones {
+    .perfil-page .perfil-acciones {
       flex-direction: column;
     }
   
-    .perfil-button {
+    .perfil-page .perfil-button {
       width: 100%;
       text-align: center;
     }
+  }
+  /* =========================================
+     INTEGRACIÓN: varias tarjetas y la baja
+     ========================================= */
+
+  .perfil-page .perfil-card + .perfil-card,
+  .perfil-page .perfil-card + .mensaje-error {
+    margin-top: 20px;
+  }
+
+  .perfil-page .perfiles-cuenta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .perfil-page .perfiles-cuenta + .texto-apagado a {
+    color: var(--brand);
+    font-weight: 700;
+  }
+
+  .perfil-page .perfil-acciones {
+    margin: 25px 0;
+  }
+
+  .perfil-page .zona-baja {
+    border-color: #fecaca;
+  }
+
+  .perfil-page .zona-baja h2 {
+    color: #b91c1c;
   }

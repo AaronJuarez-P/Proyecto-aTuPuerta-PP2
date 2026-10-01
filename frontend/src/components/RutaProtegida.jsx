@@ -17,7 +17,8 @@ export default function RutaProtegida({ roles }) {
   }
 
   if (roles && !roles.includes(usuario.rol)) {
-    const paraQuien = roles.map((rol) => etiquetaDelRol(rol).toLowerCase()).join(' o ')
+    const nombres = roles.map((rol) => etiquetaDelRol(rol).toLowerCase())
+    const paraQuien = nombres.length > 1 ? `${nombres.slice(0, -1).join(', ')} o ${nombres.at(-1)}` : nombres[0]
 
     return (
       <main className="pagina">

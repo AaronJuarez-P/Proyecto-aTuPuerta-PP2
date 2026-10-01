@@ -121,15 +121,29 @@ export default function SesionProvider({ children }) {
 
   const limpiarAvisoSesion = useCallback(() => setAvisoSesion(''), [])
 
+  // Después de editar el perfil: el nombre del header sale de acá
+  const actualizarUsuario = useCallback((cambios) => {
+    setSesion((actual) => {
+      if (!actual) {
+        return actual
+      }
+
+      const actualizada = { ...actual, usuario: { ...actual.usuario, ...cambios } }
+      guardarSesion(actualizada)
+      return actualizada
+    })
+  }, [])
+
   const valor = useMemo(() => ({
     sesion,
     usuario: sesion?.usuario ?? null,
     entrar,
     salir,
     olvidarSesion,
+    actualizarUsuario,
     avisoSesion,
     limpiarAvisoSesion,
-  }), [sesion, entrar, salir, olvidarSesion, avisoSesion, limpiarAvisoSesion])
+  }), [sesion, entrar, salir, olvidarSesion, actualizarUsuario, avisoSesion, limpiarAvisoSesion])
 
   return <SesionContext.Provider value={valor}>{children}</SesionContext.Provider>
 }
