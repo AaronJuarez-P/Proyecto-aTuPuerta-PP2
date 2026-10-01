@@ -19,13 +19,13 @@ import Perfil from './pages/Perfil/Perfil'
 import ComercioAdmin from './pages/ComercioAdmin/ComercioAdmin'
 import ComercioVenta from './pages/ComercioVenta/ComercioVenta'
 import ComercioProductos from './pages/ComercioProductos/ComercioProductos'
-import RepartidorAdmin from './pages/RepartidorAdmin/RepartidorAdmin'
 import Admin from './pages/Admin/Admin'
 import NoEncontrado from './pages/NoEncontrado/NoEncontrado'
 
 // Las pantallas con mapa y socket (Leaflet y Socket.IO pesan) se bajan recién cuando se
 // abren: el resto de la app no las necesita. Layout pone el Suspense.
 const Pedido = lazy(() => import('./pages/Pedido/Pedido'))
+const RepartidorAdmin = lazy(() => import('./pages/RepartidorAdmin/RepartidorAdmin'))
 
 // Las notificaciones push del backend traen URLs propias (/cliente/pedidos/5,
 // /repartidor/pedidos...). Estas rutas las llevan a la pantalla que corresponde.

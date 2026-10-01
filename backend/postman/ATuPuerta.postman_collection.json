@@ -1226,6 +1226,21 @@
             },
             "description": "codigoPedido: el que el cliente ve en su notificación o en GET /pedidos/:id. latitud y longitud son opcionales."
           }
+        },
+        {
+          "name": "Mis entregas (pedido en curso e historial)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_carlos}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/repartidor/entregas",
+            "description": "en_curso: el pedido en camino con direcciones, cliente, ítems y comisión (o null). entregas: historial paginado. resumen: entregas hechas y comisión ganada. Filtros: estado (en_camino | entregado | cancelado), pagina, limite."
+          }
         }
       ]
     },

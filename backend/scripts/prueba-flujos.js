@@ -240,6 +240,13 @@ const main = async () => {
         (datos) => datos.pedido.estado === "en_camino");
     await esperar("codigo incorrecto", "PATCH", "/pedido/entrega/5", { token: lucia, body: { codigoPedido: "00000000" } }, 400);
     await esperar("entrega", "PATCH", "/pedido/entrega/5", { token: lucia, body: { codigoPedido: codigo } }, 200);
+    await esperar("las entregas de Lucía: sin pedido en curso y con la 5 entregada", "GET", "/repartidor/entregas", { token: lucia }, 200,
+        (datos) => datos.en_curso === null && datos.entregas.some((e) => e.id === 5 && e.estado === "entregado") &&
+                   datos.resumen.entregados === 1 && datos.resumen.comisiones > 0);
+    await esperar("el pedido en curso de Carlos trae las direcciones y los ítems", "GET", "/repartidor/entregas", { token: carlos }, 200,
+        (datos) => datos.en_curso?.id === 1 && datos.en_curso.direccion_entrega.includes("San Martín") &&
+                   datos.en_curso.items.length === 2 && typeof datos.en_curso.comision === "number");
+    await esperar("estado de entrega inventado", "GET", "/repartidor/entregas?estado=perdido", { token: lucia }, 400);
 
     // -----------------------------------------------------------------------
     seccion("Semana 12 - Historial y repeticion");

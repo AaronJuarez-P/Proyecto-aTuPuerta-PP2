@@ -480,6 +480,7 @@ Los casos de prueba están en `postman/backend-pagos.js`.
 | `PATCH` | `/api/pedido/entrega/:idPedido` | Confirma la entrega. Body: `{ codigoPedido }` y, opcional, `{ latitud, longitud }` |
 | `GET` | `/api/repartidor/disponibilidad` | `{ disponible, pedido_en_curso }` |
 | `PATCH` | `/api/repartidor/disponibilidad` | Entrar o salir de servicio. Body: `{ disponible }` |
+| `GET` | `/api/repartidor/entregas` | `en_curso` (el pedido en camino con direcciones, cliente, ítems y comisión), el historial paginado y `resumen` (entregas y comisión ganada). Filtros: `estado`, `pagina`, `limite` |
 
 Cadena de middlewares: `verificarToken` → `verificarRol('repartidor')` → `resolverRepartidor`
 (busca el repartidor en la base y exige que el usuario siga activo).
@@ -508,6 +509,10 @@ con ese código y vuelve a quedar disponible.
 - **Transacción completa.** Asignar, cambiar la disponibilidad, auditar en
   `auditoria_pedidos` (con el `usuario_id` del repartidor) y notificar al cliente se
   confirman juntos o se revierten juntos.
+- **`/repartidor/entregas` es de la integración con el front.** La disponibilidad devuelve
+  solo el id del pedido en curso y las direcciones venían únicamente en la ruta, que da `409`
+  mientras el repartidor no mandó su ubicación: al recargar la página no tenía cómo saber a
+  dónde iba. No expone el teléfono ni el email del cliente.
 - **Errores precisos en el camino de error.** Cuando el `UPDATE` condicional no afecta
   filas, se consulta el pedido para responder `404` (no existe), `403` (es de otro
   repartidor), `409` (estado que no corresponde) o `400` (código incorrecto). Para la

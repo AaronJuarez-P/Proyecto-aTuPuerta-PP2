@@ -5,7 +5,7 @@
 .admin-page {
     min-height: calc(100vh - 80px);
     padding: 120px 24px 80px;
-    background: var(--surface);
+    background: #ffffff;
   }
   
   .admin-page .admin-container {
@@ -274,7 +274,7 @@
     height: 42px;
     flex-shrink: 0;
     border-radius: 50%;
-    background: var(--surface);
+    background: #ffffff;
     font-size: 1.1rem;
   }
   
@@ -297,7 +297,7 @@
   .admin-page .admin-user-role {
     padding: 6px 11px;
     border-radius: 999px;
-    background: var(--surface);
+    background: #ffffff;
     color: var(--muted);
     font-size: 0.72rem;
     font-weight: 700;
