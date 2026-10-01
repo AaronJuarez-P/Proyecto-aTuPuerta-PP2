@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { infoEstado } from '../../utils/estados'
 import './Comunes.css'
 
@@ -40,7 +40,7 @@ export function EstadoVacio({ icono = '📦', titulo, children, accion }) {
   )
 }
 
-// tipo: 'pedido' | 'pago' | 'reclamo'
+// tipo: 'pedido' | 'pago' | 'reclamo' | 'auditoria'
 export function EstadoBadge({ tipo = 'pedido', estado }) {
   const { etiqueta, tono } = infoEstado(tipo, estado)
   return <span className={`estado-badge tono-${tono}`}>{etiqueta}</span>
@@ -124,6 +124,42 @@ export function Modal({ abierto, titulo, children, alCerrar }) {
 
         {children}
       </section>
+    </div>
+  )
+}
+
+// Contenido de un Modal que pide confirmar una acción: explica qué va a pasar y muestra
+// el error del backend ahí mismo si no se pudo (un 409 tiene que leerse antes de cerrar)
+export function Confirmacion({ children, boton, peligro = false, alConfirmar }) {
+  const [error, setError] = useState('')
+  const [enviando, setEnviando] = useState(false)
+
+  async function confirmar() {
+    setError('')
+    setEnviando(true)
+
+    try {
+      await alConfirmar()
+    } catch (errorAccion) {
+      setError(errorAccion.message)
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <div className="formulario">
+      <div className="texto-apagado">{children}</div>
+      {error && <p className="aviso-form aviso-form-error" role="alert">{error}</p>}
+      <div className="acciones">
+        <button
+          type="button"
+          className={`boton ${peligro ? 'boton-peligro' : 'boton-primario'}`}
+          disabled={enviando}
+          onClick={confirmar}
+        >
+          {enviando ? 'Un momento…' : boton}
+        </button>
+      </div>
     </div>
   )
 }

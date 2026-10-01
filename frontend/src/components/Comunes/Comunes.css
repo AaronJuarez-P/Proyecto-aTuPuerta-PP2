@@ -91,6 +91,11 @@
   align-items: start;
 }
 
+/* Dos tarjetas lado a lado no se apilan: sin esto la segunda columna arranca más abajo */
+.grilla-dos > .tarjeta + .tarjeta {
+  margin-top: 0;
+}
+
 .dato-fila {
   display: flex;
   justify-content: space-between;

@@ -25,6 +25,18 @@ export function formatearFecha(valor, { conHora = true } = {}) {
     : { dateStyle: 'short' })
 }
 
+// La auditoría guarda la fecha y la hora por separado (CURDATE y CURTIME del servidor), y
+// el panel de administración recibe la fecha como texto AAAA-MM-DD. new Date('2026-09-30')
+// la tomaría como medianoche UTC, que en Argentina es el día anterior: con la hora pegada
+// y sin zona se lee como hora local.
+export function formatearFechaYHora(fecha, hora) {
+  if (!fecha) {
+    return '—'
+  }
+
+  return formatearFecha(`${fecha}T${hora ?? '00:00:00'}`, { conHora: Boolean(hora) })
+}
+
 export const formatearHora = (valor) =>
   valor ? new Date(valor).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '—'
 

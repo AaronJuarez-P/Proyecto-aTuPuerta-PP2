@@ -13,6 +13,8 @@ const ICONOS = {
   pedido_entregado: '✅',
   pedido_cancelado: '✖️',
   cuenta_reactivada: '🔓',
+  comercio_suspendido: '⛔',
+  comercio_reactivado: '🏪',
 }
 
 export const iconoDeNotificacion = (tipo) =>

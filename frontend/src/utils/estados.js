@@ -44,7 +44,14 @@ export const VEHICULOS = {
   otro: 'Otro',
 }
 
-const TABLAS = { pedido: ESTADOS_PEDIDO, pago: ESTADOS_PAGO, reclamo: ESTADOS_RECLAMO }
+// auditoria_productos y auditoria_pedidos guardan la acción con el nombre del SQL
+export const ACCIONES_AUDITORIA = {
+  INSERT: { etiqueta: 'Alta', tono: 'ok' },
+  UPDATE: { etiqueta: 'Cambio', tono: 'proceso' },
+  DELETE: { etiqueta: 'Baja', tono: 'error' },
+}
+
+const TABLAS = { pedido: ESTADOS_PEDIDO, pago: ESTADOS_PAGO, reclamo: ESTADOS_RECLAMO, auditoria: ACCIONES_AUDITORIA }
 
 export const infoEstado = (tipo, estado) =>
   TABLAS[tipo]?.[estado] ?? { etiqueta: estado ?? '—', tono: 'neutro' }

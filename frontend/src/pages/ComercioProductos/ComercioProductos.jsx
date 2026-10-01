@@ -8,7 +8,7 @@ import {
   listarMisProductos,
   obtenerAuditoriaProducto,
 } from '../../api/comercio'
-import { Cargando, EstadoVacio, MensajeError, Modal, Paginacion } from '../../components/Comunes/Comunes'
+import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Modal, Paginacion } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
 import { useCarga } from '../../hooks/useCarga'
 import { iconoDeCategoria } from '../../utils/categorias'
@@ -20,8 +20,6 @@ const FILTROS_ESTADO = [
   { valor: 'false', texto: 'Dados de baja' },
   { valor: '', texto: 'Todos' },
 ]
-
-const ACCIONES_AUDITORIA = { INSERT: 'Alta', UPDATE: 'Cambio', DELETE: 'Baja' }
 
 // PUT /productos/:id es una edición completa: lleva todos los campos
 const datosCompletos = (producto, cambios = {}) => ({
@@ -512,9 +510,7 @@ function HistorialProducto({ producto }) {
     <ul className="historial-producto">
       {datos.auditoria.map((registro) => (
         <li key={registro.id}>
-          <span className={`estado-badge ${registro.accion === 'DELETE' ? 'tono-error' : registro.accion === 'INSERT' ? 'tono-ok' : 'tono-proceso'}`}>
-            {ACCIONES_AUDITORIA[registro.accion] ?? registro.accion}
-          </span>
+          <EstadoBadge tipo="auditoria" estado={registro.accion} />
           <span>
             {formatearFecha(registro.fecha, { conHora: false })} {registro.hora?.slice(0, 5)}
           </span>

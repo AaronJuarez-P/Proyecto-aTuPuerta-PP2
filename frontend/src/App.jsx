@@ -23,13 +23,22 @@ import Reclamo from './pages/Reclamos/Reclamo'
 import ComercioAdmin from './pages/ComercioAdmin/ComercioAdmin'
 import ComercioVenta from './pages/ComercioVenta/ComercioVenta'
 import ComercioProductos from './pages/ComercioProductos/ComercioProductos'
-import Admin from './pages/Admin/Admin'
 import NoEncontrado from './pages/NoEncontrado/NoEncontrado'
 
 // Las pantallas con mapa y socket (Leaflet y Socket.IO pesan) se bajan recién cuando se
 // abren: el resto de la app no las necesita. Layout pone el Suspense.
 const Pedido = lazy(() => import('./pages/Pedido/Pedido'))
 const RepartidorAdmin = lazy(() => import('./pages/RepartidorAdmin/RepartidorAdmin'))
+
+// La administración solo la abren los administradores: el resto no tiene por qué bajarla
+const Admin = lazy(() => import('./pages/Admin/Admin'))
+const AdminPedidos = lazy(() => import('./pages/Admin/AdminPedidos'))
+const AdminPedido = lazy(() => import('./pages/Admin/AdminPedido'))
+const AdminUsuarios = lazy(() => import('./pages/Admin/AdminUsuarios'))
+const AdminUsuario = lazy(() => import('./pages/Admin/AdminUsuario'))
+const AdminReclamos = lazy(() => import('./pages/Admin/AdminReclamos'))
+const AdminReclamo = lazy(() => import('./pages/Admin/AdminReclamo'))
+const AdminAuditoria = lazy(() => import('./pages/Admin/AdminAuditoria'))
 
 // Las notificaciones push del backend traen URLs propias (/cliente/pedidos/5,
 // /repartidor/pedidos...). Estas rutas las llevan a la pantalla que corresponde.
@@ -103,6 +112,13 @@ export default function App() {
 
             <Route element={<RutaProtegida roles={['administrador']} />}>
               <Route path="admin" element={<Admin />} />
+              <Route path="admin/pedidos" element={<AdminPedidos />} />
+              <Route path="admin/pedidos/:id" element={<AdminPedido />} />
+              <Route path="admin/usuarios" element={<AdminUsuarios />} />
+              <Route path="admin/usuarios/:id" element={<AdminUsuario />} />
+              <Route path="admin/reclamos" element={<AdminReclamos />} />
+              <Route path="admin/reclamos/:id" element={<AdminReclamo />} />
+              <Route path="admin/auditoria" element={<AdminAuditoria />} />
             </Route>
 
             <Route path="*" element={<NoEncontrado />} />
