@@ -154,6 +154,7 @@ MAPS_GEOCODING_PERMANENT=false
 MAPS_CENTRO_LAT=-31.6667
 MAPS_CENTRO_LNG=-60.7667
 MAPS_RADIO_MOCK_KM=5
+MAPS_RADIO_ZONA_KM=15
 MAPS_VELOCIDAD_KMH=25
 MAPS_FACTOR_RUTA=1.3
 MAPS_DISTANCIA_FALLBACK_KM=3
@@ -210,8 +211,9 @@ para poder recibir el webhook.
 | `MAPS_MODO` | `mock` no llama a Mapbox: geocodifica de forma determinística y estima la distancia con Haversine. `real` usa la Directions API y la Geocoding API |
 | `MAPS_ACCESS_TOKEN` | Access token de Mapbox. Solo con `MAPS_MODO=real` |
 | `MAPS_GEOCODING_PERMANENT` | En `true` pide derechos de almacenamiento permanente al geocodificar, que es lo que habilita a guardar las coordenadas en la base. Cuesta más por request y exige una tarjeta cargada en la cuenta, así que viene en `false` |
-| `MAPS_CENTRO_LAT` / `MAPS_CENTRO_LNG` | Centro alrededor del cual el modo mock reparte las direcciones (por defecto, Santo Tomé) |
+| `MAPS_CENTRO_LAT` / `MAPS_CENTRO_LNG` | Centro de la zona de reparto (por defecto, Santo Tomé). El modo mock reparte las direcciones alrededor; el real busca las direcciones cerca |
 | `MAPS_RADIO_MOCK_KM` | Radio en el que el mock las dispersa |
+| `MAPS_RADIO_ZONA_KM` | Solo con `MAPS_MODO=real`: radio de la zona en la que la geocodificación busca las direcciones. Por defecto 15; `0` = sin límite |
 | `MAPS_VELOCIDAD_KMH` | Velocidad promedio del repartidor, para estimar el tiempo de viaje sin Mapbox |
 | `MAPS_FACTOR_RUTA` | Factor calle / línea recta que se le aplica al Haversine |
 | `MAPS_DISTANCIA_FALLBACK_KM` | Distancia que se usa cuando no hay ni coordenadas para estimar |
@@ -561,6 +563,13 @@ al confirmar la entrega puede mandar la posición final, que cierra el rastro de
   segunda habilita a guardar las coordenadas en una base de datos. Como este proyecto las
   guarda, para un despliegue real hay que prender el flag y cargar una tarjeta en la
   cuenta. Para el trabajo de cátedra queda documentado y apagado.
+- **La geocodificación solo busca dentro de la zona de reparto.** Con `country=ar` solo,
+  "Av. Rivadavia 800, Santo Tomé" caía en el Santo Tomé de Corrientes, a 570 km: hay uno
+  en cada provincia. Pedirle a Mapbox resultados cercanos (`proximity`) no lo arregló, y
+  además mandó "Mitre 450, Santo Tomé" a Entre Ríos. Lo que sí funciona es el parámetro
+  `bbox`: un recuadro de `MAPS_RADIO_ZONA_KM` alrededor de `MAPS_CENTRO_LAT/LNG` fuera del
+  cual Mapbox no busca. La contra es que una dirección de otra ciudad termina en la
+  coincidencia más parecida de adentro, razonable para un delivery que solo reparte acá.
 - **Nada de esto puede tirar abajo un pedido.** Si Mapbox no contesta, expira el timeout o
   falta el access token, `maps.service.js` degrada a un cálculo local con Haversine y lo
   avisa con un `console.error`. El campo `origen_datos` de la respuesta dice de dónde salió
