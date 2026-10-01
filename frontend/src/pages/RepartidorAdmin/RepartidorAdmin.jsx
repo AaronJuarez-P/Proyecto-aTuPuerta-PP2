@@ -17,6 +17,7 @@ import { useAvisos } from '../../context/avisos'
 import { useSesion } from '../../context/sesion'
 import { useCarga } from '../../hooks/useCarga'
 import { formatearDistancia, formatearFecha, formatearHora, formatearMinutos, formatearPrecio, plural } from '../../utils/formato'
+import { avanzarSobreRuta, decodificarPolilinea } from '../../utils/polilinea'
 import './RepartidorAdmin.css'
 
 // Los pedidos disponibles cambian cuando otros repartidores toman o cuando se pagan
@@ -27,10 +28,12 @@ const ACTUALIZAR_DISPONIBLES_MS = 20000
 // una request por ping
 const INTERVALO_UBICACION_MS = 10000
 
-// "Simular avance" (demo): cuánto del camino que falta se recorre en cada clic, y desde
-// dónde se arranca si todavía no hay ninguna posición. Es el mismo centro alrededor del
-// cual el modo mock del backend ubica las direcciones (MAPS_CENTRO_LAT/LNG).
+// "Simular avance" (demo): cuánto del camino que falta se recorre en cada clic, el
+// mínimo de cada clic sobre una ruta de Mapbox, y desde dónde se arranca si todavía no
+// hay ninguna posición. Es el mismo centro alrededor del cual el modo mock del backend
+// ubica las direcciones (MAPS_CENTRO_LAT/LNG).
 const FRACCION_POR_PASO = 0.35
+const PASO_MINIMO_KM = 0.15
 const CENTRO_DEMO = { latitud: -31.6667, longitud: -60.7667 }
 
 const distanciaKm = (a, b) => {
@@ -282,6 +285,7 @@ function PedidoEnCurso({ pedido, alTerminar }) {
   const ruta = useCarga(() => obtenerRuta(pedido.id, retirado), [pedido.id, retirado])
   const { recargar: recargarRuta } = ruta
   const puntos = ruta.datos?.ruta?.puntos
+  const polilinea = ruta.datos?.ruta?.polilinea
 
   const enviar = useCallback(async (posicion) => {
     try {
@@ -386,6 +390,19 @@ function PedidoEnCurso({ pedido, alTerminar }) {
       return
     }
 
+    // Con una ruta de Mapbox avanza por las calles que dibuja el mapa
+    const porLaRuta = avanzarSobreRuta(decodificarPolilinea(polilinea), desde, hacia, {
+      fraccion: FRACCION_POR_PASO,
+      minimoKm: PASO_MINIMO_KM,
+    })
+
+    if (porLaRuta) {
+      enviar(porLaRuta)
+      return
+    }
+
+    // Sin ruta (modo mock del backend, o la primera posición), en línea recta, que es
+    // como la dibuja el mapa en ese caso
     const siguiente = distanciaKm(desde, hacia) < 0.05
       ? hacia
       : {
