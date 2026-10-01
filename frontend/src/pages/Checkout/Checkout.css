@@ -249,12 +249,6 @@
    MÉTODOS DE PAGO
 ========================= */
 
-.payment-options {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-}
-
 .payment-option {
   display: flex;
   align-items: center;

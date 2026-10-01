@@ -2,9 +2,9 @@
 
 Proyecto anual Practica Profesionalizante 2 — IES Santa Fe — 2026.
 
-Sistema de delivery enfocado en la distribuciòn de productos variados, soportar tipos de usuarios cliente, comerio y repartidor y soportar funcionalidades como el pago, trackeo de repartidores, sistema push de notificaciones, mapas integrados con Mapbox, etc. Desarrollo dividido en dos ramas;
+Sistema de delivery enfocado en la distribuciòn de productos variados, soportar tipos de usuarios cliente, comerio y repartidor y soportar funcionalidades como el pago, trackeo de repartidores, sistema push de notificaciones, mapas integrados con Mapbox, etc. El repositorio tiene dos partes, integradas en la rama `main`;
 backend: Las tecnologias utilizadas son Node.js, Express.js y API rest para las conecciones y el funcionamiento general de la app, MySql para la base de datos, VisualStudio como IDE, Github como plataforma para aplicar los cambios en el proyecto y desarrollo colaborativo.
-frontend: Creado con JavaScript, HTML y CSS.
+frontend: React con Vite, conectado a la API del backend.
 
 **Desarrollado por Aaròn Juarez - backend, Santiago Weidmann - backend, Gonzalo Silva - frontend y Jeronimo Ocampo - frontend.**
 
@@ -14,7 +14,7 @@ frontend: Creado con JavaScript, HTML y CSS.
 
 ```
 ├── backend/    <- API REST — Node.js + Express + MySQL
-├── frontend/   <- JavaSctip + HTML + CSS
+├── frontend/   <- React + Vite, consume la API del backend
 ```
 
 ---
@@ -29,6 +29,74 @@ frontend: Creado con JavaScript, HTML y CSS.
 - Socket.IO — seguimiento en tiempo real
 - Web Push — notificaciones al navegador
 - helmet + express-rate-limit — cabeceras de seguridad y límite de intentos
+
+**Frontend**
+- React 19 + Vite
+- React Router — rutas y rutas protegidas por rol
+- Socket.IO (cliente) — seguimiento del pedido en vivo
+- Leaflet + OpenStreetMap — mapas del seguimiento
+- Oxlint — revisión estática
+
+---
+
+## Cómo levantar todo
+
+Hace falta Node.js 22.22 o más nuevo (lo pide React Router 8; se usó Node 24) y MySQL o
+MariaDB (XAMPP).
+
+1. **Base de datos.** Encender MySQL en XAMPP e importar `backend/scripts/aTuPuerta.sql`
+   desde phpMyAdmin. El script arranca con `DROP DATABASE IF EXISTS aTuPuerta`: volver a
+   importarlo borra los datos locales.
+2. **Backend** (`http://localhost:4000`). Crear `backend/.env` copiando `.env.example` y
+   completar la conexión a la base y `JWT_SECRET` (detalle en
+   [`backend/readme.md`](backend/readme.md), "Variables de entorno"). Después:
+   ```sh
+   cd backend
+   npm install
+   npm run dev
+   ```
+3. **Frontend** (`http://localhost:5173`), en otra terminal. El `.env` es opcional: sin él,
+   el front usa `http://localhost:4000/api`.
+   ```sh
+   cd frontend
+   npm install
+   npm run dev
+   ```
+4. Abrir `http://localhost:5173`.
+
+En Windows, si PowerShell bloquea `npm`, usar `npm.cmd`.
+
+### Cuentas de prueba
+
+La semilla trae cuentas de cada rol, todas con la contraseña `Test1234!`. En el login del
+front se elige la pestaña del rol; en desarrollo también aparecen listadas para entrar con
+un clic.
+
+| Rol | Email | Cómo entrar |
+|---|---|---|
+| Cliente | `maria.gomez@test.com`, `juan.perez@test.com` | Pestaña "Cliente" |
+| Comercio | `libreria.sur@test.com` (CUIL `20405060708`), `ferreteria.central@test.com` (CUIL `20304050607`) | Pestaña "Comercio", con el CUIL |
+| Repartidor | `lucia.repartidor@test.com`, `carlos.repartidor@test.com` | Pestaña "Repartidor" |
+| Administrador | `admin@test.com` | Botón "Acceso de administradores" del login |
+
+El backend admite una sola sesión por cuenta y el navegador guarda una sola sesión: para
+probar varios roles a la vez, cada uno va en otro navegador o en una ventana de incógnito.
+
+### Sin servicios externos
+
+Con el `.env.example` tal cual, nada depende de cuentas externas:
+
+- `MP_MODO=mock`: no hay MercadoPago de verdad. El detalle del pedido muestra un simulador
+  para aprobar o rechazar el pago.
+- `MAPS_MODO=mock`: las direcciones se ubican alrededor de `MAPS_CENTRO_LAT/LNG` y el mapa
+  dibuja la ruta como una línea recta. El panel del repartidor tiene "Simular avance" para
+  la demo sin GPS.
+- Las notificaciones push del navegador necesitan `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY`
+  (`npx web-push generate-vapid-keys`). Sin ellas, las notificaciones se ven igual en la
+  campanita del front.
+
+Cómo funciona el front por dentro (estructura, rutas, sesión) está en
+[`frontend/README.md`](frontend/README.md).
 
 ## Changelog
 

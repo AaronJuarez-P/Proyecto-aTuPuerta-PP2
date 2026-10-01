@@ -48,16 +48,6 @@
   font-size: 14px;
 }
 
-.pedido-page .pedido-status {
-  padding: 9px 15px;
-  border-radius: 20px;
-  background: #f0f0f0;
-  color: #111827;
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .pedido-page .pedido-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -169,11 +159,6 @@
 .pedido-page .pedido-not-found {
   text-align: center;
   padding: 80px 20px;
-}
-
-.pedido-page .pedido-empty-icon {
-  margin-bottom: 15px;
-  font-size: 50px;
 }
 
 .pedido-page .pedido-not-found h1 {

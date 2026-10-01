@@ -38,14 +38,6 @@
     color: var(--muted);
   }
   
-  .repartidor-page .repartidor-welcome {
-    padding: 14px 18px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--surface);
-    font-weight: 600;
-  }
-  
   /* ESTADÍSTICAS */
   
   .repartidor-page .repartidor-stats {
@@ -230,33 +222,6 @@
   .repartidor-page .deliver-button:hover {
     transform: translateY(-1px);
     opacity: 0.9;
-  }
-  
-  /* VACÍO */
-  
-  .repartidor-page .repartidor-empty {
-    padding: 55px 20px;
-    border: 1px dashed var(--border);
-    border-radius: 16px;
-    background: var(--surface);
-    text-align: center;
-  }
-  
-  .repartidor-page .repartidor-empty.small {
-    padding: 30px 20px;
-  }
-  
-  .repartidor-page .empty-icon {
-    margin-bottom: 12px;
-    font-size: 2.8rem;
-  }
-  
-  .repartidor-page .repartidor-empty h3 {
-    margin-bottom: 8px;
-  }
-  
-  .repartidor-page .repartidor-empty p {
-    color: var(--muted);
   }
   
   /* =========================================
@@ -490,10 +455,6 @@
     .repartidor-page .repartidor-header {
       align-items: flex-start;
       flex-direction: column;
-    }
-  
-    .repartidor-page .repartidor-welcome {
-      width: 100%;
     }
   
     .repartidor-page .repartidor-card-info {
