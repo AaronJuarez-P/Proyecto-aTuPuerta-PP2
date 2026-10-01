@@ -3,6 +3,7 @@ const database = require('../database/database');
 const {
     asignarPedidoARepartidor,
     confirmarEntregaPedido,
+    registrarRetiroPedido,
     ESTADOS_PARA_REPARTIR
 } = require('../services/pedido.service');
 const { bloquearRepartidor, actualizarDisponibilidad } = require('../services/repartidor.service');
@@ -127,6 +128,23 @@ const explicarEntregaRechazada = async (conexion, pedidoId, repartidorId) => {
     return { codigo: 400, mensaje: "El código de entrega no es correcto" };
 };
 
+const explicarRetiroRechazado = async (conexion, pedidoId, repartidorId) => {
+    const [pedidos] = await conexion.query(
+        `SELECT repartidor_id, estado FROM pedidos WHERE id = ?`,
+        [pedidoId]
+    );
+
+    if (pedidos.length === 0) {
+        return { codigo: 404, mensaje: "Pedido no encontrado" };
+    }
+
+    if (pedidos[0].repartidor_id !== repartidorId) {
+        return { codigo: 403, mensaje: "Ese pedido no está asignado a vos" };
+    }
+
+    return { codigo: 409, mensaje: `El pedido está en estado "${pedidos[0].estado}": el retiro se marca mientras está en camino` };
+};
+
 // Todo lo que CU21 necesita para armar la ruta: el pedido con su punto de destino y
 // el comercio con el suyo. Trae tambien las direcciones de texto porque son lo que se
 // geocodifica cuando alguna de las dos filas todavia no tiene coordenadas.
@@ -135,6 +153,7 @@ const buscarPedidoParaRuta = async (conexion, pedidoId) => {
         `SELECT pe.id,
                 pe.estado,
                 pe.repartidor_id,
+                pe.retirado_en,
                 pe.direccion_entrega,
                 pe.destino_latitud,
                 pe.destino_longitud,
@@ -468,16 +487,106 @@ const entregaPedido = async (req, res) => {
 };
 
 // ---------------------------------------------------------------------------
+// Retiro del pedido en el comercio (integracion con el front)
+// ---------------------------------------------------------------------------
+
+// PATCH /api/pedido/retiro/:idPedido
+// Body: { "retirado": true }   (false lo deshace)
+//
+// Lo marca el "Ya retire" del panel del repartidor. Antes ese dato vivia solo en el
+// navegador y viajaba como ?retirado= en la ruta, asi que el seguimiento del cliente no
+// lo conocia: le dibujaba la ruta derecho a su casa mientras el repartidor todavia iba
+// a buscar el pedido. Guardado en el pedido lo usan las dos rutas y sobrevive a un
+// reinicio del servidor.
+const retiroPedido = async (req, res) => {
+    let connection;
+    try {
+        const pedidoId = obtenerIdValido(req.params.idPedido);
+        if (pedidoId === null) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El id del pedido no es válido" }
+            });
+        }
+
+        const retirado = req.body?.retirado;
+        if (typeof retirado !== "boolean") {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "Mandá { \"retirado\": true } al retirar el pedido del comercio, o false para deshacerlo" }
+            });
+        }
+
+        connection = await database.getConnection();
+        await connection.beginTransaction();
+
+        const resultado = await registrarRetiroPedido(connection, {
+            pedidoId,
+            repartidorId: req.repartidorId,
+            retirado,
+            usuarioId: req.usuario.id
+        });
+
+        if (!resultado.registrado) {
+            await connection.rollback();
+
+            const error = await explicarRetiroRechazado(connection, pedidoId, req.repartidorId);
+            return res.status(error.codigo).json({
+                codigo: error.codigo,
+                estado: "error",
+                datos: { mensaje: error.mensaje }
+            });
+        }
+
+        await connection.commit();
+
+        // No hace falta avisarle a nadie: el proximo ping del repartidor ya recalcula la
+        // ruta del seguimiento sin el comercio (ver necesitaRefresco)
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                mensaje: retirado ? "Pedido retirado del comercio" : "Retiro deshecho",
+                pedido: {
+                    id: pedidoId,
+                    estado: "en_camino",
+                    retirado,
+                    retirado_en: resultado.retiradoEn
+                }
+            }
+        });
+
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+            }
+        }
+
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
+// ---------------------------------------------------------------------------
 // CU21 - Ver la ruta optimizada hacia el destino (semana 9)
 // ---------------------------------------------------------------------------
 
 // GET /api/pedido/ruta/:idPedido?retirado=true|false
 //
-// La ruta por defecto es "donde estoy -> comercio -> domicilio del cliente", con el
-// comercio como parada: cuando el repartidor acepta, el pedido pasa directo a
-// en_camino pero todavia NO retiro la mercaderia. Con ?retirado=true la ruta va
-// derecho al cliente; sin ese parametro, despues de pasar por el comercio la ruta lo
-// mandaria de vuelta a la tienda.
+// Mientras el repartidor no retiro el pedido (PATCH /pedido/retiro), la ruta es "donde
+// estoy -> comercio -> domicilio del cliente", con el comercio como parada: cuando el
+// repartidor acepta, el pedido pasa directo a en_camino pero todavia NO retiro la
+// mercaderia. Despues va derecho al cliente. ?retirado=true|false pide una de las dos
+// a mano, sin mirar lo que marco el repartidor.
 //
 // Sin transaccion: es una lectura, y ademas la llamada a Mapbox no puede quedar
 // adentro de una. Lo unico que escribe es el relleno perezoso de coordenadas, que es
@@ -544,7 +653,9 @@ const rutaPedido = async (req, res) => {
         }
 
         // Los query params siempre llegan como string: "false" a secas seria truthy
-        const retirado = req.query.retirado === 'true';
+        const retirado = req.query.retirado === undefined
+            ? pedido.retirado_en !== null
+            : req.query.retirado === 'true';
         const paradas = [];
 
         if (!retirado) {
@@ -632,5 +743,6 @@ module.exports = {
     listarPedidos,
     asignarPedido,
     entregaPedido,
+    retiroPedido,
     rutaPedido
 };

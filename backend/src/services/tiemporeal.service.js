@@ -274,6 +274,9 @@ const emitirUbicacionDePedido = async ({ pedidoId, ubicacionId, latitud, longitu
                 origen_datos: ruta.origenDatos
             }
             : null,
+        // Si ya retiro el pedido del comercio (PATCH /pedido/retiro): con el refresco
+        // que dispara el cambio, la ruta deja de pasar por la tienda
+        retirado: Boolean(pedido.retirado_en),
         emitido_en: new Date().toISOString()
     });
 };

@@ -6,7 +6,7 @@ import { SERVIDOR_URL, avisarSesionVencida, esErrorDeSesion, leerSesionGuardada 
 //
 // Se entra a la sala de un pedido con seguir_pedido y el servidor empuja:
 //   estado_actualizado    { pedido_id, estado, seguimiento_activo, mensaje, ocurrido_en }
-//   ubicacion_actualizada { pedido_id, ubicacion: { id, latitud, longitud }, eta, ruta, emitido_en }
+//   ubicacion_actualizada { pedido_id, ubicacion: { id, latitud, longitud }, eta, ruta, retirado, emitido_en }
 //
 // Devuelve la función que corta la suscripción.
 export function seguirPedidoEnVivo(pedidoId, { alCambiarEstado, alMoverse, alConectar, alError } = {}) {

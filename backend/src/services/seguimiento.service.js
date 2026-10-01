@@ -14,7 +14,11 @@
 // y por el mismo motivo: adentro puede haber una llamada de red a Mapbox, y una
 // llamada de red nunca tiene que correr con una transaccion abierta.
 
-const { obtenerUltimaUbicacionPedido, asegurarDestinoPedido } = require('./ubicacion.service');
+const {
+    obtenerUltimaUbicacionPedido,
+    asegurarDestinoPedido,
+    asegurarCoordenadasComercio
+} = require('./ubicacion.service');
 const { calcularRuta, distanciaHaversineKm, estimarMinutos } = require('./maps.service');
 
 // Mismo helper que maps.service.js: se resuelve en cada llamada y no al importar el
@@ -74,6 +78,7 @@ const buscarPedidoParaSeguimiento = async (conexion, pedidoId) => {
                 pe.destino_latitud,
                 pe.destino_longitud,
                 pe.distancia_km,
+                pe.retirado_en,
                 pe.created_at,
                 pe.updated_at,
                 cl.usuario_id AS usuario_cliente,
@@ -169,14 +174,45 @@ const armarEta = (minutos, calculadoEn, origenDatos) => ({
     origen_datos: origenDatos
 });
 
-// Se refresca contra Mapbox si no hay sesion (primer ping, o el servidor se reinicio),
-// si ya pasaron suficientes pings, o si paso suficiente tiempo.
+// La parada que le falta al repartidor antes de ir a la casa del cliente: el comercio,
+// mientras no marco que retiro el pedido (PATCH /pedido/retiro). Despues, null.
 //
-// Las dos condiciones son necesarias. Solo por pings: uno que pingea cada 30 segundos
-// tardaria 5 minutos en refrescar. Solo por tiempo: uno que pingea una vez por minuto
-// refrescaria en uno de cada dos pings.
-const necesitaRefresco = (sesion) => {
+// Tambien null si el comercio no se puede ubicar en el mapa: el ETA queda corto, pero
+// el seguimiento del cliente no se corta por eso.
+const paradaPendiente = async (pool, pedido) => {
+    if (pedido.retirado_en) {
+        return null;
+    }
+
+    return asegurarCoordenadasComercio(pool, {
+        id: pedido.comercio_id,
+        direccion: pedido.direccion_comercio,
+        latitud: pedido.comercio_latitud,
+        longitud: pedido.comercio_longitud
+    });
+};
+
+// Lo que falta recorrer en linea recta, pasando por la parada si todavia hay una. Es la
+// base del reescalado del ETA entre refrescos.
+const distanciaPendienteKm = (origen, parada, destino) =>
+    parada
+        ? distanciaHaversineKm(origen, parada) + distanciaHaversineKm(parada, destino)
+        : distanciaHaversineKm(origen, destino);
+
+// Se refresca contra Mapbox si no hay sesion (primer ping, o el servidor se reinicio),
+// si el repartidor marco o deshizo el retiro, si ya pasaron suficientes pings, o si
+// paso suficiente tiempo.
+//
+// Las dos ultimas condiciones son necesarias. Solo por pings: uno que pingea cada 30
+// segundos tardaria 5 minutos en refrescar. Solo por tiempo: uno que pingea una vez por
+// minuto refrescaria en uno de cada dos pings.
+const necesitaRefresco = (sesion, conParada) => {
     if (!sesion) {
+        return true;
+    }
+
+    // La ruta guardada pasa por el comercio y el repartidor ya lo retiro, o al reves
+    if (sesion.conParada !== conParada) {
         return true;
     }
 
@@ -197,19 +233,22 @@ const necesitaRefresco = (sesion) => {
 // contarPing distingue al repartidor moviendose del cliente mirando: solo el ping
 // gasta credito del contador de refresco. Si el cliente refrescara la pantalla diez
 // veces, no tendria por que disparar una llamada a Mapbox.
-const resolverEta = async (pool, { pedidoId, origen, destino, vehiculo, contarPing = false }) => {
+const resolverEta = async (pool, { pedidoId, origen, destino, parada = null, vehiculo, contarPing = false }) => {
     const sesion = sesiones.get(pedidoId);
+    const conParada = Boolean(parada);
 
-    if (necesitaRefresco(sesion)) {
-        // Sin paradas: a diferencia de CU21, que manda al repartidor a pasar por el
-        // comercio, aca la pregunta es "cuando me llega", no "que vuelta da el
-        // repartidor". El tramo que importa es el que falta hasta la puerta.
-        const ruta = await calcularRuta({ origen, destino, paradas: [], vehiculo });
+    if (necesitaRefresco(sesion, conParada)) {
+        // "Cuando me llega" incluye la vuelta por el comercio mientras el repartidor
+        // todavia no retiro el pedido: la ruta pasa por ahi, igual que la de CU21, y el
+        // mapa del cliente muestra el camino que de verdad va a hacer. Despues del
+        // retiro va derecho a la puerta.
+        const ruta = await calcularRuta({ origen, destino, paradas: conParada ? [parada] : [], vehiculo });
         const calculadoEn = new Date();
 
         const nueva = {
             destino,
             vehiculo,
+            conParada,
             ruta: {
                 distanciaKm: ruta.distanciaKm,
                 duracionMinutos: ruta.duracionMinutos,
@@ -217,7 +256,7 @@ const resolverEta = async (pool, { pedidoId, origen, destino, vehiculo, contarPi
                 origenDatos: ruta.origenDatos
             },
             origenRuta: origen,
-            distanciaOrigenRuta: distanciaHaversineKm(origen, destino),
+            distanciaOrigenRuta: distanciaPendienteKm(origen, parada, destino),
             calculadoEn,
             pings: contarPing ? 1 : 0
         };
@@ -235,7 +274,7 @@ const resolverEta = async (pool, { pedidoId, origen, destino, vehiculo, contarPi
         sesion.pings += 1;
     }
 
-    const restante = distanciaHaversineKm(origen, destino);
+    const restante = distanciaPendienteKm(origen, parada, destino);
     const fraccion = sesion.distanciaOrigenRuta > DISTANCIA_MINIMA_KM
         ? restante / sesion.distanciaOrigenRuta
         : 1;
@@ -270,6 +309,7 @@ const calcularEtaDePing = async (pool, { pedido, punto }) => {
         pedidoId: pedido.id,
         origen: punto,
         destino,
+        parada: await paradaPendiente(pool, pedido),
         vehiculo: pedido.tipo_vehiculo,
         contarPing: true
     });
@@ -284,7 +324,8 @@ const calcularEtaDePing = async (pool, { pedido, punto }) => {
 const aIso = (fecha) => (fecha instanceof Date ? fecha.toISOString() : fecha);
 
 // La parte variable del seguimiento: donde esta el repartidor, cuanto falta y por
-// donde va. Devuelve { seguimiento_activo, ubicacion, destino, eta, ruta, mensaje }.
+// donde va. Devuelve { seguimiento_activo, retirado, ubicacion, destino, eta, ruta,
+// mensaje }.
 //
 // Nunca falla por falta de datos. A diferencia de CU21, que le contesta 409 al
 // repartidor que no registro su ubicacion (porque el repartidor PUEDE arreglarlo
@@ -295,6 +336,8 @@ const armarSeguimiento = async (pool, pedido) => {
 
     const seguimiento = {
         seguimiento_activo: activo,
+        // Si el repartidor ya paso por el comercio: el mapa deja de mostrar la tienda
+        retirado: Boolean(pedido.retirado_en),
         ubicacion: null,
         destino: null,
         eta: null,
@@ -337,6 +380,7 @@ const armarSeguimiento = async (pool, pedido) => {
         pedidoId: pedido.id,
         origen: { latitud: ubicacion.latitud, longitud: ubicacion.longitud },
         destino: seguimiento.destino,
+        parada: await paradaPendiente(pool, pedido),
         vehiculo: pedido.tipo_vehiculo
     });
 

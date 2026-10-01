@@ -380,7 +380,7 @@ const ESTADOS_ENTREGA = ['en_camino', 'entregado', 'cancelado'];
 // seguimiento).
 const SELECT_ENTREGA = `
     SELECT pe.id, pe.estado, pe.direccion_entrega, pe.distancia_km, pe.tiempo_estimado,
-           pe.comision, pe.total, pe.motivo_cancelacion, pe.created_at, pe.updated_at,
+           pe.comision, pe.total, pe.motivo_cancelacion, pe.retirado_en, pe.created_at, pe.updated_at,
            co.nombre AS comercio, co.direccion AS direccion_comercio,
            uc.nombre AS cliente,
            (SELECT COALESCE(SUM(ip.cantidad), 0)

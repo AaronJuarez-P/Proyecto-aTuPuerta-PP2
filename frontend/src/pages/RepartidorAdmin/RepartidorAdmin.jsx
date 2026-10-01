@@ -5,6 +5,7 @@ import {
   enviarUbicacion,
   listarMisEntregas,
   listarPedidosDisponibles,
+  marcarRetiro,
   obtenerDisponibilidad,
   obtenerRuta,
   tomarPedido,
@@ -261,17 +262,11 @@ function PedidosDisponibles({ alTomar }) {
 
 function PedidoEnCurso({ pedido, alTerminar }) {
   const avisar = useAvisos()
-  const claveRetirado = `atupuerta:retirado:${pedido.id}`
 
-  // "Ya retiré" no lo guarda el backend (es solo el parámetro de la ruta): se recuerda
-  // en el navegador para que una recarga no vuelva a mandar al comercio
-  const [retirado, setRetirado] = useState(() => {
-    try {
-      return localStorage.getItem(claveRetirado) === 'si'
-    } catch {
-      return false
-    }
-  })
+  // "Ya retiré" queda guardado en el pedido: con eso la ruta del repartidor y el mapa
+  // del cliente dejan de pasar por el comercio
+  const [retirado, setRetirado] = useState(Boolean(pedido.retirado_en))
+  const [guardandoRetiro, setGuardandoRetiro] = useState(false)
   const [compartiendo, setCompartiendo] = useState(false)
   const [ultimoEnvio, setUltimoEnvio] = useState(null)
   const [errorUbicacion, setErrorUbicacion] = useState('')
@@ -365,17 +360,16 @@ function PedidoEnCurso({ pedido, alTerminar }) {
     setCompartiendo(true)
   }
 
-  function marcarRetirado(valor) {
-    setRetirado(valor)
+  async function marcarRetirado(valor) {
+    setGuardandoRetiro(true)
 
     try {
-      if (valor) {
-        localStorage.setItem(claveRetirado, 'si')
-      } else {
-        localStorage.removeItem(claveRetirado)
-      }
-    } catch {
-      // Sin localStorage solo se pierde el recordatorio al recargar
+      await marcarRetiro(pedido.id, valor)
+      setRetirado(valor)
+    } catch (error) {
+      avisar(error.message, 'error')
+    } finally {
+      setGuardandoRetiro(false)
     }
   }
 
@@ -426,11 +420,6 @@ function PedidoEnCurso({ pedido, alTerminar }) {
 
     try {
       await confirmarEntrega(pedido.id, { codigo, ...(ultimaPosicion.current ?? {}) })
-      try {
-        localStorage.removeItem(claveRetirado)
-      } catch {
-        // nada que limpiar
-      }
       avisar(`¡Entregado! Sumaste ${formatearPrecio(pedido.comision)}.`)
       alTerminar()
     } catch (error) {
@@ -485,7 +474,12 @@ function PedidoEnCurso({ pedido, alTerminar }) {
         <div className="en-curso-cuerpo">
           <div className="en-curso-controles">
             <label className="casilla">
-              <input type="checkbox" checked={retirado} onChange={(evento) => marcarRetirado(evento.target.checked)} />
+              <input
+                type="checkbox"
+                checked={retirado}
+                disabled={guardandoRetiro}
+                onChange={(evento) => marcarRetirado(evento.target.checked)}
+              />
               Ya retiré el pedido del comercio
             </label>
 

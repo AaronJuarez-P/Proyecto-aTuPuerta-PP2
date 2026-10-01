@@ -467,6 +467,14 @@ ALTER TABLE pedidos
   ADD INDEX idx_pedidos_cliente_fecha (cliente_id, created_at),
   ADD INDEX idx_pedidos_comercio_fecha (comercio_id, created_at);
 
+-- Integración del front. Cuándo retiró el repartidor el pedido del comercio
+-- (PATCH /api/pedido/retiro). El pedido pasa a en_camino al aceptarlo, antes de
+-- retirarlo, así que el estado solo no dice si todavía tiene que pasar por la
+-- tienda. Hasta que lo retira, la ruta del repartidor y la del seguimiento del
+-- cliente pasan por el comercio. NULL = todavía no lo retiró.
+ALTER TABLE pedidos
+  ADD COLUMN retirado_en TIMESTAMP NULL AFTER repartidor_id;
+
 -- =====================================================================
 -- DATOS DE PRUEBA
 -- Contraseña en texto plano para TODOS los usuarios de prueba: Test1234!
