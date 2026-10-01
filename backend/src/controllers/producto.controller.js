@@ -1,7 +1,7 @@
 const database = require('../database/database');
 const { registrarAuditoriaProducto } = require('../services/auditoria.service');
 const { obtenerPaginacion } = require('../utils/paginacion');
-const { obtenerIdValido, obtenerTextoQuery } = require('../utils/validacion');
+const { obtenerIdValido, obtenerTextoQuery, obtenerBooleanoQuery } = require('../utils/validacion');
 
 // La columna precio es DECIMAL(10,2), o sea que no entra un valor mas grande que este
 const PRECIO_MAXIMO = 99999999.99;
@@ -770,9 +770,108 @@ const obtenerAuditoriaProducto = async (req, res) => {
     }
 };
 
+// GET /api/comercio/productos
+//
+// El catalogo del propio comercio, para gestionarlo (integracion con el front). A
+// diferencia de GET /api/comercios/:id/productos, que es publico y muestra solo lo que
+// esta a la venta, incluye los productos dados de baja: sin esto el panel no podia
+// mostrarlos ni reactivarlos (PUT /api/productos/:id acepta activo).
+//
+// Filtros: buscar (nombre o descripcion), categoria, activo (true | false; sin el,
+// todos), pagina y limite. Devuelve ademas las categorias del comercio, que es lo que
+// el front usa para armar los filtros sin otra consulta.
+const listarProductosPropios = async (req, res) => {
+    try {
+        const buscar = obtenerTextoQuery(req.query.buscar);
+        const categoria = obtenerTextoQuery(req.query.categoria);
+        const activo = obtenerBooleanoQuery(req.query.activo);
+
+        if (buscar === null || categoria === null) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "Los filtros buscar y categoria tienen que ser texto" }
+            });
+        }
+
+        if (activo === null) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "activo tiene que ser true o false" }
+            });
+        }
+
+        const { limite, pagina, offset } = obtenerPaginacion(req.query);
+
+        // Los fragmentos de SQL salen de aca, nunca del request
+        const condiciones = ['comercio_id = ?'];
+        const parametros = [req.comercioId];
+
+        if (buscar !== '') {
+            condiciones.push('(nombre LIKE ? OR descripcion LIKE ?)');
+            parametros.push(`%${buscar}%`, `%${buscar}%`);
+        }
+
+        if (categoria !== '') {
+            condiciones.push('categoria = ?');
+            parametros.push(categoria);
+        }
+
+        if (activo !== undefined) {
+            condiciones.push('activo = ?');
+            parametros.push(activo);
+        }
+
+        const where = `WHERE ${condiciones.join(' AND ')}`;
+
+        const [total] = await database.query(
+            `SELECT COUNT(*) AS cantidad FROM productos ${where}`,
+            parametros
+        );
+
+        // Primero lo que esta a la venta, y dentro de cada grupo por nombre
+        const [productos] = await database.query(
+            `SELECT ${COLUMNAS_PRODUCTO}
+            FROM productos
+            ${where}
+            ORDER BY activo DESC, nombre ASC
+            LIMIT ? OFFSET ?`,
+            [...parametros, limite, offset]
+        );
+
+        const [categorias] = await database.query(
+            `SELECT DISTINCT categoria FROM productos WHERE comercio_id = ? ORDER BY categoria ASC`,
+            [req.comercioId]
+        );
+
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                productos: productos.map((producto) => ({
+                    ...producto,
+                    precio: Number(producto.precio),
+                    activo: Boolean(producto.activo)
+                })),
+                categorias: categorias.map((fila) => fila.categoria),
+                paginacion: { pagina, limite, total: total[0].cantidad }
+            }
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    }
+};
+
 module.exports = {
     buscarProductos,
     obtenerProducto,
+    listarProductosPropios,
     crearProducto,
     actualizarProducto,
     actualizarStock,

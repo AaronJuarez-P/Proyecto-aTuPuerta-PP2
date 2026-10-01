@@ -1,282 +1,141 @@
-import { useState } from 'react'
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
+import { Link } from 'react-router'
+import { listarPedidosAdmin, listarReclamosAdmin, listarUsuarios } from '../../api/admin'
+import { Cargando, EstadoBadge, MensajeError } from '../../components/Comunes/Comunes'
+import { useSesion } from '../../context/sesion'
+import { useCarga } from '../../hooks/useCarga'
+import { ESTADOS_PEDIDO } from '../../utils/estados'
+import { formatearFecha, formatearPrecio } from '../../utils/formato'
 import './Admin.css'
 
+// Tablero del administrador: los números de todo el sistema y lo que necesita atención
 export default function Admin() {
-  const usuarioGuardado = localStorage.getItem('usuario')
-  const usuario = usuarioGuardado
-    ? JSON.parse(usuarioGuardado)
-    : null
+  const { usuario } = useSesion()
 
-  if (!usuario) {
-    window.location.href = '/login'
-    return null
-  }
+  const { datos, cargando, error, recargar } = useCarga(async () => {
+    const [pedidos, reclamos, usuarios, sinAsignar] = await Promise.all([
+      listarPedidosAdmin({ activos: 'true', limite: 6 }),
+      listarReclamosAdmin({ limite: 1 }),
+      listarUsuarios({ limite: 1 }),
+      listarReclamosAdmin({ asignado: 'ninguno', estado: 'pendiente', limite: 5 }),
+    ])
 
-  if (usuario.rol !== 'administrador') {
-    window.location.href = '/'
-    return null
-  }
+    return { pedidos, reclamos, usuarios, sinAsignar }
+  }, [])
 
-  const pedidosGuardados = localStorage.getItem('pedidos')
-  const pedidosIniciales = pedidosGuardados
-    ? JSON.parse(pedidosGuardados)
-    : []
-
-  const usuariosGuardados = localStorage.getItem('usuarios')
-  const usuariosIniciales = usuariosGuardados
-    ? JSON.parse(usuariosGuardados)
-    : []
-
-  const [pedidos] = useState(pedidosIniciales)
-  const [usuarios] = useState(usuariosIniciales)
-
-  const pedidosPendientes = pedidos.filter(
-    (pedido) =>
-      pedido.estado !== 'entregado' &&
-      pedido.estado !== 'cancelado'
-  )
-
-  const pedidosEnCamino = pedidos.filter(
-    (pedido) => pedido.estado === 'en_camino'
-  )
-
-  const pedidosEntregados = pedidos.filter(
-    (pedido) => pedido.estado === 'entregado'
-  )
-
-  const estados = {
-    pendiente_pago: 'Esperando pago',
-    confirmado: 'Confirmado',
-    preparando: 'En preparación',
-    listo: 'Listo para retirar',
-    en_camino: 'En camino',
-    entregado: 'Entregado',
-    cancelado: 'Cancelado',
-  }
+  const resumenPedidos = datos?.pedidos.resumen_por_estado
+  const resumenReclamos = datos?.reclamos.resumen_por_estado
 
   return (
-    <>
-      <Header />
+    <main className="admin-page">
+      <section className="admin-container">
+        <header className="admin-header">
+          <div>
+            <p className="admin-label">Administración</p>
+            <h1>Panel de administrador</h1>
+            <p>Supervisá el funcionamiento general de ATuPuerta.</p>
+          </div>
+          <div className="admin-welcome">⚙️ {usuario.nombre}</div>
+        </header>
 
-      <main className="admin-page">
-        <section className="admin-container">
+        <MensajeError error={error} alReintentar={recargar} />
 
-          <header className="admin-header">
-            <div>
-              <p className="admin-label">
-                Administración
-              </p>
+        {cargando && !datos ? (
+          <Cargando />
+        ) : datos && (
+          <>
+            <section className="admin-stats">
+              <Link className="admin-stat" to="/admin/pedidos">
+                <span>Pedidos en total</span>
+                <strong>{resumenPedidos.total}</strong>
+              </Link>
+              <Link className="admin-stat" to="/admin/pedidos?activos=true">
+                <span>Pedidos activos</span>
+                <strong>{resumenPedidos.activos}</strong>
+              </Link>
+              <Link className="admin-stat" to="/admin/reclamos?estado=pendiente">
+                <span>Reclamos pendientes</span>
+                <strong>{resumenReclamos.pendiente}</strong>
+              </Link>
+              <Link className="admin-stat" to="/admin/usuarios">
+                <span>Usuarios</span>
+                <strong>{datos.usuarios.paginacion.total}</strong>
+              </Link>
+            </section>
 
-              <h1>Panel de administrador</h1>
-
-              <p>
-                Supervisá el funcionamiento general de ATuPuerta.
-              </p>
-            </div>
-
-            <div className="admin-welcome">
-              ⚙️ {usuario.nombre}
-            </div>
-          </header>
-
-          {/* ESTADÍSTICAS */}
-
-          <section className="admin-stats">
-
-            <div className="admin-stat">
-              <span>Total de pedidos</span>
-              <strong>{pedidos.length}</strong>
-            </div>
-
-            <div className="admin-stat">
-              <span>Pedidos activos</span>
-              <strong>{pedidosPendientes.length}</strong>
-            </div>
-
-            <div className="admin-stat">
-              <span>En camino</span>
-              <strong>{pedidosEnCamino.length}</strong>
-            </div>
-
-            <div className="admin-stat">
-              <span>Entregados</span>
-              <strong>{pedidosEntregados.length}</strong>
-            </div>
-
-          </section>
-
-          {/* PEDIDOS */}
-
-          <section className="admin-section">
-
-            <div className="admin-section-title">
-              <div>
-                <p className="admin-label">
-                  Supervisión
-                </p>
-
-                <h2>Pedidos</h2>
+            <section className="admin-section">
+              <div className="admin-section-title">
+                <div>
+                  <p className="admin-label">Supervisión</p>
+                  <h2>Pedidos por estado</h2>
+                </div>
               </div>
 
-              <span>{pedidos.length}</span>
-            </div>
-
-            {pedidos.length === 0 ? (
-              <div className="admin-empty">
-                <div>📦</div>
-                <h3>No hay pedidos</h3>
-                <p>
-                  Todavía no se registraron pedidos.
-                </p>
-              </div>
-            ) : (
-              <div className="admin-orders">
-
-                {[...pedidos].reverse().map((pedido) => (
-
-                  <article
-                    className="admin-order"
-                    key={pedido.id}
-                  >
-
-                    <div className="admin-order-main">
-
-                      <div>
-                        <span>Pedido</span>
-
-                        <h3>
-                          #{pedido.id}
-                        </h3>
-
-                        <small>
-                          {pedido.fecha}
-                        </small>
-                      </div>
-
-                      <span
-                        className={`admin-status ${pedido.estado}`}
-                      >
-                        {estados[pedido.estado] || pedido.estado}
-                      </span>
-
-                    </div>
-
-                    <div className="admin-order-info">
-
-                      <div>
-                        <span>Productos</span>
-                        <strong>
-                          {pedido.productos.reduce(
-                            (total, producto) =>
-                              total + producto.cantidad,
-                            0
-                          )}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <span>Dirección</span>
-                        <strong>
-                          {pedido.direccion}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <span>Total</span>
-                        <strong>
-                          ${pedido.total.toLocaleString('es-AR')}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <span>Repartidor</span>
-                        <strong>
-                          {pedido.repartidor || 'Sin asignar'}
-                        </strong>
-                      </div>
-
-                    </div>
-
-                  </article>
-
+              <div className="tablero">
+                {Object.entries(ESTADOS_PEDIDO).map(([estado, { etiqueta }]) => (
+                  <Link className="tablero-dato" key={estado} to={`/admin/pedidos?estado=${estado}`}>
+                    <span>{etiqueta}</span>
+                    <strong>{resumenPedidos[estado]}</strong>
+                  </Link>
                 ))}
-
               </div>
-            )}
+            </section>
 
-          </section>
-
-          {/* USUARIOS */}
-
-          <section className="admin-section">
-
-            <div className="admin-section-title">
-
-              <div>
-                <p className="admin-label">
-                  Sistema
-                </p>
-
-                <h2>Usuarios registrados</h2>
-              </div>
-
-              <span>{usuarios.length}</span>
-
-            </div>
-
-            {usuarios.length === 0 ? (
-              <div className="admin-empty">
-                <div>👥</div>
-
-                <h3>No hay usuarios registrados</h3>
-
-                <p>
-                  Los usuarios registrados aparecerán acá.
-                </p>
-              </div>
-            ) : (
-              <div className="admin-users">
-
-                {usuarios.map((item, index) => (
-
-                  <article
-                    className="admin-user"
-                    key={item.id || index}
-                  >
-
-                    <div className="admin-user-avatar">
-                      👤
-                    </div>
-
-                    <div className="admin-user-info">
-                      <strong>
-                        {item.nombre}
-                      </strong>
-
+            <div className="grilla-dos">
+              <section className="tarjeta">
+                <h2>Pedidos activos más recientes</h2>
+                {datos.pedidos.pedidos.length === 0 ? (
+                  <p className="texto-apagado">No hay pedidos activos.</p>
+                ) : (
+                  datos.pedidos.pedidos.map((pedido) => (
+                    <Link className="fila-tablero" key={pedido.id} to={`/admin/pedidos/${pedido.id}`}>
                       <span>
-                        {item.correo}
+                        <strong>#{pedido.id}</strong> {pedido.comercio} → {pedido.cliente}
+                        <small>{formatearFecha(pedido.created_at)} · {formatearPrecio(pedido.total)}</small>
                       </span>
-                    </div>
+                      <EstadoBadge estado={pedido.estado} />
+                    </Link>
+                  ))
+                )}
+                <div className="acciones">
+                  <Link className="boton boton-secundario" to="/admin/pedidos">Ver todos los pedidos →</Link>
+                </div>
+              </section>
 
-                    <span className="admin-user-role">
-                      {item.rol || 'cliente'}
-                    </span>
+              <section className="tarjeta">
+                <h2>Reclamos sin asignar</h2>
+                {datos.sinAsignar.reclamos.length === 0 ? (
+                  <p className="texto-apagado">No hay reclamos esperando que alguien los tome.</p>
+                ) : (
+                  datos.sinAsignar.reclamos.map((reclamo) => (
+                    <Link className="fila-tablero" key={reclamo.id} to={`/admin/reclamos/${reclamo.id}`}>
+                      <span>
+                        <strong>#{reclamo.id}</strong> {reclamo.usuario}
+                        <small>{formatearFecha(reclamo.created_at)}{reclamo.pedido_id ? ` · pedido #${reclamo.pedido_id}` : ''}</small>
+                      </span>
+                      <EstadoBadge tipo="reclamo" estado={reclamo.estado} />
+                    </Link>
+                  ))
+                )}
+                <div className="acciones">
+                  {/* La cola muestra primero los que esperan hace más: los nuevos pueden quedar afuera */}
+                  {datos.sinAsignar.paginacion.total > datos.sinAsignar.reclamos.length ? (
+                    <Link className="boton boton-secundario" to="/admin/reclamos?estado=pendiente&asignado=ninguno">
+                      Ver los {datos.sinAsignar.paginacion.total} sin asignar →
+                    </Link>
+                  ) : (
+                    <Link className="boton boton-secundario" to="/admin/reclamos">Ir a la cola de reclamos →</Link>
+                  )}
+                </div>
+              </section>
+            </div>
 
-                  </article>
-
-                ))}
-
-              </div>
-            )}
-
-          </section>
-
-        </section>
-      </main>
-
-      <Footer />
-    </>
+            <div className="acciones">
+              <Link className="boton boton-secundario" to="/admin/usuarios">👥 Usuarios</Link>
+              <Link className="boton boton-secundario" to="/admin/auditoria">🧾 Auditoría</Link>
+            </div>
+          </>
+        )}
+      </section>
+    </main>
   )
 }

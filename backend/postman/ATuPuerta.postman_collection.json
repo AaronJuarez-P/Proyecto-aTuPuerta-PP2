@@ -838,6 +838,21 @@
             ],
             "url": "{{baseUrl}}/productos/1/auditoria"
           }
+        },
+        {
+          "name": "Mis productos, incluidos los dados de baja",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_ferreteria}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/comercio/productos",
+            "description": "El catálogo del propio comercio para gestionarlo. Filtros: buscar, categoria, activo (true | false), pagina, limite. Devuelve también las categorias del comercio."
+          }
         }
       ]
     },
@@ -885,6 +900,35 @@
               }
             ],
             "url": "{{baseUrl}}/carrito/listar"
+          }
+        },
+        {
+          "name": "Cambiar la cantidad de un producto",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_maria}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/carrito/4",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cantidad\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "La cantidad NUEVA (mayor a 0), no un delta. Para sacar el producto se usa DELETE."
           }
         },
         {
@@ -1181,6 +1225,21 @@
               }
             },
             "description": "codigoPedido: el que el cliente ve en su notificación o en GET /pedidos/:id. latitud y longitud son opcionales."
+          }
+        },
+        {
+          "name": "Mis entregas (pedido en curso e historial)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{token_carlos}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/repartidor/entregas",
+            "description": "en_curso: el pedido en camino con direcciones, cliente, ítems y comisión (o null). entregas: historial paginado. resumen: entregas hechas y comisión ganada. Filtros: estado (en_camino | entregado | cancelado), pagina, limite."
           }
         }
       ]

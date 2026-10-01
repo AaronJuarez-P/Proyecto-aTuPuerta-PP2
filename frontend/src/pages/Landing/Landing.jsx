@@ -1,13 +1,12 @@
-import Header from '../../components/Header/Header'
-import Footer from '../../components/Footer/Footer'
+import { Link } from 'react-router'
 import './Landing.css'
 
 const categories = [
 
-  { icon: '🛒', title: 'Supermercados', description: 'Lo que necesitás para todos los días.', color: 'super' },
-  { icon: '📚', title: 'Librerías', description: 'Para estudiar, trabajar y crear.', color: 'books' },
-  { icon: '🔧', title: 'Ferreterías', description: 'Todo para ese próximo proyecto.', color: 'hardware' },
-  { icon: '👕', title: 'Ropa', description: 'Tu próximo favorito, cerca de casa.', color: 'clothes' },
+  { icon: '🛒', title: 'Supermercados', description: 'Lo que necesitás para todos los días.', color: 'super', categoria: 'Supermercado' },
+  { icon: '📚', title: 'Librerías', description: 'Para estudiar, trabajar y crear.', color: 'books', categoria: 'Librería' },
+  { icon: '🔧', title: 'Ferreterías', description: 'Todo para ese próximo proyecto.', color: 'hardware', categoria: 'Ferretería' },
+  { icon: '👕', title: 'Ropa', description: 'Tu próximo favorito, cerca de casa.', color: 'clothes', categoria: 'Indumentaria' },
 ]
 
 const steps = [
@@ -27,7 +26,6 @@ export default function Landing() {
   return (
     <>
       <a className="skip-link" href="#contenido">Saltar al contenido</a>
-      <Header />
       <main id="contenido">
         <section className="landing-hero" id="inicio" aria-labelledby="hero-title">
           <div className="hero-content">
@@ -35,8 +33,8 @@ export default function Landing() {
             <h1 id="hero-title">Delivery justo,<br /><em>a tu puerta</em></h1>
             <p className="hero-description">Pedí de supermercados, ferreterías, librerías y más — sin el sobrecosto de las apps tradicionales.</p>
             <div className="hero-actions">
-            <a className="button button-primary" href="/comercios">
-            <span aria-hidden="true">🛒</span> Explorá los rubros</a>
+            <Link className="button button-primary" to="/comercios">
+            <span aria-hidden="true">🛒</span> Explorá los rubros</Link>
               <a className="button button-outline" href="#como-funciona">¿Cómo funciona? <span aria-hidden="true">↓</span></a>
             </div>
           </div>
@@ -55,10 +53,10 @@ export default function Landing() {
           <p className="section-description">Una plataforma para comprar en comercios de distintos rubros.</p>
           <div className="category-grid">
             {categories.map(category => (
-              <article className={`category-card category-${category.color}`} key={category.title}>
+              <Link className={`category-card category-${category.color}`} key={category.title} to={`/comercios?categoria=${encodeURIComponent(category.categoria)}`}>
                 <div className="category-banner" aria-hidden="true">{category.icon}</div>
                 <div className="category-body"><h3>{category.title}</h3><p>{category.description}</p></div>
-              </article>
+              </Link>
             ))}
           </div>
         </section>
@@ -95,7 +93,6 @@ export default function Landing() {
           </div>
         </section>
       </main>
-      <Footer />
     </>
   )
 }

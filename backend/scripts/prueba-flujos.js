@@ -187,6 +187,13 @@ const main = async () => {
     await esperar("carrito con token de comercio", "GET", "/carrito/listar", { token: ferreteria }, 403);
     await esperar("agregar cuadernos", "POST", "/carrito/agregar", { token: maria, body: { id_producto: 4, cantidad: 2 } }, 201);
     await esperar("agregar martillo", "POST", "/carrito/agregar", { token: maria, body: { id_producto: 1, cantidad: 1 } }, 201);
+    await esperar("subir la cantidad de cuadernos", "PATCH", "/carrito/4", { token: maria, body: { cantidad: 3 } }, 200,
+        (datos) => datos.item.cantidad === 3);
+    await esperar("cantidad por encima del stock", "PATCH", "/carrito/4", { token: maria, body: { cantidad: 999 } }, 400);
+    await esperar("cantidad 0 no vale: sacar es DELETE", "PATCH", "/carrito/4", { token: maria, body: { cantidad: 0 } }, 400);
+    await esperar("un producto que no está en el carrito", "PATCH", "/carrito/5", { token: maria, body: { cantidad: 1 } }, 404);
+    await esperar("volver a 2 cuadernos", "PATCH", "/carrito/4", { token: maria, body: { cantidad: 2 } }, 200,
+        (datos) => datos.item.cantidad === 2);
     await esperar("confirmar: un pedido por comercio", "POST", "/carrito/confirmar", { token: maria }, 201,
         (datos) => datos.pedidos.length === 2 && datos.pedidos[0].pedidoId === 4 && datos.pedidos[1].pedidoId === 5);
     await esperar("nace en pago_espera", "GET", "/pedidos/5", { token: maria }, 200,
@@ -233,6 +240,13 @@ const main = async () => {
         (datos) => datos.pedido.estado === "en_camino");
     await esperar("codigo incorrecto", "PATCH", "/pedido/entrega/5", { token: lucia, body: { codigoPedido: "00000000" } }, 400);
     await esperar("entrega", "PATCH", "/pedido/entrega/5", { token: lucia, body: { codigoPedido: codigo } }, 200);
+    await esperar("las entregas de Lucía: sin pedido en curso y con la 5 entregada", "GET", "/repartidor/entregas", { token: lucia }, 200,
+        (datos) => datos.en_curso === null && datos.entregas.some((e) => e.id === 5 && e.estado === "entregado") &&
+                   datos.resumen.entregados === 1 && datos.resumen.comisiones > 0);
+    await esperar("el pedido en curso de Carlos trae las direcciones y los ítems", "GET", "/repartidor/entregas", { token: carlos }, 200,
+        (datos) => datos.en_curso?.id === 1 && datos.en_curso.direccion_entrega.includes("San Martín") &&
+                   datos.en_curso.items.length === 2 && typeof datos.en_curso.comision === "number");
+    await esperar("estado de entrega inventado", "GET", "/repartidor/entregas?estado=perdido", { token: lucia }, 400);
 
     // -----------------------------------------------------------------------
     seccion("Semana 12 - Historial y repeticion");
@@ -372,6 +386,11 @@ const main = async () => {
     seccion("Semana 13 - Trazabilidad");
     // -----------------------------------------------------------------------
     await esperar("cambio de precio", "PATCH", "/productos/1/precio", { token: ferreteria, body: { precio: 4600 } }, 200);
+    await esperar("catálogo de gestión del comercio, con sus categorías", "GET", "/comercio/productos", { token: ferreteria }, 200,
+        (datos) => datos.productos.length === 3 && datos.productos.every((p) => p.comercio_id === 1) &&
+                   datos.categorias.includes("Herramientas") && typeof datos.productos[0].precio === "number");
+    await esperar("filtro activo inválido", "GET", "/comercio/productos?activo=quizas", { token: ferreteria }, 400);
+    await esperar("un cliente no ve el catálogo de gestión", "GET", "/comercio/productos", { token: juan }, 403);
     await esperar("auditoria de productos del comercio", "GET", "/admin/auditoria/productos?comercioId=1", { token: admin }, 200,
         (datos) => datos.auditoria.length >= 1 && datos.auditoria[0].accion === "UPDATE" && datos.auditoria[0].usuario === "Ferretería Central");
     await esperar("auditoria del pedido 5", "GET", "/admin/auditoria/pedidos?pedidoId=5", { token: admin }, 200,
@@ -456,6 +475,14 @@ const main = async () => {
     await esperar("el stock vuelve", "GET", "/productos/4", {}, 200, (datos) => datos.producto.stock === 38);
     await esperar("aviso de pago rechazado", "GET", "/notificaciones", { token: maria }, 200,
         (datos) => datos.notificaciones.some((n) => n.tipo === "pago_rechazado"));
+
+    // Vuelta del navegador desde MercadoPago: con FRONT_URL redirige al pedido en el front,
+    // sin FRONT_URL contesta el JSON de siempre. Se acepta cualquiera de los dos.
+    const retorno = await fetch(`${BASE}/pagos/retorno?external_reference=8&status=rejected`, { redirect: "manual" });
+    const destinoRetorno = retorno.headers.get("location") || "";
+    verificar("vuelta de MercadoPago: JSON, o redirección al pedido en el front",
+        retorno.status === 200 || (retorno.status === 302 && destinoRetorno.endsWith("/pedidos/8?pago=rejected")),
+        `obtuvo ${retorno.status} ${destinoRetorno}`);
 
     // -----------------------------------------------------------------------
     seccion("Semana 14 - Limite de intentos (va ultimo: bloquea los logins un rato)");

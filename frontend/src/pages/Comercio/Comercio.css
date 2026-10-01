@@ -8,7 +8,8 @@
     background: var(--brand-light);
   }
   
-  .back-link {
+  /* Acotado: Checkout.css también define .back-link */
+  .comercio-header .back-link {
     display: block;
     width: min(1100px, 100%);
     margin: 0 auto 45px;
@@ -17,7 +18,7 @@
     text-decoration: none;
   }
   
-  .back-link:hover {
+  .comercio-header .back-link:hover {
     text-decoration: underline;
   }
   
@@ -77,6 +78,7 @@
   }
   
   .cart-indicator {
+    text-decoration: none;
     padding: 10px 16px;
     border-radius: 8px;
     background: var(--brand-light);
@@ -148,8 +150,35 @@
     cursor: pointer;
   }
   
-  .add-cart-button:hover {
+  .add-cart-button:hover:not(:disabled) {
     opacity: 0.9;
+  }
+
+  .add-cart-button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+
+  .producto-categoria {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--brand);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .producto-info .producto-stock {
+    min-height: 0;
+    margin: -8px 0 14px;
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .comercio-header .comercio-header-content p {
+    margin-top: 4px;
   }
   
   .comercio-not-found {

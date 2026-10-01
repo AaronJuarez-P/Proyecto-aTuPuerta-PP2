@@ -21,7 +21,8 @@
   margin-bottom: 42px;
 }
 
-.back-link {
+/* Acotado: Comercio.css también define .back-link */
+.checkout-title .back-link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -35,17 +36,8 @@
   transition: gap 0.2s ease;
 }
 
-.back-link:hover {
+.checkout-title .back-link:hover {
   gap: 12px;
-}
-
-.eyebrow {
-  margin-bottom: 8px;
-
-  color: var(--brand);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
 }
 
 .checkout-title h1 {
@@ -155,11 +147,12 @@
   gap: 22px;
 }
 
-.form-group {
+/* Acotado: Login.css también define .form-group */
+.checkout-form .form-group {
   margin: 0;
 }
 
-.form-group label {
+.checkout-form .form-group label {
   display: block;
   margin-bottom: 9px;
 
@@ -255,12 +248,6 @@
 /* =========================
    MÉTODOS DE PAGO
 ========================= */
-
-.payment-options {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-}
 
 .payment-option {
   display: flex;
@@ -655,6 +642,101 @@
   border: 1px solid var(--border);
   background: #ffffff;
   color: var(--brand);
+}
+
+/* =========================
+   INTEGRACIÓN CON EL BACKEND
+========================= */
+
+/* El header es fijo: las pantallas centradas necesitan lugar arriba */
+.checkout-page > .checkout-empty,
+.checkout-page > .order-success {
+  padding-top: 130px;
+}
+
+/* Pedidos que creó la confirmación, uno por comercio */
+.pedidos-creados {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(560px, 100%);
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.pedidos-creados li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.pedidos-creados li > div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pedidos-creados small {
+  color: var(--muted);
+}
+
+.pedidos-creados li > span {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* En success-actions todos los links son botones verdes; este también */
+.pedidos-creados .boton {
+  color: #ffffff;
+}
+
+/* El pago no se elige acá: la tarjeta solo informa */
+.pago-informativo {
+  cursor: default;
+}
+
+.pago-informativo:hover {
+  background: #ffffff;
+  border-color: #dce1e6;
+  transform: none;
+}
+
+.enlace-boton {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--brand);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.summary-comercio {
+  margin: 4px 0 6px;
+  color: #111827;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.checkout-errores {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-weight: 500;
+}
+
+.confirm-order-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* =========================

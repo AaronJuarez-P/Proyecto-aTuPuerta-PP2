@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
     agregarAlCarrito,
+    actualizarCantidadCarrito,
     listarProductosCarrito,
     eliminarProductoCarrito,
     confirmarCarrito
@@ -21,6 +22,9 @@ router.post('/carrito/agregar', soloCliente, agregarAlCarrito);
 
 // Listar productos del carrito
 router.get('/carrito/listar', soloCliente, listarProductosCarrito);
+
+// Cambiar la cantidad de un producto que ya está en el carrito (los botones +/- del front)
+router.patch('/carrito/:id_producto', soloCliente, actualizarCantidadCarrito);
 
 // Quitar producto del carrito
 router.delete('/carrito/:id_producto', soloCliente, eliminarProductoCarrito);

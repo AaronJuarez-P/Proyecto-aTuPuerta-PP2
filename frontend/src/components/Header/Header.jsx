@@ -1,277 +1,139 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { Link, NavLink, useNavigate } from 'react-router'
+import { useCarrito } from '../../context/carrito'
+import { useNotificaciones } from '../../context/notificaciones'
+import { useSesion } from '../../context/sesion'
+import { etiquetaDelRol } from '../../utils/roles'
 import './Header.css'
 
+// Qué ve cada rol en la barra. La sesión es una sola por cuenta (usuarios.rol en el
+// backend), así que la navegación sigue al rol con el que se entró.
+const NAVEGACION = {
+  anonimo: [
+    { a: '/comercios', texto: 'Comercios' },
+    { a: '/#como-funciona', texto: 'Cómo funciona' },
+  ],
+  cliente: [
+    { a: '/comercios', texto: 'Comercios' },
+    { a: '/pedidos', texto: 'Mis pedidos' },
+    { a: '/reclamos', texto: 'Reclamos' },
+  ],
+  comercio: [
+    { a: '/comercio', texto: 'Pedidos y ventas', exacto: true },
+    { a: '/comercio/productos', texto: 'Productos' },
+    { a: '/reclamos', texto: 'Reclamos' },
+  ],
+  repartidor: [
+    { a: '/repartidor', texto: 'Mis entregas' },
+    { a: '/reclamos', texto: 'Reclamos' },
+  ],
+  administrador: [
+    { a: '/admin', texto: 'Panel', exacto: true },
+    { a: '/admin/pedidos', texto: 'Pedidos' },
+    { a: '/admin/usuarios', texto: 'Usuarios' },
+    { a: '/admin/reclamos', texto: 'Reclamos' },
+    { a: '/admin/auditoria', texto: 'Auditoría' },
+  ],
+}
+
 export default function Header() {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [cantidadCarrito, setCantidadCarrito] = useState(0)
+  const [menuAbierto, setMenuAbierto] = useState(false)
+  const { usuario, salir } = useSesion()
+  const { cantidad: cantidadCarrito } = useCarrito()
+  const { noLeidas } = useNotificaciones()
+  const navigate = useNavigate()
 
-  const esPaginaSimple = [
-    '/checkout',
-    '/carrito',
-    '/perfil'
-  ].includes(window.location.pathname)
+  const cerrarMenu = () => setMenuAbierto(false)
 
-  const usuarioGuardado = localStorage.getItem('usuario')
-
-  const usuario = usuarioGuardado
-    ? JSON.parse(usuarioGuardado)
-    : null
-
-  useEffect(() => {
-    function actualizarCantidad() {
-      const carritoGuardado =
-        JSON.parse(localStorage.getItem('carrito')) || []
-
-      const cantidad = carritoGuardado.reduce(
-        (total, producto) => total + producto.cantidad,
-        0
-      )
-
-      setCantidadCarrito(cantidad)
-    }
-
-    actualizarCantidad()
-
-    window.addEventListener('storage', actualizarCantidad)
-
-    return () => {
-      window.removeEventListener('storage', actualizarCantidad)
-    }
-  }, [])
-
-  function cerrarSesion() {
-    localStorage.removeItem('token')
-    localStorage.removeItem('usuario')
-
-    window.location.href = '/'
+  // Primero se sale de la ruta actual: si es protegida y la sesión se borrara antes, la
+  // ruta mandaría al login en vez de al inicio
+  async function cerrarSesion() {
+    cerrarMenu()
+    navigate('/')
+    await salir()
   }
+
+  const enlaces = (NAVEGACION[usuario?.rol] ?? NAVEGACION.anonimo).map(({ a, texto, exacto }) => (
+    <NavLink key={a} to={a} end={exacto} onClick={cerrarMenu}>
+      {texto}
+    </NavLink>
+  ))
+
+  const acciones = usuario ? (
+    <>
+      <Link to="/notificaciones" className="cart-link" onClick={cerrarMenu} aria-label={noLeidas > 0 ? `Notificaciones: ${noLeidas} sin leer` : 'Notificaciones'}>
+        🔔
+        {noLeidas > 0 && <span className="cart-counter campanita-contador">{noLeidas > 99 ? '99+' : noLeidas}</span>}
+      </Link>
+
+      {usuario.rol === 'cliente' && (
+        <Link to="/carrito" className="cart-link" onClick={cerrarMenu}>
+          🛒 Carrito
+          {cantidadCarrito > 0 && (
+            <span className="cart-counter" aria-label={`${cantidadCarrito} productos`}>
+              {cantidadCarrito}
+            </span>
+          )}
+        </Link>
+      )}
+
+      <Link to="/perfil" className="profile-button" onClick={cerrarMenu}>
+        👤 {usuario.nombre}
+        {usuario.rol !== 'cliente' && (
+          <span className="rol-sesion">{etiquetaDelRol(usuario.rol)}</span>
+        )}
+      </Link>
+
+      <button type="button" className="logout-button" onClick={cerrarSesion}>
+        Cerrar sesión
+      </button>
+    </>
+  ) : (
+    <>
+      <Link to="/registro" onClick={cerrarMenu}>
+        Registrarse
+      </Link>
+
+      <Link className="nav-cta" to="/login" onClick={cerrarMenu}>
+        Iniciar sesión
+        <span aria-hidden="true">↗</span>
+      </Link>
+    </>
+  )
 
   return (
     <header className="site-header">
       <div className="header-inner">
+        <nav className="header-left" aria-label="Principal">
+          {enlaces}
+        </nav>
 
-        {/* ============================= */}
-        {/* IZQUIERDA                     */}
-        {/* ============================= */}
-
-        <div className="header-left">
-
-          {!esPaginaSimple && (
-            <>
-              <a
-                href="/comercios"
-                onClick={() => setMenuOpen(false)}
-              >
-                Comercios
-              </a>
-
-              <a
-                href="/#como-funciona"
-                onClick={() => setMenuOpen(false)}
-              >
-                Cómo funciona
-              </a>
-            </>
-          )}
-
-        </div>
-
-        {/* ============================= */}
-        {/* LOGO                           */}
-        {/* ============================= */}
-
-        <a
-          className="brand"
-          href="/"
-          aria-label="ATuPuerta, volver al inicio"
-        >
-          <span aria-hidden="true">
-            🚪
-          </span>
-
+        <Link className="brand" to="/" aria-label="ATuPuerta, volver al inicio" onClick={cerrarMenu}>
+          <span aria-hidden="true">🚪</span>
           ATuPuerta
-        </a>
+        </Link>
 
-        {/* ============================= */}
-        {/* DERECHA                        */}
-        {/* ============================= */}
-
-        <div className="header-right">
-
-          {usuario ? (
-            <>
-              {/* ========================= */}
-              {/* CARRITO                    */}
-              {/* ========================= */}
-
-              <a
-                href="/carrito"
-                className="cart-link"
-                onClick={() => setMenuOpen(false)}
-              >
-                🛒 Carrito
-
-                {cantidadCarrito > 0 && (
-                  <span className="cart-counter">
-                    {cantidadCarrito}
-                  </span>
-                )}
-              </a>
-
-              {/* ========================= */}
-              {/* USUARIO                    */}
-              {/* ========================= */}
-
-              {esPaginaSimple ? (
-                <a
-                  href="/perfil"
-                  className="profile-button"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  👤 Mi perfil
-                </a>
-              ) : (
-                <a
-                  href="/perfil"
-                  className="profile-button"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  👤 {usuario.nombre}
-                </a>
-              )}
-
-              {/* ========================= */}
-              {/* PANELES                    */}
-              {/* ========================= */}
-
-              {!esPaginaSimple && (
-                <>
-                  {usuario.rol === 'comercio' && (
-                    <a
-                      href="/comercio-admin"
-                      className="profile-button"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Panel de comercio
-                    </a>
-                  )}
-
-                  {usuario.rol === 'repartidor' && (
-                    <a
-                      href="/repartidor-admin"
-                      className="profile-button"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Panel de repartidor
-                    </a>
-                  )}
-
-                  {usuario.rol === 'administrador' && (
-                    <a
-                      href="/admin"
-                      className="profile-button"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Panel de administrador
-                    </a>
-                  )}
-                </>
-              )}
-
-              {/* ========================= */}
-              {/* CERRAR SESIÓN              */}
-              {/* ========================= */}
-
-              <button
-                className="logout-button"
-                onClick={cerrarSesion}
-              >
-                Cerrar sesión
-              </button>
-            </>
-          ) : (
-            !esPaginaSimple && (
-              <a
-                className="nav-cta"
-                href="/login"
-                onClick={() => setMenuOpen(false)}
-              >
-                Iniciar sesión
-                <span aria-hidden="true">↗</span>
-              </a>
-            )
-          )}
-
-        </div>
-
-        {/* ============================= */}
-        {/* MENÚ MOBILE                   */}
-        {/* ============================= */}
+        <div className="header-right">{acciones}</div>
 
         <button
           className="menu-toggle"
           type="button"
-          aria-expanded={menuOpen}
+          aria-expanded={menuAbierto}
           aria-controls="main-navigation"
-          onClick={() => setMenuOpen(!menuOpen)}
+          onClick={() => setMenuAbierto(!menuAbierto)}
         >
-          {menuOpen ? 'Cerrar menú' : 'Menú'}
-
-          <span aria-hidden="true">
-            {menuOpen ? '×' : '☰'}
-          </span>
+          {menuAbierto ? 'Cerrar menú' : 'Menú'}
+          <span aria-hidden="true">{menuAbierto ? '×' : '☰'}</span>
         </button>
-
       </div>
 
-      {/* Navegación mobile */}
       <nav
         id="main-navigation"
-        className={`main-navigation ${
-          menuOpen ? 'is-open' : ''
-        }`}
+        className={`main-navigation ${menuAbierto ? 'is-open' : ''}`}
+        aria-label="Menú"
       >
-        {!esPaginaSimple && (
-          <>
-            <a
-              href="/comercios"
-              onClick={() => setMenuOpen(false)}
-            >
-              Comercios
-            </a>
-
-            <a
-              href="/#como-funciona"
-              onClick={() => setMenuOpen(false)}
-            >
-              Cómo funciona
-            </a>
-          </>
-        )}
-
-        {usuario && (
-          <>
-            <a
-              href="/carrito"
-              onClick={() => setMenuOpen(false)}
-            >
-              🛒 Carrito
-            </a>
-
-            <a
-              href="/perfil"
-              onClick={() => setMenuOpen(false)}
-            >
-              👤 {esPaginaSimple ? 'Mi perfil' : usuario.nombre}
-            </a>
-
-            <button
-              onClick={cerrarSesion}
-            >
-              Cerrar sesión
-            </button>
-          </>
-        )}
+        {enlaces}
+        {acciones}
       </nav>
     </header>
   )

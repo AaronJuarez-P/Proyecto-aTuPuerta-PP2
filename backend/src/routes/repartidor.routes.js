@@ -3,6 +3,7 @@ const router = express.Router();
 const {
     consultarDisponibilidad,
     cambiarDisponibilidad,
+    listarMisEntregas,
     registrarUbicacionRepartidor,
     obtenerPerfilRepartidor,
     actualizarPerfilRepartidor
@@ -17,6 +18,10 @@ const soloRepartidor = [verificarToken, verificarRol('repartidor'), resolverRepa
 // Disponibilidad del repartidor: si puede tomar pedidos nuevos (semana 8)
 router.get('/repartidor/disponibilidad', soloRepartidor, consultarDisponibilidad);
 router.patch('/repartidor/disponibilidad', soloRepartidor, cambiarDisponibilidad);
+
+// El pedido en curso con todo lo del reparto y el historial de entregas, con la comision
+// ganada (integracion con el front: la disponibilidad solo devuelve el id del pedido)
+router.get('/repartidor/entregas', soloRepartidor, listarMisEntregas);
 
 // CU21 - Registrar la posicion actual del repartidor (semana 9)
 router.post('/repartidor/ubicacion', soloRepartidor, registrarUbicacionRepartidor);

@@ -6,7 +6,8 @@ const {
 } = require('../services/repartidor.service');
 const { registrarUbicacion } = require('../services/ubicacion.service');
 const { emitirUbicacionDePedido } = require('../services/tiemporeal.service');
-const { obtenerLatitudValida, obtenerLongitudValida, obtenerTextoValido } = require('../utils/validacion');
+const { obtenerLatitudValida, obtenerLongitudValida, obtenerTextoValido, obtenerTextoQuery } = require('../utils/validacion');
+const { obtenerPaginacion } = require('../utils/paginacion');
 
 // El ENUM de repartidores.tipo_vehiculo
 const TIPOS_VEHICULO = ['moto', 'bicicleta', 'auto', 'otro'];
@@ -368,9 +369,138 @@ const actualizarPerfilRepartidor = async (req, res) => {
     }
 };
 
+// ---------------------------------------------------------------------------
+// Mis entregas (integracion con el front)
+// ---------------------------------------------------------------------------
+
+const ESTADOS_ENTREGA = ['en_camino', 'entregado', 'cancelado'];
+
+// Las columnas que el repartidor necesita para hacer el reparto. El telefono y el email
+// del cliente no van: lo que no hace falta no se expone (mismo criterio que el
+// seguimiento).
+const SELECT_ENTREGA = `
+    SELECT pe.id, pe.estado, pe.direccion_entrega, pe.distancia_km, pe.tiempo_estimado,
+           pe.comision, pe.total, pe.motivo_cancelacion, pe.created_at, pe.updated_at,
+           co.nombre AS comercio, co.direccion AS direccion_comercio,
+           uc.nombre AS cliente,
+           (SELECT COALESCE(SUM(ip.cantidad), 0)
+            FROM items_pedido ip
+            WHERE ip.pedido_id = pe.id) AS cantidad_productos
+    FROM pedidos pe
+    INNER JOIN comercios co ON co.id = pe.comercio_id
+    INNER JOIN clientes cl ON cl.id = pe.cliente_id
+    INNER JOIN usuarios uc ON uc.id = cl.usuario_id`;
+
+// mysql2 devuelve DECIMAL y SUM como string
+const normalizarEntrega = (entrega) => ({
+    ...entrega,
+    distancia_km: Number(entrega.distancia_km),
+    comision: Number(entrega.comision),
+    total: Number(entrega.total),
+    cantidad_productos: Number(entrega.cantidad_productos)
+});
+
+// GET /api/repartidor/entregas
+//
+// Los pedidos del repartidor autenticado. Hacia falta para el panel del front: la
+// disponibilidad solo devuelve el id del pedido en curso, y las direcciones venian
+// unicamente en la ruta, que da 409 mientras el repartidor no mando su ubicacion. Asi,
+// al recargar la pagina el repartidor no tenia como saber a donde iba.
+//
+// - en_curso: el pedido en camino con todo lo del reparto, incluidos los items (para
+//   controlar lo que retira), o null.
+// - entregas: el historial paginado. Filtros: estado (en_camino | entregado |
+//   cancelado), pagina y limite.
+// - resumen: entregas hechas y comision ganada, sobre todos sus pedidos.
+const listarMisEntregas = async (req, res) => {
+    try {
+        const estado = obtenerTextoQuery(req.query.estado);
+
+        if (estado === null || (estado !== '' && !ESTADOS_ENTREGA.includes(estado))) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: `El estado tiene que ser uno de: ${ESTADOS_ENTREGA.join(', ')}` }
+            });
+        }
+
+        const { limite, pagina, offset } = obtenerPaginacion(req.query);
+
+        const condiciones = ['pe.repartidor_id = ?'];
+        const parametros = [req.repartidorId];
+
+        if (estado !== '') {
+            condiciones.push('pe.estado = ?');
+            parametros.push(estado);
+        }
+
+        const where = `WHERE ${condiciones.join(' AND ')}`;
+
+        const [total] = await database.query(
+            `SELECT COUNT(*) AS cantidad FROM pedidos pe ${where}`,
+            parametros
+        );
+
+        const [entregas] = await database.query(
+            `${SELECT_ENTREGA}
+             ${where}
+             ORDER BY pe.updated_at DESC, pe.id DESC
+             LIMIT ? OFFSET ?`,
+            [...parametros, limite, offset]
+        );
+
+        const pedidoEnCurso = await buscarPedidoEnCurso(database, req.repartidorId);
+        let enCurso = null;
+
+        if (pedidoEnCurso) {
+            const [filas] = await database.query(`${SELECT_ENTREGA} WHERE pe.id = ?`, [pedidoEnCurso]);
+            const [items] = await database.query(
+                `SELECT ip.producto_id, p.nombre, ip.cantidad
+                 FROM items_pedido ip
+                 INNER JOIN productos p ON p.id = ip.producto_id
+                 WHERE ip.pedido_id = ?
+                 ORDER BY p.nombre ASC`,
+                [pedidoEnCurso]
+            );
+
+            enCurso = { ...normalizarEntrega(filas[0]), items };
+        }
+
+        const [resumen] = await database.query(
+            `SELECT COALESCE(SUM(estado = 'entregado'), 0) AS entregados,
+                    COALESCE(SUM(CASE WHEN estado = 'entregado' THEN comision ELSE 0 END), 0) AS comisiones
+             FROM pedidos
+             WHERE repartidor_id = ?`,
+            [req.repartidorId]
+        );
+
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                en_curso: enCurso,
+                entregas: entregas.map(normalizarEntrega),
+                resumen: {
+                    entregados: Number(resumen[0].entregados),
+                    comisiones: Number(resumen[0].comisiones)
+                },
+                paginacion: { pagina, limite, total: total[0].cantidad }
+            }
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    }
+};
+
 module.exports = {
     consultarDisponibilidad,
     cambiarDisponibilidad,
+    listarMisEntregas,
     registrarUbicacionRepartidor,
     obtenerPerfilRepartidor,
     actualizarPerfilRepartidor

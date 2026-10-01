@@ -146,6 +146,7 @@ MP_MODO=mock
 MP_ACCESS_TOKEN=
 MP_WEBHOOK_SECRET=
 URL_PUBLICA=http://localhost:4000
+FRONT_URL=http://localhost:5173
 
 MAPS_MODO=mock
 MAPS_ACCESS_TOKEN=
@@ -195,6 +196,7 @@ TRUST_PROXY=
 | `MP_ACCESS_TOKEN` | Access token de prueba de la aplicación (empieza con `TEST-`). Solo con `MP_MODO=sandbox` |
 | `MP_WEBHOOK_SECRET` | Clave con la que MercadoPago firma las notificaciones. Es lo que autentica el webhook |
 | `URL_PUBLICA` | URL desde la que se llega al backend. Con `sandbox` tiene que ser la de ngrok, porque MercadoPago necesita alcanzar el webhook desde afuera |
+| `FRONT_URL` | URL del front. Al volver de MercadoPago, `GET /api/pagos/retorno` redirige al detalle del pedido ahí. Vacía, contesta un JSON |
 
 Para desarrollo y para la defensa alcanza con `MP_MODO=mock`: no hace falta cuenta,
 credenciales ni ngrok. Las credenciales de prueba de MercadoPago tampoco cuestan nada
@@ -382,6 +384,7 @@ rol que viene adentro del token.
 | `PATCH` | `/api/productos/:id/precio` | Actualiza precio. Body: `{ precio }` |
 | `DELETE` | `/api/productos/:id` | Baja lógica (`activo = FALSE`) |
 | `GET` | `/api/productos/:id/auditoria` | Historial de cambios del producto |
+| `GET` | `/api/comercio/productos` | Los productos propios, **incluidos los dados de baja**, para gestionarlos. Filtros: `buscar`, `categoria`, `activo`, `pagina`, `limite`. Trae también `categorias` |
 
 Cadena de middlewares: `verificarToken` → `verificarRol('comercio')` → `resolverComercio`.
 
@@ -389,12 +392,38 @@ Cadena de middlewares: `verificarToken` → `verificarRol('comercio')` → `reso
   se acepta desde la semana 14).
 - El `comercio_id` sale siempre del token, nunca del body: un comercio no puede crear
   ni modificar productos de otro (`403`).
+- `GET /api/comercio/productos` es de la integración con el front: el catálogo público
+  (`/api/comercios/:id/productos`) muestra solo lo que está a la venta, así que el panel no
+  tenía cómo mostrar un producto dado de baja ni reactivarlo (`PUT` con `activo: true`).
 - Cada escritura corre dentro de una transacción junto con su fila en
   `auditoria_productos` (`INSERT` / `UPDATE` / `DELETE`, con el `usuario_id` del actor).
 - El borrado es lógico porque `items_pedido.producto_id` es `ON DELETE RESTRICT` y
   `auditoria_productos.producto_id` es `ON DELETE CASCADE`.
 
 Los casos de prueba de cada endpoint están en `postman/backend-productos.js`.
+
+### Carrito — CU05, CU06 (rol `cliente`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/api/carrito/agregar` | Suma un producto. Body: `{ id_producto, cantidad }`. Si ya estaba, se suma a lo que había |
+| `GET` | `/api/carrito/listar` | El carrito agrupado por comercio, con `subtotal_comercio`, `total_general` y `direccion_entrega_default` |
+| `PATCH` | `/api/carrito/:id_producto` | Cambia la cantidad de un producto que ya está en el carrito. Body: `{ cantidad }`, la nueva y mayor a 0 |
+| `DELETE` | `/api/carrito/:id_producto` | Saca el producto del carrito |
+| `POST` | `/api/carrito/confirmar` | Crea un pedido por comercio, descuenta el stock y vacía el carrito. Body opcional: `{ direccion_entrega }` |
+
+- **Un pedido por comercio.** Cada comercio prepara y despacha lo suyo, así que el carrito se
+  parte al confirmar: la respuesta trae `pedidos`, uno por comercio, con su distancia y su
+  tiempo estimado. Cada pedido nace en `pago_espera` y se paga por separado.
+- **`direccion_entrega` en confirmar** es para una entrega suelta en otra dirección: se
+  geocodifica pero no pisa la del perfil. Sin ella se usa la del perfil del cliente.
+- **El stock se valida al agregar, al cambiar la cantidad y al confirmar**, siempre con el
+  producto lockeado (`FOR UPDATE`). `listar` marca `disponible: false` lo que ya no se puede
+  comprar (producto o comercio dado de baja, o stock que no alcanza): no suma al total, y
+  confirmar con algo así contesta `409` con la lista en `datos.errores`.
+- **`PATCH` es de la integración con el front.** Agregar suma, así que sin él bajar una
+  cantidad obligaba a sacar el producto entero. Cantidad 0 no vale a propósito: sacar un
+  producto es `DELETE`, siempre una acción explícita.
 
 ### Pagos — CU07 (rol `cliente`)
 
@@ -403,7 +432,7 @@ Los casos de prueba de cada endpoint están en `postman/backend-productos.js`.
 | `POST` | `/api/pedidos/:id/pagar` | Registra el intento de pago y devuelve la URL de MercadoPago |
 | `GET` | `/api/pedidos/:id/pago` | Estado del pago del pedido propio |
 | `POST` | `/api/pagos/webhook` | Notificación de MercadoPago. **Público** |
-| `GET` | `/api/pagos/retorno` | Vuelta del navegador después de pagar (`back_urls`) |
+| `GET` | `/api/pagos/retorno` | Vuelta del navegador después de pagar (`back_urls`). Con `FRONT_URL` redirige a `FRONT_URL/pedidos/:id?pago=<status>` |
 | `POST` | `/api/pagos/simular` | Fuerza un resultado. Solo con `MP_MODO=mock` |
 
 Flujo: `confirmarCarrito` deja el pedido en `pago_espera` → `POST /pedidos/:id/pagar`
@@ -451,6 +480,7 @@ Los casos de prueba están en `postman/backend-pagos.js`.
 | `PATCH` | `/api/pedido/entrega/:idPedido` | Confirma la entrega. Body: `{ codigoPedido }` y, opcional, `{ latitud, longitud }` |
 | `GET` | `/api/repartidor/disponibilidad` | `{ disponible, pedido_en_curso }` |
 | `PATCH` | `/api/repartidor/disponibilidad` | Entrar o salir de servicio. Body: `{ disponible }` |
+| `GET` | `/api/repartidor/entregas` | `en_curso` (el pedido en camino con direcciones, cliente, ítems y comisión), el historial paginado y `resumen` (entregas y comisión ganada). Filtros: `estado`, `pagina`, `limite` |
 
 Cadena de middlewares: `verificarToken` → `verificarRol('repartidor')` → `resolverRepartidor`
 (busca el repartidor en la base y exige que el usuario siga activo).
@@ -479,6 +509,10 @@ con ese código y vuelve a quedar disponible.
 - **Transacción completa.** Asignar, cambiar la disponibilidad, auditar en
   `auditoria_pedidos` (con el `usuario_id` del repartidor) y notificar al cliente se
   confirman juntos o se revierten juntos.
+- **`/repartidor/entregas` es de la integración con el front.** La disponibilidad devuelve
+  solo el id del pedido en curso y las direcciones venían únicamente en la ruta, que da `409`
+  mientras el repartidor no mandó su ubicación: al recargar la página no tenía cómo saber a
+  dónde iba. No expone el teléfono ni el email del cliente.
 - **Errores precisos en el camino de error.** Cuando el `UPDATE` condicional no afecta
   filas, se consulta el pedido para responder `404` (no existe), `403` (es de otro
   repartidor), `409` (estado que no corresponde) o `400` (código incorrecto). Para la
