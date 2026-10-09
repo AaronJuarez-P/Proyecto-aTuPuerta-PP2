@@ -50,7 +50,7 @@ export default function AdminUsuarios() {
           <div>
             <p className="admin-label">Gestión</p>
             <h1>Usuarios</h1>
-            <p>Las cuentas de la plataforma con sus perfiles. Desde acá se suspenden, se reactivan y se dan de baja.</p>
+            <p>Las cuentas de la plataforma con sus perfiles. Desde acá se suspenden, se reactivan y se eliminan definitivamente.</p>
           </div>
           <button type="button" className="boton boton-primario" onClick={() => setCreando(true)}>
             + Nuevo usuario

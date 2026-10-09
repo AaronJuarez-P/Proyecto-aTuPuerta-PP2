@@ -17,7 +17,7 @@ const {
     buscarPedidosEnCurso,
     describirPedidosEnCurso,
     esUltimoAdministradorActivo,
-    darDeBajaCuenta
+    eliminarCuentaDefinitivamente
 } = require('../services/usuario.service');
 const { enviarNotificaciones } = require('./notificaciones.controller');
 
@@ -583,10 +583,9 @@ const cambiarEstadoUsuario = async (req, res) => {
 
 // DELETE /api/admin/usuarios/:id
 //
-// Baja logica (ver darDeBajaCuenta en usuario.service.js): ademas de desactivar la
-// cuenta, saca el comercio del catalogo, deja al repartidor fuera de servicio, cancela
-// los pedidos que el cliente nunca pago y borra sus suscripciones push. Se puede
-// revertir la cuenta con PATCH .../estado, pero el comercio hay que reactivarlo aparte.
+// Eliminacion definitiva (ver eliminarCuentaDefinitivamente en usuario.service.js):
+// elimina pedidos e historial propios, devuelve el stock de pedidos sin pagar y borra
+// la cuenta y sus perfiles. Las suspensiones reversibles se gestionan con PATCH .../estado.
 const darDeBajaUsuario = async (req, res) => {
     let connection;
     try {
@@ -616,11 +615,11 @@ const darDeBajaUsuario = async (req, res) => {
             return responderError(res, impedimento.codigo, impedimento.mensaje);
         }
 
-        const { pedidosCancelados } = await darDeBajaCuenta(connection, {
+        const { pedidosCancelados, pedidosEliminados } = await eliminarCuentaDefinitivamente(connection, {
             usuarioId: id,
             actorUsuarioId: req.usuario.id,
             administradorId: req.administradorId,
-            motivo: "La cuenta fue dada de baja por un administrador"
+            motivo: "La cuenta fue eliminada por un administrador"
         });
 
         await connection.commit();
@@ -629,8 +628,9 @@ const darDeBajaUsuario = async (req, res) => {
             codigo: 200,
             estado: "exito",
             datos: {
-                mensaje: "Usuario dado de baja",
-                pedidos_cancelados: pedidosCancelados
+                mensaje: "Usuario eliminado definitivamente",
+                pedidos_cancelados: pedidosCancelados,
+                pedidos_eliminados: pedidosEliminados
             }
         });
 

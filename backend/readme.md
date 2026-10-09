@@ -77,7 +77,7 @@ backend/
 │   │   ├── maps.service.js         <- adaptador de Mapbox (Directions + Geocoding)
 │   │   ├── ubicacion.service.js    <- posiciones del repartidor y coordenadas guardadas
 │   │   ├── repartidor.service.js   <- disponibilidad del repartidor
-│   │   ├── usuario.service.js      <- cuentas: perfiles, pedidos en curso y baja lógica
+│   │   ├── usuario.service.js      <- cuentas: perfiles, pedidos en curso y eliminación definitiva
 │   │   ├── notificacion.service.js <- filas de notificaciones y envío push
 │   │   ├── seguimiento.service.js  <- negocio del seguimiento: autorización, ETA y su caché
 │   │   └── tiemporeal.service.js   <- adaptador de Socket.IO (handshake, salas, emisión)
@@ -768,7 +768,7 @@ y desde cualquier estado no terminal -> cancelado
 | `GET` | `/api/perfil` | Cualquier sesión | Cuenta y perfiles que tiene: cliente, comercio, repartidor, administrador |
 | `PATCH` | `/api/perfil` | Cualquier sesión | `nombre`, `telefono` y, si es cliente, `direccion_entrega` |
 | `PATCH` | `/api/perfil/contrasena` | Cualquier sesión | `{ contrasena_actual, contrasena_nueva }` |
-| `DELETE` | `/api/perfil` | Cualquier sesión | Baja lógica de la propia cuenta. Body: `{ contrasena }` |
+| `DELETE` | `/api/perfil` | Cualquier sesión | Eliminación definitiva de la cuenta, perfiles y pedidos propios. Body: `{ contrasena }` |
 | `GET` / `PATCH` | `/api/comercio/perfil` | Comercio | `nombre`, `categoria`, `direccion`, `horario_atencion` |
 | `GET` / `PATCH` | `/api/repartidor/perfil` | Repartidor | `tipo_vehiculo`, `patente`, `numero_licencia` |
 
@@ -781,9 +781,12 @@ y desde cualquier estado no terminal -> cancelado
   que no puede pasar es que queden las de la dirección vieja.
 - El repartidor no puede cambiar el vehículo con un pedido en camino: el perfil de ruta de
   Mapbox y el ETA del seguimiento salen de `tipo_vehiculo`.
-- **La baja pide la contraseña** y no se permite con pedidos pagados en curso, ni si es el
-  último administrador activo. Cancela los pedidos que el cliente nunca pagó y devuelve su
-  stock (ver `darDeBajaCuenta` en `services/usuario.service.js`).
+- **La eliminación pide la contraseña** y no se permite con pedidos pagados en curso, ni si
+  es el último administrador activo. Cancela los pedidos que el cliente nunca pagó y devuelve
+  su stock; luego elimina sus pedidos e historial, perfiles y cuenta para liberar el email
+  y otros identificadores únicos. Los pedidos donde solo participó como repartidor se
+  conservan sin la referencia al repartidor. La operación es irreversible
+  (ver `eliminarCuentaDefinitivamente` en `services/usuario.service.js`).
 
 ### Historial y repetición — semana 12 (CU09, CU10, CU17)
 
@@ -824,7 +827,7 @@ que guardan las auditorías y los reclamos).
 | `POST` | `/api/admin/usuarios` | Alta de un cliente o de un **administrador** (`rol: 'cliente' \| 'administrador'`) |
 | `PATCH` | `/api/admin/usuarios/:id` | `nombre`, `telefono`, `email` |
 | `PATCH` | `/api/admin/usuarios/:id/estado` | `{ activo: false }` suspende, `{ activo: true }` reactiva |
-| `DELETE` | `/api/admin/usuarios/:id` | Baja lógica |
+| `DELETE` | `/api/admin/usuarios/:id` | Eliminación definitiva de la cuenta y datos propios |
 | `PATCH` | `/api/admin/comercios/:id/estado` | Suspende o reactiva solo el comercio |
 | `GET` | `/api/admin/pedidos` | Vista global. Filtros: `estado`, `activos`, `comercioId`, `clienteId`, `repartidorId`, `desde`, `hasta`. Incluye `resumen_por_estado` |
 | `GET` | `/api/admin/pedidos/:id` | Ítems, pago, los tres actores, última ubicación, auditoría y reclamos |
@@ -835,12 +838,14 @@ que guardan las auditorías y los reclamos).
 - **Suspender corta el acceso al instante**, porque `verificarToken` consulta
   `usuarios.activo` en cada request: el token que la persona ya tenía deja de servir. Es
   reversible tal cual.
-- **La baja además** saca el comercio del catálogo, deja al repartidor fuera de servicio,
-  cancela los pedidos que el cliente nunca pagó y borra sus suscripciones push. Es lógica:
-  pedidos, reclamos y auditoría siguen apuntando a la cuenta.
+- **Eliminar borra la cuenta y sus perfiles**; cancela y devuelve el stock de los pedidos
+  impagos del cliente, y elimina los pedidos, pagos, reclamos e historial asociados. Los
+  productos y demás identificadores únicos también se liberan, así que la persona puede
+  registrarse otra vez con los mismos datos. En los pedidos de terceros donde solo fue
+  repartidor, se conserva el pedido sin su perfil y se eliminan sus datos de seguimiento.
 - **Suspensión por rol:** `/admin/comercios/:id/estado` suspende solo el comercio. La persona
   sigue pudiendo comprar como cliente.
-- Suspender o dar de baja da `409` si hay pedidos pagados que dependen de esa cuenta (el
+- Suspender o eliminar da `409` si hay pedidos pagados que dependen de esa cuenta (el
   repartidor que lleva uno en camino, el comercio que tiene pedidos por preparar, el
   cliente con pedidos en curso), si es la propia cuenta, o si es el último administrador
   activo.

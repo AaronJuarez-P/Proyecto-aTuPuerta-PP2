@@ -117,24 +117,25 @@ const esUltimoAdministradorActivo = async (conexion, usuarioId) => {
     return esAdministrador && administradores.length === 1;
 };
 
-// Baja logica de una cuenta. No se borra ninguna fila: pedidos.cliente_id es ON DELETE
-// RESTRICT, y aunque no lo fuera, borrar al usuario se llevaria puestos sus reclamos y
-// la trazabilidad de todo lo que hizo.
-//
-// - repartidor: queda no disponible. Va PRIMERO por el orden de locks del proyecto
-//   (repartidores -> pagos -> pedidos -> productos).
+// Eliminacion definitiva de una cuenta y sus perfiles. Antes se quitan los pedidos
+// propios como cliente o comercio porque sus FK son RESTRICT. Si solo participo como
+// repartidor, el pedido conserva el historial y queda sin repartidor por ON DELETE SET NULL.
 // - pedidos sin pagar del cliente: se cancelan y devuelven el stock, que si no quedaria
 //   reservado para siempre.
-// - cuenta y comercio: inactivos. El comercio sale del catalogo.
-// - suscripciones push: se borran, no tiene sentido seguir avisandole a un navegador.
+// - pedidos donde fue cliente o comercio: se eliminan con sus pagos, items y auditoria.
+// - usuario y perfiles: se eliminan al final, liberando email, CUIT, DNI y patente.
+//   Los reclamos del usuario y otros datos con FK CASCADE tambien se eliminan; las
+//   referencias a pedidos eliminados desde reclamos ajenos quedan en NULL.
 //
 // Quien llama ya verifico que no haya pedidos en curso (buscarPedidosEnCurso) ni que
 // sea el ultimo administrador.
-const darDeBajaCuenta = async (conexion, { usuarioId, actorUsuarioId = null, administradorId = null, motivo }) => {
-    await conexion.query(
-        `UPDATE repartidores SET disponible = FALSE WHERE usuario_id = ?`,
-        [usuarioId]
+const eliminarCuentaDefinitivamente = async (conexion, { usuarioId, actorUsuarioId = null, administradorId = null, motivo }) => {
+    const [perfiles] = await conexion.query(
+        `SELECT (SELECT id FROM clientes WHERE usuario_id = ?) AS cliente_id,
+                (SELECT id FROM comercios WHERE usuario_id = ?) AS comercio_id`,
+        [usuarioId, usuarioId]
     );
+    const { cliente_id, comercio_id } = perfiles[0];
 
     const [sinPagar] = await conexion.query(
         `SELECT pe.id
@@ -154,11 +155,24 @@ const darDeBajaCuenta = async (conexion, { usuarioId, actorUsuarioId = null, adm
         });
     }
 
-    await conexion.query(`UPDATE usuarios SET activo = FALSE WHERE id = ?`, [usuarioId]);
-    await conexion.query(`UPDATE comercios SET activo = FALSE WHERE usuario_id = ?`, [usuarioId]);
-    await conexion.query(`DELETE FROM suscripciones_push WHERE usuario_id = ?`, [usuarioId]);
+    const [pedidosEliminados] = await conexion.query(
+        `DELETE FROM pedidos WHERE cliente_id = ? OR comercio_id = ?`,
+        [cliente_id, comercio_id]
+    );
 
-    return { pedidosCancelados: sinPagar.map((pedido) => pedido.id) };
+    const [usuarioEliminado] = await conexion.query(
+        `DELETE FROM usuarios WHERE id = ?`,
+        [usuarioId]
+    );
+
+    if (usuarioEliminado.affectedRows !== 1) {
+        throw new Error(`No se pudo eliminar el usuario ${usuarioId}`);
+    }
+
+    return {
+        pedidosCancelados: sinPagar.map((pedido) => pedido.id),
+        pedidosEliminados: pedidosEliminados.affectedRows
+    };
 };
 
 module.exports = {
@@ -166,5 +180,5 @@ module.exports = {
     buscarPedidosEnCurso,
     describirPedidosEnCurso,
     esUltimoAdministradorActivo,
-    darDeBajaCuenta
+    eliminarCuentaDefinitivamente
 };

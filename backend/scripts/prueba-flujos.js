@@ -155,6 +155,8 @@ const main = async () => {
     await esperar("editar horario del comercio", "PATCH", "/comercio/perfil",
         { token: ferreteria, body: { horario_atencion: "Lun a Dom 08:00-22:00" } }, 200,
         (datos) => datos.comercio.horario_atencion === "Lun a Dom 08:00-22:00");
+    await esperar("el horario actualizado persiste en la base", "GET", "/comercio/perfil", { token: ferreteria }, 200,
+        (datos) => datos.comercio.horario_atencion === "Lun a Dom 08:00-22:00");
     await esperar("perfil del comercio con token de cliente", "GET", "/comercio/perfil", { token: juan }, 403);
 
     await esperar("perfil de Carlos con pedido en curso", "GET", "/repartidor/perfil", { token: carlos }, 200,
@@ -333,9 +335,14 @@ const main = async () => {
     await esperar("reactivar a Pedro", "PATCH", "/admin/usuarios/9/estado", { token: admin, body: { activo: true } }, 200);
     pedro = await login("/inicioSesion", { email: "pedro@test.com", contrasena: "Clave12345" });
 
-    await esperar("baja de Pedro: cancela su pedido sin pagar", "DELETE", "/admin/usuarios/9", { token: admin }, 200,
-        (datos) => datos.pedidos_cancelados.length === 1 && datos.pedidos_cancelados[0] === 6);
+    await esperar("eliminación definitiva de Pedro", "DELETE", "/admin/usuarios/9", { token: admin }, 200,
+        (datos) => datos.pedidos_cancelados.length === 1 && datos.pedidos_cancelados[0] === 6 &&
+                   datos.pedidos_eliminados === 1);
     await esperar("y el stock vuelve", "GET", "/productos/3", {}, 200, (datos) => datos.producto.stock === 60);
+    await esperar("el token de la cuenta eliminada deja de servir", "GET", "/perfil", { token: pedro }, 401);
+    await esperar("Pedro puede registrarse otra vez con los mismos datos", "POST", "/registro",
+        { body: { nombre: "Pedro Prueba", email: "pedro@test.com", contrasena: "Clave12345", telefono: "3421000009", direccion_entrega: "Rivadavia 100, Santo Tomé" } }, 201);
+    await login("/inicioSesion", { email: "pedro@test.com", contrasena: "Clave12345" });
     await esperar("Carlos tiene un pedido en camino", "PATCH", "/admin/usuarios/5/estado", { token: admin, body: { activo: false } }, 409);
     await esperar("un admin no se suspende a si mismo", "PATCH", "/admin/usuarios/7/estado", { token: admin, body: { activo: false } }, 409);
     await esperar("activo como string", "PATCH", "/admin/usuarios/5/estado", { token: admin, body: { activo: "false" } }, 400);
@@ -345,7 +352,7 @@ const main = async () => {
     // -----------------------------------------------------------------------
     await esperar("pedidos activos", "GET", "/admin/pedidos?activos=true", { token: admin }, 200,
         (datos) => datos.pedidos.map((p) => p.id).sort().join(",") === "1,2,3" &&
-                   datos.resumen_por_estado.total === 6 && datos.resumen_por_estado.cancelado === 2);
+                   datos.resumen_por_estado.total === 5 && datos.resumen_por_estado.cancelado === 1);
     await esperar("detalle con la auditoria completa", "GET", "/admin/pedidos/5", { token: admin }, 200,
         (datos) => datos.pedido.auditoria.length === 6 && datos.pedido.pago.estado === "aprobado" &&
                    datos.pedido.auditoria.some((a) => a.detalle === "en_preparacion -> preparado") &&
@@ -457,7 +464,7 @@ const main = async () => {
         }
 
         const conPedro = await conectar(pedro);
-        verificar("socket: una cuenta dada de baja no conecta", conPedro.error?.data?.codigo === 403,
+        verificar("socket: una cuenta eliminada no conecta", conPedro.error?.data?.codigo === 401,
             conPedro.error?.message || "conectó");
 
         const conBasura = await conectar("no-es-un-token");

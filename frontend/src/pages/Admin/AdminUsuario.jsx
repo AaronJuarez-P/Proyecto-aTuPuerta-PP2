@@ -107,27 +107,30 @@ export default function AdminUsuario() {
       ),
     },
     baja: {
-      titulo: `Dar de baja a ${cuenta.nombre}`,
+      titulo: `Eliminar a ${cuenta.nombre} definitivamente`,
       contenido: (
         <Confirmacion
-          boton="Dar de baja"
+          boton="Eliminar definitivamente"
           peligro
           alConfirmar={async () => {
-            const { pedidos_cancelados: cancelados } = await darDeBajaUsuario(cuenta.id)
+            const {
+              pedidos_cancelados: cancelados,
+              pedidos_eliminados: pedidosEliminados = 0,
+            } = await darDeBajaUsuario(cuenta.id)
             terminar(cancelados.length > 0
-              ? `Cuenta dada de baja. Se cancelaron sus pedidos sin pagar: ${cancelados.map((numero) => `#${numero}`).join(', ')}`
-              : 'Cuenta dada de baja')
+              ? `Cuenta eliminada definitivamente. Se eliminaron ${pedidosEliminados} pedidos y se cancelaron los impagos: ${cancelados.map((numero) => `#${numero}`).join(', ')}`
+              : `Cuenta eliminada definitivamente. Se eliminaron ${pedidosEliminados} pedidos.`)
           }}
         >
-          <p>Es la baja que pide una persona cuando deja la plataforma:</p>
+          <p>Es la eliminación definitiva que pide una persona cuando deja la plataforma:</p>
           <ul>
-            <li>la cuenta queda desactivada;</li>
-            {comercio && <li>el comercio sale del catálogo;</li>}
-            {repartidor && <li>el repartidor queda fuera de servicio;</li>}
+            <li>se eliminan la cuenta y todos sus perfiles;</li>
+            {comercio && <li>se elimina el comercio y sus productos;</li>}
+            {repartidor && <li>se elimina el perfil de repartidor;</li>}
             {cliente && <li>se cancelan los pedidos que nunca pagó y vuelve el stock;</li>}
-            <li>se borran sus suscripciones a notificaciones.</li>
+            <li>se eliminan sus pedidos e historial asociados.</li>
           </ul>
-          <p>No se borra su historial. La cuenta se puede reactivar después{comercio ? ', pero el comercio hay que reactivarlo aparte' : ''}.</p>
+          <p>La acción no se puede deshacer. Luego se podrá crear una cuenta nueva con el mismo email.</p>
         </Confirmacion>
       ),
     },

@@ -174,7 +174,13 @@ function MiComercio() {
 
   return (
     <FormularioPerfilRol
-      key={comercio.id}
+      key={JSON.stringify([
+        comercio.id,
+        comercio.nombre,
+        comercio.categoria,
+        comercio.direccion,
+        comercio.horario_atencion,
+      ])}
       titulo="Mi comercio"
       inicial={{
         nombre: comercio.nombre,
@@ -212,7 +218,12 @@ function MiVehiculo() {
 
   return (
     <FormularioPerfilRol
-      key={`${repartidor.id}-${repartidor.patente}`}
+      key={JSON.stringify([
+        repartidor.id,
+        repartidor.tipo_vehiculo,
+        repartidor.patente,
+        repartidor.numero_licencia,
+      ])}
       titulo="Mi vehículo"
       inicial={{
         tipo_vehiculo: repartidor.tipo_vehiculo,
@@ -445,12 +456,15 @@ function ZonaBaja() {
     setEnviando(true)
 
     try {
-      const { pedidos_cancelados: cancelados = [] } = await darDeBajaCuenta(contrasena)
+      const {
+        pedidos_cancelados: cancelados = [],
+        pedidos_eliminados: pedidosEliminados = 0,
+      } = await darDeBajaCuenta(contrasena)
       navigate('/')
       olvidarSesion()
       avisar(cancelados.length > 0
-        ? `Diste de baja tu cuenta. Se cancelaron ${cancelados.length} pedidos que no habías pagado.`
-        : 'Diste de baja tu cuenta.')
+        ? `Tu cuenta fue eliminada definitivamente. Se eliminaron ${pedidosEliminados} pedidos y se cancelaron ${cancelados.length} que no habías pagado.`
+        : `Tu cuenta fue eliminada definitivamente. Se eliminaron ${pedidosEliminados} pedidos.`)
     } catch (errorBaja) {
       setError(errorBaja.message)
       setEnviando(false)
@@ -459,18 +473,21 @@ function ZonaBaja() {
 
   return (
     <section className="perfil-card zona-baja">
-      <h2>Dar de baja la cuenta</h2>
+      <h2>Eliminar la cuenta</h2>
       <p className="texto-apagado">
-        Deja de funcionar para todos tus perfiles. No se puede con pedidos pagados en curso, y
-        los que todavía no pagaste se cancelan.
+        Se elimina definitivamente tu cuenta y tus perfiles, junto con tu historial de pedidos.
+        No se puede con pedidos pagados en curso; los pedidos que todavía no pagaste se cancelan.
       </p>
       <div className="acciones">
-        <button type="button" className="boton boton-peligro" onClick={() => setAbierto(true)}>Dar de baja mi cuenta</button>
+        <button type="button" className="boton boton-peligro" onClick={() => setAbierto(true)}>Eliminar mi cuenta</button>
       </div>
 
-      <Modal abierto={abierto} titulo="¿Dar de baja tu cuenta?" alCerrar={() => setAbierto(false)}>
+      <Modal abierto={abierto} titulo="¿Eliminar tu cuenta definitivamente?" alCerrar={() => setAbierto(false)}>
         <form className="formulario" onSubmit={darDeBaja}>
-          <p className="texto-apagado">Para confirmar, escribí tu contraseña.</p>
+          <p className="texto-apagado">
+            Esta acción no se puede deshacer: se eliminarán tus datos de cuenta, perfiles y pedidos.
+            Para confirmar, escribí tu contraseña.
+          </p>
           <div className="campo-form">
             <label htmlFor="baja-contrasena">Contraseña</label>
             <input id="baja-contrasena" type="password" value={contrasena} onChange={(evento) => setContrasena(evento.target.value)} autoComplete="current-password" />
@@ -478,7 +495,7 @@ function ZonaBaja() {
           {error && <p className="aviso-form aviso-form-error">{error}</p>}
           <div className="acciones">
             <button type="submit" className="boton boton-peligro" disabled={enviando || !contrasena}>
-              {enviando ? 'Dando de baja…' : 'Sí, dar de baja'}
+              {enviando ? 'Eliminando…' : 'Sí, eliminar mi cuenta'}
             </button>
             <button type="button" className="boton boton-secundario" onClick={() => setAbierto(false)}>Cancelar</button>
           </div>

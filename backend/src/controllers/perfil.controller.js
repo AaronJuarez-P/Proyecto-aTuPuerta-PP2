@@ -6,7 +6,7 @@ const {
     buscarPedidosEnCurso,
     describirPedidosEnCurso,
     esUltimoAdministradorActivo,
-    darDeBajaCuenta
+    eliminarCuentaDefinitivamente
 } = require('../services/usuario.service');
 const { obtenerTextoValido, esTelefonoValido, esContrasenaValida } = require('../utils/validacion');
 
@@ -208,16 +208,15 @@ const cambiarContrasena = async (req, res) => {
 // DELETE /api/perfil
 // Body: { "contrasena": "..." }
 //
-// Baja logica de la propia cuenta (ver darDeBajaCuenta en usuario.service.js). Pide la
-// contraseña por el mismo motivo que cambiarContrasena, y porque es irreversible para
-// el usuario: volver a activarla la puede hacer solo un administrador.
+// Eliminacion definitiva de la propia cuenta. Pide la contraseña por el mismo motivo
+// que cambiarContrasena; no se puede revertir.
 const darDeBajaPerfil = async (req, res) => {
     let connection;
     try {
         const { contrasena } = req.body ?? {};
 
         if (typeof contrasena !== "string" || !contrasena) {
-            return responderError(res, 400, "Para dar de baja la cuenta mandá tu contraseña en el campo contrasena");
+            return responderError(res, 400, "Para eliminar la cuenta mandá tu contraseña en el campo contrasena");
         }
 
         const [usuarios] = await database.query(
@@ -249,10 +248,10 @@ const darDeBajaPerfil = async (req, res) => {
             return responderError(res, 409, describirPedidosEnCurso(pedidosEnCurso));
         }
 
-        const { pedidosCancelados } = await darDeBajaCuenta(connection, {
+        const { pedidosCancelados, pedidosEliminados } = await eliminarCuentaDefinitivamente(connection, {
             usuarioId: req.usuario.id,
             actorUsuarioId: req.usuario.id,
-            motivo: "El cliente dio de baja su cuenta"
+            motivo: "El cliente elimino su cuenta"
         });
 
         await connection.commit();
@@ -261,8 +260,9 @@ const darDeBajaPerfil = async (req, res) => {
             codigo: 200,
             estado: "exito",
             datos: {
-                mensaje: "Tu cuenta fue dada de baja",
-                pedidos_cancelados: pedidosCancelados
+                mensaje: "Tu cuenta fue eliminada definitivamente",
+                pedidos_cancelados: pedidosCancelados,
+                pedidos_eliminados: pedidosEliminados
             }
         });
 
