@@ -129,3 +129,51 @@ como preguntas cuya respuesta no está, que el Portero tiene que rechazar.
   mitad de camino entre los dos temas, y la fuente no dice nada útil. Cortado por
   pregunta, cada fragmento es una idea completa, con la pregunta adentro, que se parece
   a cómo pregunta la gente, y con una etiqueta que se entiende.
+
+## Indexado (Fase 3)
+
+`node --env-file=.env indexar.mjs` trocea cada archivo con la marca, pide los vectores a
+Ollama en lotes de hasta 32 fragmentos y guarda cada fragmento con un `INSERT`
+parametrizado (`$1` a `$5`) y su vector pasado por `comoVector`.
+
+**Primera corrida:** 35 fragmentos, 4 pedidos a Ollama (uno por archivo, porque cada uno
+entra en un solo lote) y unos 17 segundos. El conteo por fuente en Postgres coincide con
+la Ficha 2:
+
+```
+        fuente         | count
+-----------------------+-------
+ ayuda-clientes.md     |    10
+ ayuda-comercios.md    |     8
+ ayuda-repartidores.md |     8
+ politicas-y-cuenta.md |     9
+```
+
+### Ficha 3: correr el indexado dos veces
+
+- **Sin `TRUNCATE`**, la segunda corrida dejó **70 filas**, con ids del 1 al 70. Las
+  cantidades por fuente se duplicaron (20, 16, 16, 18), y "## ¿Cómo pago mi pedido?"
+  quedó guardada dos veces, con los ids 5 y 40. El `INSERT` solo agrega filas: nada
+  borra lo que había. Con duplicados, la búsqueda devuelve dos veces el mismo
+  fragmento y ocupa dos de los tres lugares con la misma información.
+- **Con `TRUNCATE fragmentos RESTART IDENTITY`** (`indexar.mjs:9`), dos corridas seguidas
+  dejaron **35 filas** cada una, con ids del 1 al 35. `TRUNCATE` vacía la tabla y
+  `RESTART IDENTITY` vuelve a numerar desde 1.
+- La diferencia con la clase 7: ahí el índice era un archivo, que se pisa entero cada
+  vez que se escribe. Una base de datos acumula: lo que no se borra, queda.
+
+### Verificación: Postgres contra el coseno de la clase 6
+
+`node --env-file=.env verificar-sql.mjs "¿Cómo pago mi pedido?"`:
+
+```
+id 5   Postgres: 0.751995   tu coseno: 0.751995
+id 2   Postgres: 0.672324   tu coseno: 0.672324
+id 3   Postgres: 0.661651   tu coseno: 0.661651
+```
+
+- Las dos columnas coinciden hasta el sexto decimal: `1 - (embedding <=> $1)` en
+  Postgres hace la misma cuenta que `coseno()` de `similitud.mjs`.
+- El primero (id 5) es justo "## ¿Cómo pago mi pedido?". Los otros dos son temas
+  vecinos: "## ¿Cómo hago un pedido?" (id 2) y "## ¿Por qué mi compra se dividió en
+  varios pedidos?" (id 3).
