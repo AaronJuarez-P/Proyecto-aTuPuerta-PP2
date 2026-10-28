@@ -177,3 +177,112 @@ id 3   Postgres: 0.661651   tu coseno: 0.661651
 - El primero (id 5) es justo "## ¿Cómo pago mi pedido?". Los otros dos son temas
   vecinos: "## ¿Cómo hago un pedido?" (id 2) y "## ¿Por qué mi compra se dividió en
   varios pedidos?" (id 3).
+
+## Umbral (Fase 4)
+
+### Las preguntas de prueba
+
+Las aprobó Santiago. Son 13: 6 cuya respuesta está en el corpus y 7 cuya respuesta no
+está.
+
+- **Están, con las palabras del corpus (3):** "¿Cómo pago mi pedido?", "¿Cómo doy de baja
+  un producto?" y "¿Cómo confirmo la entrega de un pedido?". Hay una de cada uno de los
+  primeros tres archivos.
+- **Están, reformuladas como las diría alguien que no leyó el corpus (3):** "me rebotó
+  la tarjeta, ¿qué hago?", "¿cuánta plata me queda por cada viaje?" y "¿por qué me sacó
+  de la cuenta si no toqué nada?".
+- **No están, de los temas que quedaron afuera (4):** descuentos, teléfono de atención,
+  costo de envío y horario de reparto. Tres son trampas a propósito: se parecen a algo
+  que sí está. El envío se parece a la comisión del repartidor; el horario de reparto, a
+  los horarios de los comercios; y "contraseña", a las respuestas sobre la cuenta.
+- **No están, las genéricas de la clase (3):** la contraseña del wifi, el último mundial
+  y la milanesa.
+
+### La distribución
+
+`node --env-file=.env distribucion.mjs` muestra la similitud del mejor fragmento de cada
+pregunta. La última columna sale de un script temporal que no está en el repo: dice qué
+fragmento trajo cada una (x = está, o = no está).
+
+| Similitud | | Pregunta | Mejor fragmento |
+|---|---|---|---|
+| 0.752 | x | ¿Cómo pago mi pedido? | el correcto |
+| 0.743 | x | ¿Cómo doy de baja un producto? | el correcto |
+| 0.738 | x | ¿Cómo confirmo la entrega de un pedido? | el correcto |
+| 0.632 | o | ¿Cuánto cuesta el envío? | repartidores · ¿Cuánto gano por cada entrega? |
+| 0.607 | x | ¿cuánta plata me queda por cada viaje? | el correcto |
+| 0.583 | x | me rebotó la tarjeta, ¿qué hago? | el correcto |
+| 0.564 | o | cuál es la contraseña del wifi | políticas · ¿Cómo cambio mi contraseña o mis datos? |
+| 0.547 | x | ¿por qué me sacó de la cuenta si no toqué nada? | **el equivocado**: políticas · ¿Cómo elimino mi cuenta? |
+| 0.546 | o | ¿Hasta qué hora reparten? | repartidores · ¿Cómo tomo un pedido para repartir? |
+| 0.501 | o | ¿Cuál es el teléfono de atención? | comercios · ¿Cómo cambio el horario de atención…? |
+| 0.457 | o | ¿Tienen descuentos para estudiantes? | políticas · ¿Me devuelven la plata…? |
+| 0.334 | o | cómo se hace una milanesa | políticas · ¿Cómo elimino mi cuenta? |
+| 0.290 | o | quién ganó el último mundial | clientes · ¿Qué significa cada estado de mi pedido? |
+
+La recta de 0 a 1, con una columna por cada 0.01. Un `*` es una x y una o en la misma
+columna (0.547 y 0.546):
+
+```
+-----------------------------o---o------------o---o----*o-x--x-o----------xx-------------------------
+0.0       0.1       0.2       0.3       0.4       0.5       0.6       0.7       0.8       0.9       1
+                                                       [-------]
+                                                       se pisan: de 0.547 a 0.632
+```
+
+### Lectura
+
+- **No hay un hueco limpio.** Las que están van de 0.547 a 0.752, y las que no, de 0.290
+  a 0.632. En la zona de 0.547 a 0.632 se pisan.
+- **Del lado equivocado:**
+  - "¿Cuánto cuesta el envío?" (0.632) queda por encima de tres preguntas que sí están.
+    El fragmento que trae es el de la comisión del repartidor. Es el caso más
+    peligroso: si pasa el umbral, el modelo recibe "$500 más $80 por km" y podría
+    contestarlo como si fuera el costo de envío.
+  - "cuál es la contraseña del wifi" (0.564) queda por encima de "¿por qué me sacó de la
+    cuenta…?" (0.547), por la palabra "contraseña".
+- **La búsqueda falla con "¿por qué me sacó de la cuenta si no toqué nada?".** La palabra
+  "cuenta" la lleva a "¿Cómo elimino mi cuenta?". El fragmento correcto, "¿Por qué se me
+  cerró la sesión?", queda en el puesto 5 de 35, con 0.450. Esto no lo arregla ningún
+  umbral: la gente dice "me sacó" y el corpus dice "se cerró la sesión". Es candidata a
+  pregunta que falla en la demo.
+- **Cada modelo tiene su propia escala.** Con `bge-m3`, hasta la milanesa saca 0.334, y
+  las preguntas relacionadas se juntan entre 0.55 y 0.75. Otro modelo daría otros
+  números, así que el umbral no se puede copiar de la clase ni de otro proyecto: se mide
+  con el modelo y el corpus de cada uno.
+
+### Los dos errores y las opciones
+
+- **Falso positivo:** pasa una pregunta cuya respuesta no está. El modelo recibe
+  fragmentos que no la contestan y puede armar una respuesta con lo que tiene. Lo único
+  que queda para frenarlo es el prompt.
+- **Falso negativo:** se bloquea una pregunta cuya respuesta sí está. El Portero dice "No
+  lo encuentro en los documentos." sin llamar al modelo, aunque la ayuda existía.
+
+| Umbral | Falsos positivos (pasan sin estar) | Falsos negativos (se bloquean estando) |
+|---|---|---|
+| 0.64 | ninguno | 3: todas las reformuladas (plata, tarjeta y sesión) |
+| **0.57** | **1: envío** | **1: sesión, que de todos modos traía el fragmento equivocado** |
+| 0.54 | 3: envío, wifi y horario | ninguno |
+
+### Umbral elegido: `UMBRAL=0.57`
+
+Lo eligió Santiago, entre las tres opciones.
+
+- **Por qué 0.57:** cae en el hueco chico entre "wifi" (0.564, la que no está con más
+  similitud después del envío) y "tarjeta" (0.583, la que está y trae su fragmento
+  correcto con menos similitud). Con 0.57 pasan cinco de las seis que están: las tres
+  literales y dos de las tres reformuladas.
+- **Qué error prefiero: el falso negativo.** En una app con plata de por medio (pagos,
+  devoluciones y comisiones), una respuesta inventada hace más daño que un "No lo
+  encuentro". Además, el front va a sugerir reformular la pregunta. Pero no al punto de
+  0.64, que deja afuera a todos los que preguntan con sus propias palabras.
+- **El falso negativo que queda** ("sesión") habría contestado con el fragmento de
+  eliminar la cuenta. Bloquearlo es mejor que contestar mal.
+- **El falso positivo que queda** ("envío") queda a cargo de la segunda barrera, el
+  prompt. Se prueba en la Fase 5: el Portero tiene que aclarar que ese dato es del
+  repartidor, o decir que no lo encuentra.
+- **Cuándo recalibrar:** el margen es de apenas 0.02, entre 0.564 y 0.583. Hay que volver
+  a correr `distribucion.mjs` si cambia el modelo de embeddings (cambia la escala), si
+  cambia el corpus (por ejemplo, al agregar muchas preguntas) o si cambia el troceado
+  (cambian los fragmentos y sus vectores).
