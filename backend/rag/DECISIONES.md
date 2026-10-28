@@ -286,3 +286,104 @@ Lo eligió Santiago, entre las tres opciones.
   a correr `distribucion.mjs` si cambia el modelo de embeddings (cambia la escala), si
   cambia el corpus (por ejemplo, al agregar muchas preguntas) o si cambia el troceado
   (cambian los fragmentos y sus vectores).
+
+## Prompt (Fase 5)
+
+`prompt.txt` parte de la plantilla de la clase 8.
+
+**Se mantiene tal cual:**
+- La restricción de responder usando EXCLUSIVAMENTE los fragmentos, sin conocimiento
+  propio.
+- La frase exacta "No lo encuentro en los documentos.".
+- El máximo de tres oraciones.
+- El renglón "Fuente:" con la etiqueta del fragmento, tal como aparece entre guiones.
+- Los marcadores `{{fragmentos}}` y `{{pregunta}}`.
+
+**Cambios respecto de la plantilla:**
+
+| # | Cambio | Por qué |
+|---|---|---|
+| 1 | El primer renglón dice quién es: "Sos El Portero de ATuPuerta, el asistente de ayuda de una app de delivery de Santo Tomé (Santa Fe). Respondés consultas de clientes, comercios y repartidores sobre cómo usar la app." | Es el cambio que pide la clase: el primer renglón dice de qué trata el corpus. Además, nombra a quiénes responde. |
+| 2 | Un párrafo nuevo de tono: español rioplatense, de "vos", amable y directo, "como el portero de un edificio que conoce a todos los vecinos". Aclara que el tono nunca cambia la frase exacta. | Le da la personalidad del Portero. La aclaración protege la frase exacta, porque el backend y el front la reconocen para mostrar la respuesta distinta. |
+| 3 | Un párrafo nuevo de roles: cada fragmento está escrito para un rol, y si el que usa es para otro rol que el de quien pregunta, lo tiene que aclarar. | Hay temas que se repiten entre roles, por ejemplo la comisión del repartidor y lo que paga el cliente. El modelo no tiene que pasar la información de un rol como si fuera de otro. |
+| 4 | Una viñeta nueva en el formato: si no encuentra la respuesta, escribe solo la frase exacta, sin el renglón "Fuente:". | Una fuente al lado de "No lo encuentro" confunde, porque cita algo que no se usó. |
+
+**Observación:** el modelo copia parte de los guiones en la fuente, por ejemplo
+`Fuente: -- ayuda-clientes.md · ## ¿Cómo pago mi pedido? ---`. No se cambió la regla de
+la plantilla: el front limpia los guiones y el "##" al mostrar la fuente (Fase 7).
+
+## rag.mjs y preguntar.mjs (Fase 5)
+
+`rag.mjs` parte del rag.mjs del anexo de la consigna, con estos cambios:
+
+- Lee `prompt.txt` con `new URL("./prompt.txt", import.meta.url)` (`rag.mjs:9`). La ruta
+  sale del archivo y no de la carpeta desde donde se corre, así funciona también desde
+  el backend.
+- Exporta `NO_LO_ENCUENTRO` (`rag.mjs:11`). La frase vive en un solo lugar del código.
+- Exporta `armarPrompt(pregunta, utiles)` (`rag.mjs:32`), que es **el único lugar del
+  proyecto donde se arma el prompt**. Reemplaza los marcadores con funciones y no con
+  texto. Con texto, `replace` interpretaría los "$" que escribe la persona: "$$" quedaría
+  "$", y "$'" pegaría el resto de la plantilla.
+- Exporta `preguntarRAG(pregunta, { modo, sinModelo })` (`rag.mjs:48`), que devuelve
+  `{ respuesta, fuentes, recuperados, umbral, modo, llamoAlModelo }`:
+  - `recuperados`: los 3 fragmentos que trae `buscar()`, cada uno con `util`, que dice
+    si pasa el umbral.
+  - `fuentes`: solo los útiles.
+  - Si ninguno pasa el umbral, devuelve la frase exacta y **no llama al modelo**
+    (`rag.mjs:67`).
+  - En modo `faq`, devuelve el texto del mejor fragmento sin su título, sin llamar al
+    modelo, y cita solo ese fragmento, porque es el único que se usó (`rag.mjs:70`).
+  - Con `sinModelo`, devuelve el prompt armado en el campo `prompt`, sin mandarlo
+    (`rag.mjs:73`).
+- Lee `UMBRAL` en cada pregunta (`leerUmbral`, `rag.mjs:16`). Si está vacío vale 0, como
+  en la clase. Si está escrito con coma, corta con un error que lo dice. Prueba con
+  `UMBRAL=0,57`: `Error: UMBRAL tiene que ser un número con punto decimal (por ejemplo
+  0.57) y el .env dice "0,57"`. Sin esa validación, el Portero diría siempre "No lo
+  encuentro" sin ningún aviso.
+- Exporta `etiqueta` (`rag.mjs:27`): el formato "archivo · sección" es el mismo en el
+  prompt, en la consola y en el front.
+- No cierra la conexión a la base, porque el pool lo sigue usando el backend.
+  `preguntar.mjs` la cierra en un `finally`.
+
+`preguntar.mjs` usa `preguntarRAG` e imprime como el de la clase: "FRAGMENTOS
+RECUPERADOS", con `✗` en los que no llegan al umbral, la etiqueta "archivo · sección" y
+"RESPUESTA". Mantiene `--sin-modelo`, que ahora además muestra el prompt que recibiría
+el modelo, y agrega `--faq`.
+
+**Pruebas:**
+- **"¿Cómo pago mi pedido?":** responde con el fragmento correcto, en tono rioplatense
+  ("¡Hola, vecino!"), y cita `ayuda-clientes.md · ## ¿Cómo pago mi pedido?`.
+- **"¿Tienen descuentos para estudiantes?":** los tres fragmentos quedan con `✗` (el mejor
+  saca 0.457) y responde "No lo encuentro en los documentos." sin llamar al modelo.
+- **"¿Cómo pago mi pedido?" con `--sin-modelo`:** muestra el prompt completo, de 3205
+  caracteres.
+- **"¿Cómo pago mi pedido?" con `--faq`:** responde con el texto del fragmento, sin el
+  título y sin llamar al modelo.
+
+### Ficha 5
+
+Para diagnosticar se usó la lista de FRAGMENTOS RECUPERADOS, que es lo mismo que muestra
+`--sin-modelo`. Si el fragmento correcto no está entre los tres, falló la búsqueda. Si
+está y la respuesta igual es mala, falló el modelo.
+
+| Pregunta | Similitud del primero | Fuente citada | ¿Correcta? | Si falló, ¿quién? |
+|---|---|---|---|---|
+| ¿Cómo pago mi pedido? | 0.752 | clientes · ¿Cómo pago mi pedido? | Sí | — |
+| me rebotó la tarjeta, ¿qué hago? | 0.583 | clientes · ¿Qué pasa si me rechazan el pago? | Sí, y está reformulada | — |
+| ¿Cuánto cuesta el envío? | 0.632 (pasa el umbral) | ninguna: "No lo encuentro" | Sí: el costo de envío no está en el corpus | El umbral dejó pasar la comisión del repartidor y **el prompt lo frenó** |
+| ¿puedo pagar en efectivo? | 0.616 | ninguna: "No lo encuentro" (igual en dos corridas) | No: el fragmento dice que el único medio de pago es MercadoPago | **El modelo**: la búsqueda trajo primero el fragmento correcto, pero el modelo no saca la conclusión |
+| ¿y si ya pagué? | 0.484 (✗) | ninguna, no se llamó al modelo | No: depende de una pregunta anterior | **La búsqueda**: sola, sin la conversación, la pregunta no se parece a nada |
+| ¿por qué me sacó de la cuenta si no toqué nada? | 0.547 (✗) | ninguna, no se llamó al modelo | No: la respuesta está en "¿Por qué se me cerró la sesión?" | **La búsqueda**: el fragmento correcto queda en el puesto 5, con 0.450 |
+
+**Lectura:**
+- **Dos barreras contra los inventos.** Con el envío, el umbral dejó pasar un fragmento
+  que no contestaba la pregunta, y el prompt hizo que el modelo dijera "No lo encuentro".
+  Con los descuentos, el umbral solo alcanzó, y ni siquiera se llamó al modelo.
+- **El costo de un prompt estricto.** Con el efectivo, el dato estaba en el fragmento,
+  pero el modelo no infiere: "EXCLUSIVAMENTE" lo vuelve muy literal. Es el precio de la
+  misma regla que frenó el envío.
+- **Las fallas de la búsqueda tienen dos causas:**
+  - Las palabras de la gente no son las del corpus: "me sacó de la cuenta" contra "se
+    cerró la sesión".
+  - Falta de contexto: "¿y si ya pagué?" no dice de qué habla. Cada pregunta viaja sola,
+    sin el historial.
