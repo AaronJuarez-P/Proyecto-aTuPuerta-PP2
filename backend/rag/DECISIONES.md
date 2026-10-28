@@ -50,3 +50,82 @@ Pedidos: 1
 fragmentos e índice HNSW creados." En la consola de `psql`, `\d fragmentos` muestra la
 columna `embedding vector(1024)` y el índice `fragmentos_embedding_idx`, de tipo `hnsw`
 con `vector_cosine_ops`.
+
+## Corpus (Fase 2)
+
+**Qué es:** el Centro de ayuda de ATuPuerta, con 35 preguntas frecuentes escritas para
+quienes usan la app.
+
+| Archivo | Para quién y qué temas | Preguntas |
+|---|---|---|
+| `ayuda-clientes.md` | Clientes: registrarse, pedir, carrito, pagar, estados, seguimiento, código de entrega y repetir | 10 |
+| `ayuda-comercios.md` | Comercios: registro, entrar con CUIL o CUIT, productos, precio y stock, preparar y avisar que está listo, ventas y datos | 8 |
+| `ayuda-repartidores.md` | Repartidores: registro, vehículo, ponerse en servicio, tomar, retirar, entregar, comisión e historial | 8 |
+| `politicas-y-cuenta.md` | Todos: cancelaciones y devoluciones, reclamos, sesión, contraseña y datos, eliminar la cuenta, notificaciones e intentos fallidos | 9 |
+
+**Por qué este corpus:** las reglas de la app existen, pero están repartidas en el código
+y en el readme técnico, que nadie que usa la app va a leer. El Portero las pone al
+alcance de clientes, comercios y repartidores, adentro de la misma app.
+
+**Cómo se escribió:**
+- Cada afirmación se verificó contra el código antes de escribirla. Las pantallas del
+  front dan los nombres exactos de botones y secciones, y el backend da las reglas.
+- Cada pregunta es un título `## ¿…?` en un renglón propio. Cada archivo arranca directo
+  con la primera pregunta y no tiene otros títulos. Así la marca reconoce todas las
+  partes.
+- Cada respuesta se entiende sola y nombra el rol ("Como repartidor, …"). El modelo ve
+  fragmentos sueltos, y hay temas que aparecen en más de un archivo.
+- Hay una idea por pregunta, con las palabras que usaría la gente: "plata", "tarjeta",
+  "devolución".
+- Las respuestas miden entre 376 y 660 caracteres, dentro del rango pedido de 300 a
+  1200.
+
+**Diferencias con lo que suponíamos. Manda el código:**
+- El login de comercio pide "CUIL / CUIT del comercio" (`Login.jsx:154`), no solo CUIL.
+- El botón para repetir un pedido se llama "↻ Volver a pedir lo mismo" (`Pedido.jsx:448`).
+- El registro de comercio exige una cuenta que ya exista: el backend responde "Debés
+  registrarte primero como usuario antes de crear un comercio"
+  (`registroComercio.controller.js:103`). `backend/readme.md` todavía dice "alta de
+  usuario + comercio en una transacción": ese renglón del readme quedó desactualizado.
+- Sobre el efectivo: la app ofrece solo MercadoPago (`Checkout.jsx:188`). Pero adentro
+  de MercadoPago un pago puede quedar pendiente, por ejemplo uno en efectivo, y el
+  backend lo contempla (`pago.controller.js:177`). Por eso el corpus dice "por ahora, el
+  único medio de pago de la app es MercadoPago", con la confirmación de Santiago, y no
+  afirma nada sobre el efectivo.
+
+**"Cancelar" está en `politicas-y-cuenta.md`,** junto con la devolución del dinero. Así
+el archivo de clientes no pasa de 10 preguntas.
+
+**Temas que quedaron afuera a propósito:** costo de envío para el cliente, horarios de
+la plataforma, teléfono o mail de contacto, tiempos de entrega garantizados, zona de
+reparto exacta, promociones y pago en efectivo. El grupo todavía no los definió. Sirven
+como preguntas cuya respuesta no está, que el Portero tiene que rechazar.
+
+## Troceado (Fase 2)
+
+**Marca:** `/^## .+/` en `marca.mjs`.
+- `^## ` reconoce el párrafo que arranca con un título de nivel 2, es decir, cada
+  pregunta.
+- `.+` toma el resto del renglón, porque el punto no cruza un salto de línea. Así la
+  sección guardada es la pregunta entera, por ejemplo "## ¿Cómo pago mi pedido?", y no
+  solo "##". Esa sección es la que se cita como fuente (`trocear.mjs:75`).
+
+**Ficha 2** (`node --env-file=.env probar-trocear.mjs`):
+
+| Archivo | Caracteres | Fragmentos | Con sección | Más corto | Más largo |
+|---|---|---|---|---|---|
+| `ayuda-clientes.md` | 5664 | 10 | 10 | 473 | 700 |
+| `ayuda-comercios.md` | 4379 | 8 | 8 | 473 | 697 |
+| `ayuda-repartidores.md` | 4156 | 8 | 8 | 428 | 650 |
+| `politicas-y-cuenta.md` | 5289 | 9 | 9 | 494 | 665 |
+| **Total** | **19488** | **35** | **35** | **428** | **700** |
+
+- Salió un fragmento por pregunta, y todos tienen la sección reconocida: ninguno se va a
+  citar como "fragmento N".
+- El fragmento más largo, de 700 caracteres, queda lejos del máximo de 2000. Ninguna
+  parte se corta con el troceo fijo (`trocear.mjs:60`).
+- **Por qué por pregunta y no con tamaño fijo:** un corte cada 1000 caracteres parte las
+  respuestas por la mitad y mezcla dos temas en un mismo fragmento. Su vector queda a
+  mitad de camino entre los dos temas, y la fuente no dice nada útil. Cortado por
+  pregunta, cada fragmento es una idea completa, con la pregunta adentro, que se parece
+  a cómo pregunta la gente, y con una etiqueta que se entiende.
