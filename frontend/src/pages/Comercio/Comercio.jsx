@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
-import { ArrowLeft, ArrowRight, Clock, MapPin, Package, Plus, ShoppingCart } from 'lucide-react'
+import { Clock, MapPin, Package, Plus, ShoppingCart } from 'lucide-react'
 import { listarProductosDeComercio, obtenerComercio } from '../../api/catalogo'
 import { Cargando, EstadoVacio, MensajeError, MiniaturaRubro, Paginacion } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
@@ -78,7 +78,7 @@ export default function Comercio() {
         <section className="comercio-not-found">
           <h1>Comercio no encontrado</h1>
           <p>El comercio que buscás no existe o no está disponible en este momento.</p>
-          <Link to="/comercios"><ArrowLeft size={16} /> Volver a comercios</Link>
+          <Link to="/comercios">Volver a comercios</Link>
         </section>
       </main>
     )
@@ -91,7 +91,7 @@ export default function Comercio() {
     <main className="comercio-page">
       <section className="comercio-header">
         <Link to="/comercios" className="back-link">
-          <ArrowLeft size={16} /> Volver a comercios
+          Volver a comercios
         </Link>
 
         {datosComercio ? (
@@ -121,7 +121,7 @@ export default function Comercio() {
 
           {cantidadCarrito > 0 && (
             <Link to="/carrito" className="cart-indicator">
-              <ShoppingCart size={18} /> {plural(cantidadCarrito, 'producto')} en tu carrito · Ver carrito <ArrowRight size={16} />
+              <ShoppingCart size={18} /> {plural(cantidadCarrito, 'producto')} en tu carrito · Ver carrito
             </Link>
           )}
         </div>

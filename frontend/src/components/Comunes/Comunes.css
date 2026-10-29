@@ -50,9 +50,7 @@
 }
 
 .volver-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: inline-block;
   margin-bottom: 18px;
   color: var(--muted);
   font-size: 0.9rem;

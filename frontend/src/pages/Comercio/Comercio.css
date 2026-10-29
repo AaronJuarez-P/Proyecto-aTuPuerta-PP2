@@ -10,9 +10,7 @@
   
   /* Acotado: Checkout.css también define .back-link */
   .comercio-header .back-link {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    display: block;
     width: min(1100px, 100%);
     margin: 0 auto 45px;
     color: var(--brand);
@@ -202,9 +200,6 @@
   }
   
   .comercio-not-found a {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
     margin-top: 10px;
     color: var(--brand);
     font-weight: 700;

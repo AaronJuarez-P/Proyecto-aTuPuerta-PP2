@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { ArrowLeft, ArrowRight, Minus, Package, Plus, ShoppingCart, Store, TriangleAlert } from 'lucide-react'
+import { Minus, Package, Plus, ShoppingCart, Store, TriangleAlert } from 'lucide-react'
 import { Cargando, IlustracionVacia, MensajeError, MiniaturaRubro } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
 import { useCarrito } from '../../context/carrito'
@@ -80,7 +80,7 @@ export default function Carrito() {
             <IlustracionVacia icono={ShoppingCart} />
             <h2>Tu carrito está vacío</h2>
             <p>Explorá los comercios y agregá productos para empezar tu pedido.</p>
-            <Link to="/comercios">Explorar comercios <ArrowRight size={16} /></Link>
+            <Link to="/comercios">Explorar comercios</Link>
           </div>
         ) : (
           <div className="carrito-layout">
@@ -89,7 +89,7 @@ export default function Carrito() {
                 <section className="carrito-comercio" key={grupo.comercio_id}>
                   <header className="carrito-comercio-encabezado">
                     <h2><Store size={20} /> {grupo.comercio_nombre}</h2>
-                    <Link to={`/comercios/${grupo.comercio_id}`}>Agregar más <ArrowRight size={14} /></Link>
+                    <Link to={`/comercios/${grupo.comercio_id}`}>Agregar más</Link>
                   </header>
 
                   {grupo.items.map((item) => (
@@ -198,7 +198,7 @@ export default function Carrito() {
               )}
 
               <Link className="seguir-comprando" to="/comercios">
-                <ArrowLeft size={16} /> Seguir comprando
+                Seguir comprando
               </Link>
             </aside>
           </div>

@@ -190,11 +190,9 @@
   }
   
   .seguir-comprando {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+    display: block;
     margin-top: 18px;
+    text-align: center;
     color: var(--brand);
     font-size: 0.9rem;
     font-weight: 700;
@@ -228,9 +226,6 @@
   }
   
   .carrito-vacio a {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
     padding: 12px 20px;
     border-radius: 8px;
     background: var(--brand);
@@ -267,9 +262,6 @@
   }
 
   .carrito-comercio-encabezado a {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
     color: var(--brand);
     font-size: 0.85rem;
     font-weight: 700;

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router'
-import { ArrowUpRight, Bell, CircleUser, Menu, ShoppingCart, X } from 'lucide-react'
+import { Bell, CircleUser, Menu, ShoppingCart, X } from 'lucide-react'
 import { useCarrito } from '../../context/carrito'
 import { useNotificaciones } from '../../context/notificaciones'
 import { useSesion } from '../../context/sesion'
@@ -98,7 +98,6 @@ export default function Header() {
 
       <Link className="nav-cta" to="/login" onClick={cerrarMenu}>
         Iniciar sesión
-        <ArrowUpRight size={16} />
       </Link>
     </>
   )

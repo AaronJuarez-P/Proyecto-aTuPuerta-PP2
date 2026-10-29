@@ -2,7 +2,7 @@ import isotipo from '../../assets/marca/isotipo.svg'
 import './Marca.css'
 
 // La marca: el isotipo y el nombre, que es texto (no una imagen). La variante clara va
-// sobre fondos claros (header, login) y la oscura sobre fondos oscuros (footer, portada),
+// sobre fondos claros (header, login) y la oscura sobre fondos oscuros (footer),
 // como el logo original. El tamaño lo da el font-size de quien la usa.
 export default function Marca({ variante = 'clara', lema = false, className = '' }) {
   return (

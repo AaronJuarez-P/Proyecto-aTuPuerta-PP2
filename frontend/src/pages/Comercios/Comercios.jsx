@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from 'react-router'
-import { ArrowRight, Clock, MapPin, Package, Search, Store } from 'lucide-react'
+import { Clock, MapPin, Package, Search, Store } from 'lucide-react'
 import { buscarProductos, listarComercios } from '../../api/catalogo'
 import { Cargando, EstadoVacio, IconoRubro, MensajeError, MiniaturaRubro, Paginacion } from '../../components/Comunes/Comunes'
 import { useCarga } from '../../hooks/useCarga'
@@ -60,9 +60,9 @@ export default function Comercios() {
           <p className="eyebrow">COMERCIOS LOCALES</p>
 
           <h1>
-            Todo lo que necesitás,
+            Comprá en tu barrio,
             <br />
-            <em>a tu puerta.</em>
+            <em>desde casa.</em>
           </h1>
 
           <p>Encontrá comercios de tu zona y pedí lo que necesitás sin complicaciones.</p>
@@ -182,7 +182,7 @@ export default function Comercios() {
                   </p>
 
                   <Link className="comercio-button" to={`/comercios/${comercio.id}`}>
-                    Ver comercio <ArrowRight size={16} />
+                    Ver comercio
                   </Link>
                 </div>
               </article>

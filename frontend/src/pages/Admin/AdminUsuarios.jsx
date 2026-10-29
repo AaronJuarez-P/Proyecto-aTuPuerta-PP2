@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { ArrowLeft, Plus, Users } from 'lucide-react'
+import { Plus, Users } from 'lucide-react'
 import { crearUsuario, listarUsuarios } from '../../api/admin'
 import { Cargando, EstadoVacio, MensajeError, Modal, Paginacion } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
@@ -45,7 +45,7 @@ export default function AdminUsuarios() {
   return (
     <main className="admin-page">
       <section className="admin-container">
-        <Link className="volver-link" to="/admin"><ArrowLeft size={16} /> Panel</Link>
+        <Link className="volver-link" to="/admin">Panel</Link>
 
         <header className="admin-header">
           <div>
@@ -132,7 +132,7 @@ export default function AdminUsuarios() {
                         ))}
                       </div>
                     </td>
-                    <td>{usuario.sesion ? etiquetaDelRol(usuario.sesion) : '—'}</td>
+                    <td>{usuario.sesion ? etiquetaDelRol(usuario.sesion) : 'Ninguna'}</td>
                     <td>
                       <span className={`estado-badge ${usuario.activo ? 'tono-ok' : 'tono-error'}`}>
                         {usuario.activo ? 'Activo' : 'Inactivo'}

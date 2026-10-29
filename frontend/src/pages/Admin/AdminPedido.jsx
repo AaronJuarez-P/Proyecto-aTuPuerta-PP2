@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { ArrowLeft, ArrowRight, Package } from 'lucide-react'
+import { Package } from 'lucide-react'
 import { cancelarPedidoAdmin, obtenerPedidoAdmin } from '../../api/admin'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Modal } from '../../components/Comunes/Comunes'
 import MapaSeguimiento from '../../components/MapaSeguimiento/MapaSeguimiento'
@@ -48,7 +48,7 @@ export default function AdminPedido() {
   return (
     <main className="admin-page">
       <section className="admin-container">
-        <Link className="volver-link" to="/admin/pedidos"><ArrowLeft size={16} /> Pedidos</Link>
+        <Link className="volver-link" to="/admin/pedidos">Pedidos</Link>
 
         {error && !pedido ? (
           error.codigo === 404 ? <EstadoVacio icono={Package} titulo="Pedido no encontrado" /> : <MensajeError error={error} alReintentar={recargar} />
@@ -59,7 +59,7 @@ export default function AdminPedido() {
             <header className="admin-header">
               <div>
                 <p className="admin-label">Pedido #{pedido.id}</p>
-                <h1>{pedido.comercio.nombre} <ArrowRight size={28} role="img" aria-label="para" /> {pedido.cliente.nombre}</h1>
+                <h1>{pedido.comercio.nombre} para {pedido.cliente.nombre}</h1>
                 <p>Creado el {formatearFecha(pedido.created_at)} · última novedad {formatearFecha(pedido.updated_at)}</p>
               </div>
               <div className="admin-acciones-pedido">
@@ -104,7 +104,7 @@ export default function AdminPedido() {
                         <li key={registro.id}>
                           <EstadoBadge tipo="auditoria" estado={registro.accion} />
                           <div>
-                            <strong>{registro.detalle ?? '—'}</strong>
+                            <strong>{registro.detalle ?? 'Sin detalle'}</strong>
                             <small>{formatearFechaYHora(registro.fecha, registro.hora)} · {autorDeAuditoria(registro)}</small>
                           </div>
                         </li>

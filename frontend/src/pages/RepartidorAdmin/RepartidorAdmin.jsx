@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
-import { ArrowRight, Bike, Check, LocateFixed, MapPin, Motorbike, Package, Play, Route, Store, Wallet } from 'lucide-react'
+import { Bike, Check, LocateFixed, MapPin, Motorbike, Package, Play, Route, Store, Wallet } from 'lucide-react'
 import {
   cambiarDisponibilidad,
   confirmarEntrega,
@@ -134,7 +134,7 @@ export default function RepartidorAdmin() {
               <span>Ganado en comisiones</span>
             </div>
             <div className="repartidor-stat">
-              <strong>{enCurso ? `#${enCurso.id}` : '—'}</strong>
+              <strong>{enCurso ? `#${enCurso.id}` : 'Ninguno'}</strong>
               <span>Pedido en curso</span>
             </div>
           </section>
@@ -250,7 +250,7 @@ function PedidosDisponibles({ alTomar }) {
 
               <div className="repartidor-actions">
                 <button type="button" className="accept-button" disabled={tomando !== null} onClick={() => tomar(pedido)}>
-                  {tomando === pedido.id ? 'Tomando…' : <>Tomar pedido <ArrowRight size={18} /></>}
+                  {tomando === pedido.id ? 'Tomando…' : 'Tomar pedido'}
                 </button>
               </div>
             </article>

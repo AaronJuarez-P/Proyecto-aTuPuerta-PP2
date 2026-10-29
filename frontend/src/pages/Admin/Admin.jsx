@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { ArrowRight, ReceiptText, ShieldCheck, Users } from 'lucide-react'
+import { ReceiptText, ShieldCheck, Users } from 'lucide-react'
 import { listarPedidosAdmin, listarReclamosAdmin, listarUsuarios } from '../../api/admin'
 import { Cargando, EstadoBadge, MensajeError } from '../../components/Comunes/Comunes'
 import { useSesion } from '../../context/sesion'
@@ -90,7 +90,7 @@ export default function Admin() {
                   datos.pedidos.pedidos.map((pedido) => (
                     <Link className="fila-tablero" key={pedido.id} to={`/admin/pedidos/${pedido.id}`}>
                       <span>
-                        <strong>#{pedido.id}</strong> {pedido.comercio} <ArrowRight size={14} role="img" aria-label="para" /> {pedido.cliente}
+                        <strong>#{pedido.id}</strong> {pedido.comercio} para {pedido.cliente}
                         <small>{formatearFecha(pedido.created_at)} · {formatearPrecio(pedido.total)}</small>
                       </span>
                       <EstadoBadge estado={pedido.estado} />
@@ -98,7 +98,7 @@ export default function Admin() {
                   ))
                 )}
                 <div className="acciones">
-                  <Link className="boton boton-secundario" to="/admin/pedidos">Ver todos los pedidos <ArrowRight size={16} /></Link>
+                  <Link className="boton boton-secundario" to="/admin/pedidos">Ver todos los pedidos</Link>
                 </div>
               </section>
 
@@ -121,10 +121,10 @@ export default function Admin() {
                   {/* La cola muestra primero los que esperan hace más: los nuevos pueden quedar afuera */}
                   {datos.sinAsignar.paginacion.total > datos.sinAsignar.reclamos.length ? (
                     <Link className="boton boton-secundario" to="/admin/reclamos?estado=pendiente&asignado=ninguno">
-                      Ver los {datos.sinAsignar.paginacion.total} sin asignar <ArrowRight size={16} />
+                      Ver los {datos.sinAsignar.paginacion.total} sin asignar
                     </Link>
                   ) : (
-                    <Link className="boton boton-secundario" to="/admin/reclamos">Ir a la cola de reclamos <ArrowRight size={16} /></Link>
+                    <Link className="boton boton-secundario" to="/admin/reclamos">Ir a la cola de reclamos</Link>
                   )}
                 </div>
               </section>

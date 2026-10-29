@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from 'react-router'
-import { ArrowRight, MapPin, Package } from 'lucide-react'
+import { MapPin, Package } from 'lucide-react'
 import { listarMisPedidos } from '../../api/pedidos'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
 import { useCarga } from '../../hooks/useCarga'
@@ -108,11 +108,11 @@ export default function Pedidos() {
 
                   {pedido.estado === 'pago_espera' ? (
                     <Link to={`/pedidos/${pedido.id}`} className="boton boton-primario boton-chico">
-                      Pagar <ArrowRight size={16} />
+                      Pagar
                     </Link>
                   ) : (
                     <Link to={`/pedidos/${pedido.id}`} className="pedido-detail-button">
-                      {pedido.estado === 'en_camino' ? 'Seguir en vivo' : 'Ver detalle'} <ArrowRight size={16} />
+                      {pedido.estado === 'en_camino' ? 'Seguir en vivo' : 'Ver detalle'}
                     </Link>
                   )}
                 </div>

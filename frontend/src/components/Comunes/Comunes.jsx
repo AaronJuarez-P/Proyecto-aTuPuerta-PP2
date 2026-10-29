@@ -1,5 +1,5 @@
 import { createElement, useEffect, useState } from 'react'
-import { ArrowLeft, ArrowRight, Package, X } from 'lucide-react'
+import { Package, X } from 'lucide-react'
 import { iconoDeCategoria, tonoDeCategoria } from '../../utils/categorias'
 import { infoEstado } from '../../utils/estados'
 import './Comunes.css'
@@ -103,7 +103,7 @@ export function Paginacion({ paginacion, alCambiar }) {
         disabled={pagina <= 1}
         onClick={() => alCambiar(pagina - 1)}
       >
-        <ArrowLeft size={16} /> Anterior
+        Anterior
       </button>
 
       <span>Página {pagina} de {paginas}</span>
@@ -114,7 +114,7 @@ export function Paginacion({ paginacion, alCambiar }) {
         disabled={pagina >= paginas}
         onClick={() => alCambiar(pagina + 1)}
       >
-        Siguiente <ArrowRight size={16} />
+        Siguiente
       </button>
     </nav>
   )

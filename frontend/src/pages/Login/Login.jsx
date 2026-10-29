@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
-import { ArrowLeft } from 'lucide-react'
 import { useSesion } from '../../context/sesion'
 import { esRutaInterna, inicioDelRol } from '../../utils/roles'
 import Marca from '../../components/Marca/Marca'
@@ -182,7 +181,7 @@ export default function Login() {
         <p className="register-link">
           {esAdministrador ? (
             <button type="button" className="login-link-boton" onClick={() => cambiarRol('cliente')}>
-              <ArrowLeft size={14} /> Volver al inicio de sesión de usuarios
+              Volver al inicio de sesión de usuarios
             </button>
           ) : (
             <button type="button" className="login-link-boton" onClick={() => cambiarRol('administrador')}>

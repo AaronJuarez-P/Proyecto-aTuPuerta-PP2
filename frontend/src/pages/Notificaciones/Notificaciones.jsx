@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { ArrowRight, Bell, Check } from 'lucide-react'
+import { Bell, Check } from 'lucide-react'
 import { listarNotificaciones, marcarLeida, marcarTodasLeidas } from '../../api/notificaciones'
 import { Cargando, EstadoVacio, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
@@ -116,7 +116,7 @@ export default function Notificaciones() {
                   <div className="notificacion-acciones">
                     {enlace && (
                       <Link className="boton boton-secundario boton-chico" to={enlace} onClick={() => leer(notificacion)}>
-                        Ver <ArrowRight size={14} />
+                        Ver
                       </Link>
                     )}
                     {!notificacion.leida && (

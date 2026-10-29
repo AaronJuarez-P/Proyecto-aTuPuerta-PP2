@@ -54,4 +54,4 @@ export const ACCIONES_AUDITORIA = {
 const TABLAS = { pedido: ESTADOS_PEDIDO, pago: ESTADOS_PAGO, reclamo: ESTADOS_RECLAMO, auditoria: ACCIONES_AUDITORIA }
 
 export const infoEstado = (tipo, estado) =>
-  TABLAS[tipo]?.[estado] ?? { etiqueta: estado ?? '—', tono: 'neutro' }
+  TABLAS[tipo]?.[estado] ?? { etiqueta: estado ?? 'Sin estado', tono: 'neutro' }

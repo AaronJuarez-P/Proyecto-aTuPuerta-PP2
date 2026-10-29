@@ -11,7 +11,7 @@ export const formatearPrecio = (valor) => formatoPrecio.format(Number(valor) || 
 // Las fechas llegan en ISO (UTC) y se muestran en la hora local del navegador
 export function formatearFecha(valor, { conHora = true } = {}) {
   if (!valor) {
-    return '—'
+    return 'Sin fecha'
   }
 
   const fecha = new Date(valor)
@@ -31,14 +31,14 @@ export function formatearFecha(valor, { conHora = true } = {}) {
 // y sin zona se lee como hora local.
 export function formatearFechaYHora(fecha, hora) {
   if (!fecha) {
-    return '—'
+    return 'Sin fecha'
   }
 
   return formatearFecha(`${fecha}T${hora ?? '00:00:00'}`, { conHora: Boolean(hora) })
 }
 
 export const formatearHora = (valor) =>
-  valor ? new Date(valor).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '—'
+  valor ? new Date(valor).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : 'Sin hora'
 
 export const formatearDistancia = (km) =>
   `${Number(km || 0).toLocaleString('es-AR', { maximumFractionDigits: 1 })} km`

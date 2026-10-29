@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { ArrowLeft, Megaphone } from 'lucide-react'
+import { Megaphone } from 'lucide-react'
 import { asignarReclamo, obtenerReclamoAdmin, resolverReclamo } from '../../api/admin'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
@@ -40,7 +40,7 @@ export default function AdminReclamo() {
   return (
     <main className="admin-page">
       <section className="admin-container">
-        <Link className="volver-link" to="/admin/reclamos"><ArrowLeft size={16} /> Reclamos</Link>
+        <Link className="volver-link" to="/admin/reclamos">Reclamos</Link>
 
         {error && !reclamo ? (
           error.codigo === 404 ? <EstadoVacio icono={Megaphone} titulo="Reclamo no encontrado" /> : <MensajeError error={error} alReintentar={recargar} />

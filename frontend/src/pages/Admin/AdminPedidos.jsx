@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { ArrowLeft, Package, X } from 'lucide-react'
+import { Package, X } from 'lucide-react'
 import { listarPedidosAdmin } from '../../api/admin'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
 import { useCarga } from '../../hooks/useCarga'
@@ -32,7 +32,7 @@ export default function AdminPedidos() {
   return (
     <main className="admin-page">
       <section className="admin-container">
-        <Link className="volver-link" to="/admin"><ArrowLeft size={16} /> Panel</Link>
+        <Link className="volver-link" to="/admin">Panel</Link>
 
         <header className="admin-header">
           <div>
@@ -117,9 +117,9 @@ export default function AdminPedidos() {
                     <td>{formatearFecha(pedido.created_at)}</td>
                     <td>{pedido.cliente}</td>
                     <td>{pedido.comercio}</td>
-                    <td>{pedido.repartidor ?? '—'}</td>
+                    <td>{pedido.repartidor ?? 'Sin asignar'}</td>
                     <td>{formatearPrecio(pedido.total)}</td>
-                    <td>{pedido.pago ? <EstadoBadge tipo="pago" estado={pedido.pago} /> : '—'}</td>
+                    <td>{pedido.pago ? <EstadoBadge tipo="pago" estado={pedido.pago} /> : 'Sin pago'}</td>
                     <td><EstadoBadge estado={pedido.estado} /></td>
                   </tr>
                 ))}

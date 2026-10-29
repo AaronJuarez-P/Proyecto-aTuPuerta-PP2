@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { ArrowLeft, Megaphone } from 'lucide-react'
+import { Megaphone } from 'lucide-react'
 import { listarReclamosAdmin } from '../../api/admin'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
 import { useCarga } from '../../hooks/useCarga'
@@ -33,7 +33,7 @@ export default function AdminReclamos() {
   return (
     <main className="admin-page">
       <section className="admin-container">
-        <Link className="volver-link" to="/admin"><ArrowLeft size={16} /> Panel</Link>
+        <Link className="volver-link" to="/admin">Panel</Link>
 
         <header className="admin-header">
           <div>
@@ -108,7 +108,7 @@ export default function AdminReclamos() {
                     </td>
                     <td className="admin-celda-texto">{resumir(reclamo.descripcion)}</td>
                     <td>{formatearFecha(reclamo.created_at)}</td>
-                    <td>{reclamo.admin_asignado ?? '—'}</td>
+                    <td>{reclamo.admin_asignado ?? 'Sin asignar'}</td>
                     <td><EstadoBadge tipo="reclamo" estado={reclamo.estado} /></td>
                   </tr>
                 ))}

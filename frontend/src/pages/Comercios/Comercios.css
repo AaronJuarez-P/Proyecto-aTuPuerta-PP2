@@ -20,6 +20,8 @@
     line-height: 1;
     color: var(--ink);
     letter-spacing: -0.04em;
+    /* En el celular corta parejo: "Comprá en / tu barrio," */
+    text-wrap: balance;
   }
   
   .comercios-hero h1 em {
@@ -186,9 +188,7 @@
   
   .comercio-button {
     text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+    display: inline-block;
     width: fit-content;
     margin-top: auto;
     padding: 10px 0;

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useEffectEvent, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
-import { ArrowLeft, ArrowRight, Check, CreditCard, MapPin, Motorbike, Package, Repeat, Store, Timer, X } from 'lucide-react'
+import { Check, CreditCard, MapPin, Motorbike, Package, Repeat, Store, Timer, X } from 'lucide-react'
 import {
   cancelarMiPedido,
   iniciarPago,
@@ -221,7 +221,7 @@ export default function Pedido() {
         <section className="pedido-container pedido-not-found">
           <h1>{noEsSuyo ? 'Pedido no encontrado' : 'No se pudo cargar el pedido'}</h1>
           <p>{detalle.error.message}</p>
-          <Link to="/pedidos" className="pedido-button"><ArrowLeft size={16} /> Volver a mis pedidos</Link>
+          <Link to="/pedidos" className="pedido-button">Volver a mis pedidos</Link>
         </section>
       </main>
     )
@@ -240,7 +240,7 @@ export default function Pedido() {
   return (
     <main className="pedido-page">
       <section className="pedido-container">
-        <Link to="/pedidos" className="pedido-back"><ArrowLeft size={16} /> Volver a mis pedidos</Link>
+        <Link to="/pedidos" className="pedido-back">Volver a mis pedidos</Link>
 
         <div className="pedido-header">
           <div>
@@ -522,7 +522,7 @@ function ResultadoRepetir({ resultado, alIrAlCarrito, alCerrar }) {
       <div className="acciones">
         {agregados.length > 0 && (
           <button type="button" className="boton boton-primario" onClick={alIrAlCarrito}>
-            Revisar el carrito <ArrowRight size={18} />
+            Revisar el carrito
           </button>
         )}
         <button type="button" className="boton boton-secundario" onClick={alCerrar}>

@@ -1,15 +1,12 @@
 .skip-link { position: fixed; top: -100px; left: 1rem; z-index: 30; background: white; color: var(--brand); padding: .8rem 1rem; border-radius: 8px; }
 .skip-link:focus { top: .5rem; }
-/* Arriba suma los 76px del header fijo, para que la marca no quede pegada. El fondo es
-   casi negro, como el del logo original, con un resplandor menta arriba y verde abajo. */
-.landing-hero { position: relative; overflow: hidden; padding: calc(76px + 2.5rem) 1.5rem 4.5rem; text-align: center; color: white; background: radial-gradient(ellipse 60% 70% at 50% 0%, color-mix(in srgb, var(--brand-menta) 14%, transparent), transparent 70%), radial-gradient(ellipse 55% 60% at 100% 100%, color-mix(in srgb, var(--brand) 55%, transparent), transparent 70%), var(--brand-noche); }
+/* Arriba suma los 76px del header fijo, para que el título no quede pegado. El fondo es
+   casi negro, como el del logo original, con un resplandor menta arriba y verde abajo.
+   La marca no se repite acá: ya está en el header. */
+.landing-hero { position: relative; overflow: hidden; padding: calc(76px + 4.5rem) 1.5rem 5.5rem; text-align: center; color: white; background: radial-gradient(ellipse 60% 70% at 50% 0%, color-mix(in srgb, var(--brand-menta) 14%, transparent), transparent 70%), radial-gradient(ellipse 55% 60% at 100% 100%, color-mix(in srgb, var(--brand) 55%, transparent), transparent 70%), var(--brand-noche); }
 .landing-hero::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.06) 2px, transparent 2px); background-size: 40px 40px; pointer-events: none; }
 .hero-content { position: relative; max-width: 750px; margin: auto; }
-/* En su propio renglón: .hero-badge también es inline-flex */
-.hero-content .hero-marca { display: flex; width: fit-content; margin: 0 auto 1.75rem; font-size: clamp(1.9rem, 4.5vw, 2.6rem); }
-.hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); padding: 6px 14px; border-radius: 999px; font-size: .875rem; margin-bottom: 1.5rem; }
-.hero-badge span { width: 7px; height: 7px; border-radius: 50%; background: var(--brand-menta); flex-shrink: 0; }
-.landing-hero h1 { font: 800 clamp(2.6rem, 5.5vw, 3.8rem)/1.15 var(--display); letter-spacing: -1.5px; }
+.landing-hero h1 { font: 800 clamp(2.6rem, 6vw, 4.2rem)/1.1 var(--display); letter-spacing: -1.5px; }
 .landing-hero h1 em { font-style: normal; color: var(--brand-menta); }
 .hero-description { max-width: 540px; margin: 1.4rem auto 2rem; font-size: 1.05rem; color: #dfebe3; }
 .hero-actions { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
@@ -20,10 +17,18 @@
 .button-primary:hover { background: white; }
 .button-outline { border: 1px solid #ffffff70; color: white; }
 .button-outline:hover { background: #ffffff15; }
-.benefits-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; padding: 1.5rem max(1.5rem, calc((100% - 1050px)/2)); background: var(--surface); border-bottom: 1px solid var(--border); text-align: center; }
+.benefits-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; padding: 1.5rem max(1.5rem, calc((100% - 1050px)/2)); position: relative; text-align: center; }
 .benefits-bar > div { display: flex; flex-direction: column; gap: 4px; }
 .benefits-bar strong { display: flex; align-items: center; justify-content: center; gap: 6px; font-family: var(--display); color: var(--brand); font-size: 1.1rem; }
 .benefits-bar div > span { font-size: .875rem; color: var(--muted); }
+/* Todas las secciones van sobre blanco y las separa una ruta punteada verde, como la del
+   mapa, más ancha que el contenido y desvanecida en las puntas. Un fondo gris además de la
+   ruta eran dos separadores en el mismo lugar. Con el mismo dibujo se unen los pasos de
+   "Así funciona". */
+.benefits-bar::after, .how-section::before, .roles-section::before { content: ''; position: absolute; left: 50%; width: min(1400px, 100%); -webkit-mask: linear-gradient(90deg, transparent, #000 12% 88%, transparent); mask: linear-gradient(90deg, transparent, #000 12% 88%, transparent); pointer-events: none; }
+.benefits-bar::after { bottom: 0; translate: -50% 50%; }
+.how-section::before, .roles-section::before { top: 0; translate: -50% -50%; }
+.benefits-bar::after, .how-section::before, .roles-section::before, .step-card:not(:last-child)::after { height: 4px; background: radial-gradient(circle, color-mix(in srgb, var(--brand-menta) 55%, var(--brand)) 2px, transparent 2.5px) left center / 12px 4px repeat-x; }
 .landing-section { max-width: 1164px; margin: auto; padding: 4rem 2rem; }
 .landing-section h2 { font: 700 clamp(1.6rem, 3vw, 2rem)/1.3 var(--display); letter-spacing: -.7px; }
 .section-description { color: var(--muted); margin-top: .75rem; }
@@ -43,18 +48,18 @@
 .category-body { padding: 1rem; }
 .category-body h3, .step-card h3 { font-size: 1rem; font-weight: 700; }
 .category-body p { margin-top: .35rem; font-size: .875rem; color: var(--muted); }
-.how-section { border-top: 1px solid var(--border); text-align: center; }
+.how-section { position: relative; text-align: center; }
 .steps-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2rem; margin-top: 2.5rem; }
 /* Cada paso va en un pin menta como el del logo, con el ícono en la cabeza y su número.
-   La línea punteada que une los pasos es la ruta, como en el mapa del seguimiento. */
+   Los une la misma ruta punteada que separa las secciones. */
 .step-card { position: relative; }
-.step-card:not(:last-child)::after { content: ''; position: absolute; top: 30px; left: calc(50% + 44px); width: calc(100% + 2rem - 88px); border-top: 3px dotted color-mix(in srgb, var(--brand) 35%, transparent); }
+.step-card:not(:last-child)::after { content: ''; position: absolute; top: 28px; left: calc(50% + 44px); width: calc(100% + 2rem - 88px); }
 .step-icon { position: relative; display: grid; justify-items: center; align-content: start; width: 60px; height: 79px; margin: 0 auto 1rem; padding-top: 16px; color: var(--brand-noche); }
 .step-icon::before { content: ''; position: absolute; inset: 0; background: var(--brand-menta); -webkit-mask: url('../../assets/marca/pin.svg') no-repeat center / contain; mask: url('../../assets/marca/pin.svg') no-repeat center / contain; }
 .step-icon .lucide { position: relative; }
 .step-icon span { position: absolute; top: -6px; right: -10px; display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; background: var(--brand); border: 2px solid white; color: white; font-size: .75rem; font-weight: 700; }
 .step-card p { margin-top: .5rem; color: var(--muted); font-size: .875rem; }
-.roles-section { background: var(--surface); border-top: 1px solid var(--border); text-align: center; }
+.roles-section { position: relative; text-align: center; }
 .roles-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; margin-top: 2rem; text-align: left; }
 .role-card { padding: 1.5rem; border: 1px solid var(--border); background: white; border-radius: 16px; }
 .role-icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: .75rem; border-radius: 14px; background: var(--brand-light); color: var(--brand); }
@@ -71,9 +76,8 @@
 }
 @media (max-width: 480px) {
   .landing-section { padding: 3rem 1rem; }
-  .landing-hero { padding: calc(70px + 2rem) 1rem 3.5rem; }
+  .landing-hero { padding: calc(70px + 3rem) 1rem 3.5rem; }
   .hero-actions { flex-direction: column; }
-  .hero-badge { font-size: .8rem; }
   .category-grid { gap: .75rem; }
   .category-body { padding: .8rem; }
   .category-body h3 { font-size: .9rem; }

@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { ArrowLeft, ReceiptText, X } from 'lucide-react'
+import { ReceiptText, X } from 'lucide-react'
 import { listarAuditoriaPedidos, listarAuditoriaProductos, listarUsuarios } from '../../api/admin'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
 import { useCarga } from '../../hooks/useCarga'
@@ -54,7 +54,7 @@ export default function AdminAuditoria() {
   return (
     <main className="admin-page">
       <section className="admin-container">
-        <Link className="volver-link" to="/admin"><ArrowLeft size={16} /> Panel</Link>
+        <Link className="volver-link" to="/admin">Panel</Link>
 
         <header className="admin-header">
           <div>
@@ -164,7 +164,7 @@ export default function AdminAuditoria() {
                       <td>{formatearFechaYHora(registro.fecha, registro.hora)}</td>
                       <td><Link to={`/admin/pedidos/${registro.pedido_id}`}>#{registro.pedido_id}</Link></td>
                       <td><EstadoBadge tipo="auditoria" estado={registro.accion} /></td>
-                      <td className="admin-celda-texto">{registro.detalle ?? '—'}</td>
+                      <td className="admin-celda-texto">{registro.detalle ?? 'Sin detalle'}</td>
                       <td>{autorDeAuditoria(registro)}</td>
                     </tr>
                   ))}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { ArrowLeft, ArrowRight, Check, CreditCard, Lock, MapPin, ShoppingCart, Store } from 'lucide-react'
+import { Check, CreditCard, Lock, MapPin, ShoppingCart, Store } from 'lucide-react'
 import { Cargando, IlustracionVacia, MensajeError } from '../../components/Comunes/Comunes'
 import { useCarrito } from '../../context/carrito'
 import { formatearDistancia, formatearMinutos, formatearPrecio, plural } from '../../utils/formato'
@@ -125,7 +125,7 @@ export default function Checkout() {
       <div className="checkout-container">
         <div className="checkout-title">
           <Link to="/carrito" className="back-link">
-            <ArrowLeft size={16} /> Volver al carrito
+            Volver al carrito
           </Link>
           <p className="eyebrow">CHECKOUT</p>
           <h1>Finalizá tu pedido</h1>
@@ -222,7 +222,6 @@ export default function Checkout() {
               {confirmando
                 ? 'Confirmando…'
                 : comercios.length > 1 ? `Confirmar ${comercios.length} pedidos` : 'Confirmar pedido'}
-              <ArrowRight size={20} />
             </button>
           </form>
 

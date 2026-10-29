@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { ArrowLeft, Motorbike, ShieldCheck, ShoppingBag, Store, Users } from 'lucide-react'
+import { Motorbike, ShieldCheck, ShoppingBag, Store, Users } from 'lucide-react'
 import {
   cambiarEstadoComercio,
   cambiarEstadoUsuario,
@@ -303,7 +303,7 @@ function Pantalla({ children }) {
   return (
     <main className="admin-page">
       <section className="admin-container">
-        <Link className="volver-link" to="/admin/usuarios"><ArrowLeft size={16} /> Usuarios</Link>
+        <Link className="volver-link" to="/admin/usuarios">Usuarios</Link>
         {children}
       </section>
     </main>

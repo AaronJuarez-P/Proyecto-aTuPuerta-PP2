@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { ArrowLeft, Check, ReceiptText } from 'lucide-react'
+import { Check, ReceiptText } from 'lucide-react'
 import { marcarPreparado, obtenerVenta } from '../../api/comercio'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Modal } from '../../components/Comunes/Comunes'
 import FormularioReclamo from '../../components/FormularioReclamo/FormularioReclamo'
@@ -36,7 +36,7 @@ export default function ComercioVenta() {
   return (
     <main className="pagina">
       <div className="pagina-contenido">
-        <Link className="volver-link" to="/comercio?ver=ventas"><ArrowLeft size={16} /> Pedidos y ventas</Link>
+        <Link className="volver-link" to="/comercio?ver=ventas">Pedidos y ventas</Link>
 
         {error && !venta ? (
           error.codigo === 404 || error.codigo === 403 ? (

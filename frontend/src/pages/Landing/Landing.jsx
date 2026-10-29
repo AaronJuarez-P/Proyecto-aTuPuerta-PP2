@@ -1,7 +1,6 @@
 import { Link } from 'react-router'
-import { ArrowDown, Check, CircleUser, DoorOpen, MapPin, Motorbike, Repeat, Search, ShoppingCart, Store } from 'lucide-react'
+import { Check, CircleUser, DoorOpen, MapPin, Motorbike, Repeat, Search, ShoppingCart, Store } from 'lucide-react'
 import { IconoRubro } from '../../components/Comunes/Comunes'
-import Marca from '../../components/Marca/Marca'
 import { tonoDeCategoria } from '../../utils/categorias'
 import './Landing.css'
 
@@ -23,7 +22,7 @@ const steps = [
 ]
 
 const roles = [
-  { icon: CircleUser, title: 'Cliente', description: 'Todo lo que necesitás, en un solo lugar.', features: ['Explorar comercios y productos', 'Seguimiento del pedido', 'Historial de compras', 'Repetir pedidos anteriores', 'Gestionar tus datos de entrega'] },
+  { icon: CircleUser, title: 'Cliente', description: 'Comercios locales, delivery justo.', features: ['Explorar comercios y productos', 'Seguimiento del pedido', 'Historial de compras', 'Repetir pedidos anteriores', 'Gestionar tus datos de entrega'] },
   { icon: Store, title: 'Negocio', description: 'Tu comercio, más cerca de tus clientes.', features: ['Panel de gestión de productos', 'Control de stock y precios', 'Recepción de pedidos', 'Coordinación de los envíos', 'Menor costo de intermediación'] },
   { icon: Motorbike, title: 'Repartidor', description: 'Conectá los negocios con su comunidad.', features: ['Panel de pedidos disponibles', 'Gestión de entregas asignadas', 'Rutas de entrega', 'Ubicación del destino', 'Confirmación de entrega'] },
 ]
@@ -35,14 +34,12 @@ export default function Landing() {
       <main id="contenido">
         <section className="landing-hero" id="inicio" aria-labelledby="hero-title">
           <div className="hero-content">
-            <Marca variante="oscura" className="marca-apilada hero-marca" />
-            <p className="hero-badge"><span aria-hidden="true" />Comercios locales, delivery justo</p>
-            <h1 id="hero-title">Delivery justo,<br /><em>a tu puerta</em></h1>
-            <p className="hero-description">Pedí de supermercados, ferreterías, librerías y más — sin el sobrecosto de las apps tradicionales.</p>
+            <h1 id="hero-title">Todo lo que necesitás,<br /><em>en un solo lugar</em></h1>
+            <p className="hero-description">Pedí de supermercados, ferreterías, librerías y más, sin el sobrecosto de las apps tradicionales.</p>
             <div className="hero-actions">
             <Link className="button button-primary" to="/comercios">
             <ShoppingCart size={18} /> Explorá los rubros</Link>
-              <a className="button button-outline" href="#como-funciona">¿Cómo funciona? <ArrowDown size={18} /></a>
+              <a className="button button-outline" href="#como-funciona">¿Cómo funciona?</a>
             </div>
           </div>
         </section>
