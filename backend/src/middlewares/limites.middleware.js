@@ -51,4 +51,15 @@ const limitadorAutenticacion = rateLimit({
     handler: responderLimite("Demasiados intentos fallidos. Esperá unos minutos y volvé a intentar")
 });
 
-module.exports = { limitadorGeneral, limitadorAutenticacion };
+// Para las preguntas al Portero, el asistente de ayuda. En modo rag cada pregunta es una
+// llamada a Gemini, que tiene un cupo por minuto y por dia: cuentan todas las preguntas,
+// no solo las fallidas, porque lo que se gasta es el cupo.
+const limitadorAyuda = rateLimit({
+    windowMs: ventanaMs(),
+    limit: numeroDelEntorno('RATE_LIMIT_AYUDA_MAX', 30),
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    handler: responderLimite("Demasiadas preguntas al Portero. Esperá unos minutos y volvé a intentar")
+});
+
+module.exports = { limitadorGeneral, limitadorAutenticacion, limitadorAyuda };

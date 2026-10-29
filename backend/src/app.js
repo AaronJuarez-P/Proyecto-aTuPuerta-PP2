@@ -22,6 +22,7 @@ const perfilRoutes            = require("./routes/perfil.routes");
 const pedidoClienteRoutes     = require("./routes/pedidoCliente.routes");
 const administradorRoutes     = require("./routes/administrador.routes");
 const reclamoRoutes           = require("./routes/reclamo.routes");
+const ayudaRoutes             = require("./routes/ayuda.routes");
 
 const app = express();
 
@@ -103,6 +104,7 @@ app.use("/api", seguimientoRoutes);
 app.use("/api", notificacionesRoutes);
 app.use("/api", perfilRoutes);
 app.use("/api", reclamoRoutes);
+app.use("/api", ayudaRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

@@ -387,3 +387,129 @@ está y la respuesta igual es mala, falló el modelo.
     cerró la sesión".
   - Falta de contexto: "¿y si ya pagué?" no dice de qué habla. Cada pregunta viaja sola,
     sin el historial.
+
+### Preguntas de la demo
+
+Las eligió Santiago, entre las candidatas de la Ficha 5:
+
+| Para mostrar | Pregunta | Qué pasa |
+|---|---|---|
+| Una que funciona | "¿Cómo pago?" | Trae primero "¿Cómo pago mi pedido?", con 0.699, y el modelo responde citando ese fragmento. |
+| Una que no está | "¿Tienen descuentos para estudiantes?" | Ningún fragmento llega al umbral (el mejor saca 0.457). Responde "No lo encuentro en los documentos." sin llamar al modelo, así que sale igual siempre. Si preguntan por la segunda barrera, se cuenta el caso del envío. |
+| Una que falla | "¿por qué me sacó de la cuenta si no toqué nada?" | Falla la búsqueda: el fragmento correcto queda en el puesto 5. Sale igual siempre, porque no llega al modelo. |
+| De reserva, si sobra tiempo | "¿puedo pagar en efectivo?" | Falla el modelo: el fragmento correcto llega primero y el modelo igual dice "No lo encuentro". Puede variar de una corrida a otra. |
+
+## Backend (Fase 6)
+
+**Archivos nuevos:**
+- `backend/src/services/ayuda.service.js`: es el único archivo del backend que sabe que
+  existe `backend/rag`. Lee `AYUDA_MODO`, carga el RAG y traduce los errores.
+- `backend/src/controllers/ayuda.controller.js`: valida la pregunta y arma las
+  respuestas con el sobre `{ codigo, estado, datos }`.
+- `backend/src/routes/ayuda.routes.js`: `GET /api/ayuda/estado` y
+  `POST /api/ayuda/preguntar`. Las dos son públicas, porque puede preguntar cualquiera,
+  también sin sesión.
+
+**Archivos compartidos que se tocaron:**
+- `app.js`: dos renglones, el `require` (`app.js:25`) y el `app.use("/api", ayudaRoutes)`
+  (`app.js:107`). La consigna dice "una línea", pero sin el `require` no hay qué usar.
+- `limites.middleware.js`: `limitadorAyuda` (`limites.middleware.js:57`), con el mismo
+  patrón que los otros dos limitadores y `RATE_LIMIT_AYUDA_MAX` (30 por ventana, por
+  defecto). Cuenta todas las preguntas, no solo las fallidas, porque lo que se gasta es
+  el cupo de Gemini.
+- `backend/.env.example`: la sección "Asistente de ayuda El Portero (RAG)", con
+  `AYUDA_MODO=off` y `RATE_LIMIT_AYUDA_MAX=30`.
+
+**Cambio respecto de la consigna:** se agregó `ayuda.controller.js`. La consigna nombra
+solo el service y las rutas. Pero en el proyecto las rutas solo enganchan middlewares y
+controladores (por ejemplo, `reclamo.routes.js`). El service le pasa al controlador el
+código HTTP en `error.codigoHttp`, igual que `crearErrorPedido` en `pedido.service.js`.
+
+**Decisiones:**
+- **El modo** se lee una sola vez, al arrancar (`ayuda.service.js:24`). Vacío o sin
+  definir vale `off`. Un valor mal escrito también vale `off`, y el log lo avisa una vez.
+- **Carga perezosa** (`cargarRag`, `ayuda.service.js:90`): el RAG se importa con la
+  primera pregunta, no al arrancar. Con `off` no se importa nunca, así que el backend
+  arranca sin Docker, sin Ollama y sin el `npm install` de `backend/rag`.
+- **Por qué `import()` y no `require()`:** `rag.mjs` es ESM y tiene un `await` afuera de
+  toda función, porque lee `prompt.txt` al cargarse. Node 24 ya puede hacer `require()`
+  de un ESM, pero no de uno así. `node -e "require('backend/rag/rag.mjs')"` responde
+  `ERR_REQUIRE_ASYNC_MODULE: require() cannot be used on an ESM graph with top-level
+  await. Use import() instead.` En Windows, `import()` necesita la ruta como URL
+  `file://`, y eso lo hace `pathToFileURL` (`ayuda.service.js:69`).
+- **Se guarda la promesa de la carga, no el módulo:** si dos preguntas llegan juntas,
+  esperan la misma carga. Si la carga falla, no se guarda nada y la próxima pregunta lo
+  vuelve a intentar.
+- **Chequeos antes del `import()`** (`ayuda.service.js:55-61`): que existan
+  `backend/rag/.env` y `backend/rag/node_modules/pg`. Si un `import()` falla, Node guarda
+  el error, y reintentar no lo arregla hasta reiniciar el backend. Con los chequeos, los
+  dos olvidos más comunes se arreglan sin reiniciar.
+- **`process.loadEnvFile`** (`ayuda.service.js:65`) suma las variables de
+  `backend/rag/.env` a las del backend, sin pisar ninguna que ya exista. `backend/src` no
+  lee ninguna variable con el nombre de una del RAG, así que no hay choques.
+- **Dónde está la clave:** en `backend/rag/.env`, que no se sube a Git, y en la memoria
+  del proceso del backend. El navegador habla solo con `/api/ayuda`, nunca con Google.
+  Todo lo que llega al navegador se puede ver con F12, y con la clave cualquiera podría
+  gastar el cupo.
+- **`db.on("error")`** (`ayuda.service.js:77`): si Postgres corta una conexión que el
+  pool tiene ociosa, el pool emite `'error'`, y un `'error'` que nadie escucha termina el
+  proceso. Sin el listener, se caería el backend entero, no solo el Portero. Se probó
+  con un pool sin listener, en un script temporal: `error: terminating connection due to
+  administrator command`, `Emitted 'error' event on BoundPool instance` y código de
+  salida 1. Con el listener, el backend lo anota en el log y sigue andando (prueba 3).
+- **Los errores:** el error real va al log, con `[ayuda]` adelante, y la persona recibe
+  un 503 con un mensaje que entiende:
+
+| Qué falla | Qué ve la persona | Qué queda en el log |
+|---|---|---|
+| Ollama cerrado | "El Portero no está disponible en este momento" | `No contesta nadie en http://localhost:11999/v1. ¿Está abierto Ollama?` |
+| Postgres caído | "El Portero no está disponible en este momento" | `AggregateError [ECONNREFUSED]`, con `::1:5999` y `127.0.0.1:5999` |
+| Google limita los pedidos (429) | "El Portero está con mucha gente, probá en un rato" | Los tres reintentos de `api.mjs` y `La API respondió 429: …` |
+| Falta `backend/rag/.env` o el `npm install` | "El Portero no está disponible en este momento" | `Falta backend/rag/.env: …` o `Faltan las dependencias del RAG: …` |
+| El Portero está en `off` | "El Portero está apagado" | Nada |
+
+  El 429 se reconoce por el texto del error de `api.mjs` ("respondió 429",
+  `ayuda.service.js:120`), porque `api.mjs` no guarda el código. Si ese texto cambiara,
+  un 429 saldría como "no disponible".
+- **La validación** usa `obtenerTextoValido` (`validacion.js:57`): de 3 a 300 caracteres
+  después de `trim()`. Se valida antes de mirar el modo.
+- **La respuesta** es `{ respuesta, fuentes, recuperados, umbral, modo }`.
+  - `recuperados` lleva el texto de los tres fragmentos, que es el Centro de ayuda,
+    público. Lo usa el panel "¿De dónde lo saqué?" del front.
+  - `llamoAlModelo` no viaja: sin fuentes, o en modo `faq`, no se llamó al modelo.
+
+### Pruebas
+
+Se corrieron con un script temporal, fuera del repo. El script levanta el backend en el
+puerto 4100 con variables de la terminal, sin tocar ningún `.env`, y gastó una sola
+llamada a Gemini.
+
+| # | Escenario | Resultado |
+|---|---|---|
+| 1 | `AYUDA_MODO` sin definir | `/health` da 200 y `estado` da `{ activo: false, modo: "off" }`. Preguntar da 503 "El Portero está apagado". "  a  " y 301 caracteres dan 400. Con `RATE_LIMIT_AYUDA_MAX=3`, la cuarta pregunta da 429. No hay ninguna línea `[ayuda]` en el log y hay 0 conexiones a Postgres. |
+| 2 | `AYUDA_MODO=rga` | Aviso en el log y `{ activo: false, modo: "off" }`. |
+| 3 | `rag` | Al arrancar no carga el RAG. Con `curl`, "¿Cómo pago?" da 200 en 4,1 segundos, contando la carga del RAG, con la respuesta de Gemini y la fuente correcta. "¿Tienen descuentos para estudiantes?" da 200 "No lo encuentro en los documentos." en 0,14 segundos, sin llamar al modelo. Después de cortar la conexión ociosa desde Postgres, el backend sigue vivo y la pregunta siguiente anda. |
+| 4 | `faq`, dos preguntas al mismo tiempo | Las dos dan 200 con el texto del fragmento. El RAG se cargó una sola vez. |
+| 5 | Ollama caído | 503 "no disponible", y `/health` sigue en 200. |
+| 6 | Postgres caído | 503 "no disponible". |
+| 7 | 429 simulado | 503 "con mucha gente", a los 60 segundos. |
+
+**Cómo se simuló cada falla sin tocar nada:** `process.loadEnvFile` no pisa las variables
+que ya existen, así que una variable de la terminal le gana a `backend/rag/.env`.
+- Ollama caído: `URL_EMBEDDINGS=http://localhost:11999/v1`, un puerto donde no escucha
+  nadie.
+- Postgres caído: `DATABASE_URL` hacia el puerto 5999, donde tampoco escucha nadie.
+- 429: `PROVEEDOR_CHAT=openai`, con `URL_CHAT` hacia un servidor falso que siempre
+  contesta 429 y una `API_KEY` falsa, así la clave de verdad no viaja a ningún lado. Pasa
+  por el mismo `pedir()` de `api.mjs` que usa Gemini.
+- Corte de Postgres: `pg_terminate_backend` sobre la conexión ociosa del Portero.
+
+**Lo que no se probó:** que falte `backend/rag/.env` o el `npm install`. Habría que mover
+el `.env` de Santiago o borrar `node_modules`. Son dos `fs.existsSync`.
+
+**Para tener en cuenta:**
+- Un 429 de Google tarda unos 60 segundos en llegarle a la persona, porque `api.mjs`
+  reintenta a los 10, 20 y 30 segundos. Mientras tanto, el front sigue mostrando que
+  está buscando.
+- Si cambia `backend/rag/.env`, por ejemplo el umbral, hay que reiniciar el backend:
+  `loadEnvFile` corre una sola vez, con la primera pregunta.
