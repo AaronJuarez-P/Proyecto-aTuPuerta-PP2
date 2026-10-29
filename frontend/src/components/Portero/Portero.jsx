@@ -3,12 +3,16 @@ import { Link } from 'react-router'
 import { LARGO_MAXIMO_PREGUNTA, LARGO_MINIMO_PREGUNTA, estadoAyuda, preguntarAlPortero } from '../../api/ayuda'
 import { useSesion } from '../../context/sesion'
 import { useCarga } from '../../hooks/useCarga'
-import { NO_LO_ENCUENTRO, esNoLoEncuentro, etiqueta, separarFuente, sinTitulo } from '../../utils/portero'
+import { NO_LO_ENCUENTRO, esNoLoEncuentro, sinFuente } from '../../utils/portero'
+import fotoPortero from './portero.png'
 import './Portero.css'
 
 // El Portero, el asistente de ayuda (Desarrollo con IA). Contesta con lo que dice el
 // Centro de ayuda (backend/rag/corpus): el backend busca las partes que más se parecen a
-// la pregunta y el modelo redacta la respuesta con ellas, citando de dónde la sacó.
+// la pregunta y el modelo redacta la respuesta con ellas.
+//
+// La respuesta se muestra como en un chat, solo el texto: la fuente y los fragmentos llegan
+// del backend, pero no se muestran (ver "Ajustes de diseño" en backend/rag/DECISIONES.md).
 //
 // Si el backend lo tiene apagado (AYUDA_MODO=off) o no contesta, no se muestra nada: la
 // app queda igual que sin el asistente.
@@ -149,7 +153,7 @@ function Porteria({ rol, clave }) {
         aria-label="¿Dudas? Preguntale al Portero"
         onClick={() => setAbierto(true)}
       >
-        <span className="portero-lanzador-icono" aria-hidden="true">🚪</span>
+        <img className="portero-lanzador-icono" src={fotoPortero} alt="" />
         <span>
           ¿Dudas?<span className="portero-lanzador-resto"> Preguntale al Portero</span>
         </span>
@@ -164,7 +168,7 @@ function Porteria({ rol, clave }) {
         onKeyDown={alTeclear}
       >
         <header className="portero-encabezado">
-          <span className="portero-avatar" aria-hidden="true">🚪</span>
+          <img className="portero-avatar" src={fotoPortero} alt="" />
 
           <div className="portero-encabezado-textos">
             <h2 id="portero-titulo">El Portero de ATuPuerta</h2>
@@ -249,15 +253,13 @@ function Intercambio({ mensaje, puedeReclamar, alIrAReclamos }) {
       {mensaje.estado === 'error' && <p className="portero-burbuja portero-burbuja-error">{mensaje.error}</p>}
 
       {mensaje.estado === 'respondida' && (
-        <Respuesta datos={mensaje.datos} puedeReclamar={puedeReclamar} alIrAReclamos={alIrAReclamos} />
+        <Respuesta respuesta={mensaje.datos.respuesta} puedeReclamar={puedeReclamar} alIrAReclamos={alIrAReclamos} />
       )}
     </>
   )
 }
 
-function Respuesta({ datos, puedeReclamar, alIrAReclamos }) {
-  const { respuesta, fuentes = [], recuperados = [], umbral, modo } = datos
-
+function Respuesta({ respuesta, puedeReclamar, alIrAReclamos }) {
   // Distinta a una respuesta, para que no se lea como una
   if (esNoLoEncuentro(respuesta)) {
     return (
@@ -274,97 +276,10 @@ function Respuesta({ datos, puedeReclamar, alIrAReclamos }) {
             y lo revisa un administrador.
           </p>
         )}
-
-        <DeDondeLoSaque recuperados={recuperados} umbral={umbral} modo={modo} noEsta />
       </div>
     )
   }
 
-  const { cuerpo, fuenteCitada } = separarFuente(respuesta)
-
-  return (
-    <div className="portero-burbuja portero-burbuja-portero">
-      <p className="portero-texto">{cuerpo}</p>
-
-      {fuentes.length > 0 && (
-        <ul className="portero-fuentes" aria-label="Fuentes">
-          {fuentes.map((fuente) => (
-            // Resaltada, la que el modelo cita en su renglón "Fuente:"
-            <li
-              key={etiqueta(fuente)}
-              className={fuenteCitada?.includes(etiqueta(fuente)) ? 'citada' : undefined}
-            >
-              <span aria-hidden="true">📄</span> {etiqueta(fuente)}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {fuenteCitada && <p className="portero-pie">Fuente: {fuenteCitada}</p>}
-
-      <DeDondeLoSaque recuperados={recuperados} umbral={umbral} modo={modo} />
-    </div>
-  )
-}
-
-function notaDelOrigen({ noEsta, algunaPaso, modo }) {
-  if (noEsta && !algunaPaso) {
-    return 'Ninguna llegó al umbral, así que ni se le preguntó al modelo.'
-  }
-
-  if (noEsta) {
-    return 'Alguna pasó el umbral, pero ninguna contesta tu pregunta: el Portero prefirió no inventar.'
-  }
-
-  if (modo === 'faq') {
-    return 'La respuesta es la primera, tal cual está en el Centro de ayuda.'
-  }
-
-  return 'Las que pasan el umbral son las que leyó el Portero para contestarte.'
-}
-
-// Las tres partes del Centro de ayuda que trajo la búsqueda, con su similitud. Las que
-// no llegan al umbral (✗) no se le pasan al modelo.
-function DeDondeLoSaque({ recuperados, umbral, modo, noEsta = false }) {
-  if (recuperados.length === 0) {
-    return null
-  }
-
-  const algunaPaso = recuperados.some((recuperado) => recuperado.util)
-
-  return (
-    <details className="portero-origen">
-      <summary>¿De dónde lo saqué?</summary>
-
-      <ul>
-        {recuperados.map((recuperado) => (
-          <li key={`${recuperado.fuente}-${recuperado.posicion}`} className={recuperado.util ? undefined : 'no-paso'}>
-            <span className="portero-origen-etiqueta">
-              <span aria-hidden="true">{recuperado.util ? '📄' : '✗'}</span>{' '}
-              {!recuperado.util && <span className="portero-oculto">No llegó al umbral: </span>}
-              {etiqueta(recuperado)}
-            </span>
-
-            <span className="portero-barra" aria-hidden="true">
-              <span className="portero-barra-relleno" style={{ width: `${Math.max(0, recuperado.similitud) * 100}%` }} />
-              <span className="portero-barra-umbral" style={{ left: `${umbral * 100}%` }} />
-            </span>
-            <span className="portero-origen-numero">{recuperado.similitud.toFixed(3)}</span>
-
-            {recuperado.texto && (
-              <details className="portero-fragmento">
-                <summary>Leer esta parte</summary>
-                <p>{sinTitulo(recuperado)}</p>
-              </details>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      <p className="portero-origen-nota">
-        Similitud con tu pregunta, de 0 a 1. La rayita naranja es el umbral ({umbral}).{' '}
-        {notaDelOrigen({ noEsta, algunaPaso, modo })}
-      </p>
-    </details>
-  )
+  // Como en un chat: solo el texto, sin el renglón "Fuente:" que agrega el modelo
+  return <p className="portero-burbuja portero-burbuja-portero portero-texto">{sinFuente(respuesta)}</p>
 }

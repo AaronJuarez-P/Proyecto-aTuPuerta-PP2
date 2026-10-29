@@ -41,17 +41,16 @@
   box-shadow: 0 14px 32px rgba(13, 61, 33, 0.42);
 }
 
+/* La foto del Portero, en el botón y en el encabezado del panel */
 .portero-lanzador-icono,
 .portero-avatar {
-  display: grid;
+  display: block;
   flex-shrink: 0;
-  place-items: center;
   width: 40px;
   height: 40px;
   border-radius: 50%;
   background: white;
-  font-size: 1.3rem;
-  line-height: 1;
+  object-fit: cover;
 }
 
 /* =========================================
@@ -230,146 +229,6 @@
 }
 
 /* =========================================
-   FUENTES
-   ========================================= */
-
-.portero-fuentes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.portero-fuentes li {
-  padding: 3px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: #374151;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.portero-fuentes li.citada {
-  border-color: var(--brand);
-  background: var(--brand-light);
-  color: var(--brand);
-}
-
-.portero-pie {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 0.78rem;
-}
-
-/* =========================================
-   ¿DE DÓNDE LO SAQUÉ?
-   ========================================= */
-
-.portero-origen {
-  margin-top: 10px;
-  font-size: 0.8rem;
-}
-
-.portero-origen > summary,
-.portero-fragmento > summary {
-  width: fit-content;
-  cursor: pointer;
-}
-
-.portero-origen > summary {
-  color: var(--brand);
-  font-weight: 700;
-}
-
-.portero-origen ul {
-  display: grid;
-  gap: 10px;
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.portero-origen li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 4px 10px;
-}
-
-.portero-origen-etiqueta,
-.portero-fragmento {
-  grid-column: 1 / -1;
-}
-
-.portero-origen-etiqueta {
-  color: #374151;
-  font-weight: 600;
-}
-
-.portero-barra {
-  position: relative;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--border);
-}
-
-.portero-barra-relleno {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  border-radius: inherit;
-  background: var(--brand-mid);
-}
-
-/* El umbral, como una rayita sobre la barra */
-.portero-barra-umbral {
-  position: absolute;
-  top: -4px;
-  bottom: -4px;
-  width: 2px;
-  margin-left: -1px;
-  background: var(--accent);
-}
-
-.portero-origen-numero {
-  color: #111827;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-
-.portero-origen li.no-paso .portero-origen-etiqueta,
-.portero-origen li.no-paso .portero-origen-numero {
-  color: var(--muted);
-}
-
-.portero-origen li.no-paso .portero-barra-relleno {
-  background: #9ca3af;
-}
-
-.portero-fragmento > summary {
-  color: var(--muted);
-}
-
-.portero-fragmento p {
-  margin-top: 6px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--surface);
-  white-space: pre-line;
-}
-
-.portero-origen-nota {
-  margin-top: 10px;
-  color: var(--muted);
-}
-
-/* =========================================
    PREGUNTA
    ========================================= */
 
@@ -441,7 +300,6 @@
   .portero-avatar {
     width: 32px;
     height: 32px;
-    font-size: 1.05rem;
   }
 
   .portero-encabezado h2 {

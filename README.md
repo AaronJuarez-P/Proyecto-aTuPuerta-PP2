@@ -102,10 +102,10 @@ Cómo funciona el front por dentro (estructura, rutas, sesión) está en
 
 ## Asistente de ayuda: El Portero
 
-El Portero es el asistente de ayuda de la app: el botón "🚪 ¿Dudas? Preguntale al
-Portero" que aparece abajo a la derecha en todas las pantallas menos el login. Contesta
-las dudas de clientes, comercios y repartidores con lo que dice el Centro de ayuda
-(`backend/rag/corpus/`), y muestra de qué parte sacó cada respuesta.
+El Portero es el asistente de ayuda de la app: el botón "¿Dudas? Preguntale al Portero",
+con su foto, que aparece abajo a la derecha en todas las pantallas menos el login.
+Contesta como en un chat las dudas de clientes, comercios y repartidores, con lo que dice
+el Centro de ayuda (`backend/rag/corpus/`).
 
 Es un RAG: busca las partes del Centro de ayuda más parecidas a la pregunta, y un modelo
 de lenguaje redacta la respuesta solo con ellas. Se hizo para la materia Desarrollo con

@@ -17,7 +17,9 @@ por fase, a medida que se tomaba cada decisión.
 9. [Documentación y prueba final](#documentación-y-prueba-final-fase-8)
 10. [Extras](#extras-fase-9): la medición propia, troceado por pregunta contra fijo, y
     `faq` contra `rag`
-11. [Qué probé y descarté](#qué-probé-y-descarté)
+11. [Ajustes de diseño](#ajustes-de-diseño-después-de-la-fase-9): la foto del Portero y
+    la respuesta como un chat
+12. [Qué probé y descarté](#qué-probé-y-descarté)
 
 ## Entorno y base (Fase 1)
 
@@ -782,6 +784,42 @@ exactamente igual que la primera.
   - Cambiar la regla del prompt para que cite cada fragmento que usó queda como decisión
     pendiente de Santiago.
 
+## Ajustes de diseño (después de la Fase 9)
+
+- **La foto del Portero** reemplaza a la puerta 🚪 en los dos círculos: el del botón
+  flotante y el del encabezado del panel.
+  - La foto vino como un JPG con el damero del "fondo transparente" pintado adentro.
+  - El damero se sacó con el canvas de Edge sin ventana, porque en la compu no hay Python
+    ni ImageMagick. Se borra desde los bordes todo lo que es claro y sin color, así no se
+    toca el blanco de la camisa ni el del casco, que están rodeados por la persona.
+  - Queda en `frontend/src/components/Portero/portero.png`: un PNG de 160 px, que pesa 40
+    KB y alcanza para círculos de 40 px en pantallas de 4x. Se importa desde el
+    componente, así Vite lo incluye en el build.
+- **La respuesta se muestra como un chat: solo el texto.** Se sacaron del front las
+  etiquetas de fuente, el pie "Fuente:" y "¿De dónde lo saqué?".
+  - **Es una decisión de Santiago,** para que la respuesta se lea como un chat normal.
+    La tomó sabiendo dos cosas: que la consigna pide que "la fuente (archivo y sección)
+    tiene que verse en el front" (regla 4), y que mostrar los fragmentos y su similitud
+    es un extra que suma puntos.
+  - **Lo que sigue igual:**
+    - el prompt pide la fuente;
+    - el backend devuelve `fuentes` y `recuperados`, que se pueden ver con F12, en la
+      pestaña Red;
+    - `preguntar.mjs` muestra en la terminal los fragmentos, con su similitud, y la
+      fuente;
+    - "No lo encuentro" conserva su estilo, la sugerencia y el link a reclamos.
+  - **Lo que deja de valer:** lo que dice la Fase 7 sobre las etiquetas, el pie y "¿De
+    dónde lo saqué?", y lo que dice el hallazgo de la Fase 9 sobre las etiquetas del
+    front. Los renglones que cita la Fase 7 son los de esa versión, del commit `7fff315`.
+  - Ahora el texto del modelo pasa por `sinFuente` (`utils/portero.js:16`), que saca el
+    renglón "Fuente:" y los `**` de Markdown.
+- **Pruebas:**
+  - `npm run lint`: 0 avisos y 0 errores.
+  - `npm run build`: sin errores, y la foto sale como un archivo aparte.
+  - La prueba en el navegador pasó entera: las dos fotos cargan, la respuesta llega solo
+    como texto, "No lo encuentro" sale sin desplegable, y anda a 320 px y en `off`. La
+    consola quedó sin errores, y la prueba gastó una llamada a Gemini.
+
 ## Qué probé y descarté
 
 ### Probado y descartado, con evidencia
@@ -797,7 +835,7 @@ exactamente igual que la primera.
 | "¿puedo pagar en efectivo?" como la pregunta que falla en la demo (Fase 5) | Falla siempre igual (tres corridas), pero depende del modelo, que puede cambiar | Una falla de la búsqueda, que no llega al modelo y sale siempre igual. La del efectivo queda de reserva |
 | Cargar el RAG con `require()` (Fase 6) | `ERR_REQUIRE_ASYNC_MODULE`: `rag.mjs` es ESM y tiene un `await` afuera de toda función | `import()` dinámico (`ayuda.service.js:69`) |
 | El pool de `pg` sin `db.on("error")` (Fase 6) | Al cortar la conexión ociosa, el proceso se cae: `Unhandled 'error' event`, código 1 | El listener (`ayuda.service.js:77`) |
-| `Date.now()` para el id de cada pregunta (Fase 7) | Aviso de oxlint: es una función impura y el compilador de React no optimiza el componente | El id sale del historial (`Portero.jsx:123`) |
+| `Date.now()` para el id de cada pregunta (Fase 7) | Aviso de oxlint: es una función impura y el compilador de React no optimiza el componente | El id sale del historial (`Portero.jsx:127`) |
 | El encabezado y el campo del Portero a 320 px (Fase 7) | El título se partía en varios renglones y el texto gris del campo se cortaba | Subtítulo más corto, ícono más chico y "Escribí tu duda…" |
 
 ### Pensado y descartado, sin probar
@@ -806,7 +844,8 @@ exactamente igual que la primera.
   del efectivo. La misma regla frenó el envío, y en una app con plata de por medio una
   respuesta inventada hace más daño que un "No lo encuentro".
 - **Cambiar la regla de "Fuente:" del prompt** para que el modelo no copie los guiones. Se
-  dejó la plantilla de la clase y el front limpia la fuente (`utils/portero.js:29`).
+  dejó la plantilla de la clase, y el front saca ese renglón del texto
+  (`utils/portero.js:16`).
 - **Mandarle el historial al backend**, para que el Portero entienda "¿y si ya pagué?". La
   consigna pide preguntas independientes, y hacerlo bien exige reescribir la pregunta con
   la charla antes de buscar. Queda anotado como algo que le falta.
