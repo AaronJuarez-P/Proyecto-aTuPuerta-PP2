@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { Compass } from 'lucide-react'
 import { EstadoVacio } from '../../components/Comunes/Comunes'
 
 export default function NoEncontrado() {
@@ -6,7 +7,7 @@ export default function NoEncontrado() {
     <main className="pagina">
       <div className="pagina-angosta">
         <EstadoVacio
-          icono="🧭"
+          icono={Compass}
           titulo="No encontramos esta página"
           accion={
             <Link className="boton boton-primario" to="/">

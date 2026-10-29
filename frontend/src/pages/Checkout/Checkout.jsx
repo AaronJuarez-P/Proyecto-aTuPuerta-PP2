@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { ArrowLeft, ArrowRight, Check, CreditCard, Lock, MapPin, ShoppingCart, Store } from 'lucide-react'
 import { Cargando, MensajeError } from '../../components/Comunes/Comunes'
 import { useCarrito } from '../../context/carrito'
 import { formatearDistancia, formatearMinutos, formatearPrecio, plural } from '../../utils/formato'
@@ -49,7 +50,7 @@ export default function Checkout() {
     return (
       <main className="checkout-page">
         <section className="order-success">
-          <div className="success-icon" aria-hidden="true">✓</div>
+          <div className="success-icon"><Check size={40} /></div>
 
           <p className="eyebrow">{varios ? 'PEDIDOS CONFIRMADOS' : 'PEDIDO CONFIRMADO'}</p>
           <h1>{varios ? `¡Listo! Armamos ${pedidosCreados.length} pedidos.` : '¡Listo! Tu pedido está hecho.'}</h1>
@@ -106,7 +107,7 @@ export default function Checkout() {
     return (
       <main className="checkout-page">
         <section className="checkout-empty">
-          <div className="checkout-empty-icon" aria-hidden="true">🛒</div>
+          <div className="checkout-empty-icon"><ShoppingCart size={40} /></div>
           <p className="eyebrow">CHECKOUT</p>
           <h1>Tu carrito está vacío</h1>
           <p>Agregá algunos productos antes de continuar con tu pedido.</p>
@@ -124,7 +125,7 @@ export default function Checkout() {
       <div className="checkout-container">
         <div className="checkout-title">
           <Link to="/carrito" className="back-link">
-            <span aria-hidden="true">←</span> Volver al carrito
+            <ArrowLeft size={16} /> Volver al carrito
           </Link>
           <p className="eyebrow">CHECKOUT</p>
           <h1>Finalizá tu pedido</h1>
@@ -146,7 +147,7 @@ export default function Checkout() {
                 <div className="form-group">
                   <label htmlFor="direccion">Dirección de entrega</label>
                   <div className="input-wrapper">
-                    <span className="input-icon" aria-hidden="true">📍</span>
+                    <span className="input-icon"><MapPin size={18} /></span>
                     <input
                       id="direccion"
                       type="text"
@@ -183,7 +184,7 @@ export default function Checkout() {
               </div>
 
               <div className="payment-option pago-informativo">
-                <span className="payment-icon" aria-hidden="true">💳</span>
+                <span className="payment-icon"><CreditCard size={20} /></span>
                 <span className="payment-content">
                   <strong>MercadoPago</strong>
                   <small>
@@ -221,7 +222,7 @@ export default function Checkout() {
               {confirmando
                 ? 'Confirmando…'
                 : comercios.length > 1 ? `Confirmar ${comercios.length} pedidos` : 'Confirmar pedido'}
-              <span aria-hidden="true">→</span>
+              <ArrowRight size={20} />
             </button>
           </form>
 
@@ -233,7 +234,7 @@ export default function Checkout() {
 
             {comercios.map((grupo) => (
               <div className="summary-products" key={grupo.comercio_id}>
-                <p className="summary-comercio">🏪 {grupo.comercio_nombre}</p>
+                <p className="summary-comercio"><Store size={16} /> {grupo.comercio_nombre}</p>
 
                 {grupo.items.map((item) => (
                   <div className="summary-product" key={item.producto_id}>
@@ -255,7 +256,7 @@ export default function Checkout() {
             </div>
 
             <div className="summary-note">
-              <span aria-hidden="true">🔒</span>
+              <Lock size={14} />
               <p>
                 {plural(comercios.length, 'pedido')} · Tu dirección se usa solo para calcular la ruta y
                 hacer la entrega.

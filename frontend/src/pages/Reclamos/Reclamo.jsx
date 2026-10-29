@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router'
+import { ArrowLeft, Megaphone } from 'lucide-react'
 import { obtenerMiReclamo } from '../../api/reclamos'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError } from '../../components/Comunes/Comunes'
 import { useSesion } from '../../context/sesion'
@@ -27,11 +28,11 @@ export default function Reclamo() {
   return (
     <main className="pagina reclamos-pagina">
       <div className="pagina-angosta">
-        <Link className="volver-link" to="/reclamos">← Mis reclamos</Link>
+        <Link className="volver-link" to="/reclamos"><ArrowLeft size={16} /> Mis reclamos</Link>
 
         {error && !reclamo ? (
           error.codigo === 404 ? (
-            <EstadoVacio icono="📣" titulo="Reclamo no encontrado">No existe o no es tuyo.</EstadoVacio>
+            <EstadoVacio icono={Megaphone} titulo="Reclamo no encontrado">No existe o no es tuyo.</EstadoVacio>
           ) : (
             <MensajeError error={error} alReintentar={recargar} />
           )

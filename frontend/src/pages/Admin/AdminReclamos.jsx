@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { ArrowLeft, Megaphone } from 'lucide-react'
 import { listarReclamosAdmin } from '../../api/admin'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
 import { useCarga } from '../../hooks/useCarga'
@@ -32,7 +33,7 @@ export default function AdminReclamos() {
   return (
     <main className="admin-page">
       <section className="admin-container">
-        <Link className="volver-link" to="/admin">← Panel</Link>
+        <Link className="volver-link" to="/admin"><ArrowLeft size={16} /> Panel</Link>
 
         <header className="admin-header">
           <div>
@@ -79,7 +80,7 @@ export default function AdminReclamos() {
         {cargando && !datos ? (
           <Cargando />
         ) : datos?.reclamos.length === 0 ? (
-          <EstadoVacio icono="📣" titulo="No hay reclamos con estos filtros" />
+          <EstadoVacio icono={Megaphone} titulo="No hay reclamos con estos filtros" />
         ) : datos && (
           <div className="tabla-contenedor">
             <table className="tabla">

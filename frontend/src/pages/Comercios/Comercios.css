@@ -46,9 +46,9 @@
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
   }
   
-  .comercios-search span {
-    padding: 0 12px;
-    font-size: 1.2rem;
+  .comercios-search > .lucide {
+    margin: 0 10px 0 12px;
+    color: var(--muted);
   }
   
   .comercios-search input {
@@ -86,6 +86,9 @@
   }
   
   .category-filters button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     flex-shrink: 0;
     padding: 10px 18px;
     border: 1px solid var(--border);
@@ -153,7 +156,7 @@
     justify-content: center;
     height: 130px;
     background: var(--brand-light);
-    font-size: 4rem;
+    color: var(--brand);
   }
   
   .comercio-info {
@@ -187,7 +190,9 @@
   
   .comercio-button {
     text-decoration: none;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     width: fit-content;
     margin-top: auto;
     padding: 10px 0;
@@ -257,7 +262,8 @@
   }
 
   .producto-encontrado-icono {
-    font-size: 1.8rem;
+    display: grid;
+    color: var(--brand);
   }
 
   .producto-encontrado-info {

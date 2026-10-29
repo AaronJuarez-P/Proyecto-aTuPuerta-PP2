@@ -50,7 +50,9 @@
 }
 
 .volver-link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 18px;
   color: var(--muted);
   font-size: 0.9rem;
@@ -307,6 +309,11 @@
   border-color: var(--brand);
 }
 
+/* La cruz de los filtros que se pueden quitar */
+.chip .lucide {
+  margin-left: 4px;
+}
+
 .chip.activo {
   background: var(--brand);
   border-color: var(--brand);
@@ -399,7 +406,7 @@
 .estado-vacio-icono {
   display: block;
   margin-bottom: 12px;
-  font-size: 2.6rem;
+  color: var(--brand);
 }
 
 .estado-vacio h2 {
@@ -574,12 +581,19 @@
 }
 
 .modal-cerrar {
+  display: grid;
+  place-items: center;
+  padding: 4px;
   border: none;
+  border-radius: 8px;
   background: none;
   color: var(--muted);
-  font-size: 1.6rem;
-  line-height: 1;
   cursor: pointer;
+}
+
+.modal-cerrar:hover {
+  background: var(--surface-2);
+  color: var(--ink);
 }
 
 /* =========================================

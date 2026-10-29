@@ -201,6 +201,7 @@
 }
 
 .input-icon {
+  color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -209,8 +210,6 @@
 
   width: 24px;
 
-  font-size: 1.05rem;
-  opacity: 0.8;
 }
 
 .input-wrapper input {
@@ -290,6 +289,7 @@
 }
 
 .payment-icon {
+  color: var(--brand);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -299,9 +299,8 @@
 
   border-radius: 10px;
 
-  background: var(--surface-2);
+  background: var(--brand-light);
 
-  font-size: 1.15rem;
 }
 
 .payment-content {
@@ -479,8 +478,9 @@
   border-top: 1px solid var(--border);
 }
 
-.summary-note span {
-  font-size: 0.9rem;
+.summary-note .lucide {
+  color: var(--muted);
+  margin-top: 2px;
 }
 
 .summary-note p {
@@ -510,6 +510,7 @@
 }
 
 .checkout-empty-icon {
+  color: var(--brand);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -523,7 +524,6 @@
 
   background: var(--brand-light);
 
-  font-size: 3rem;
 }
 
 .checkout-empty h1,
@@ -596,9 +596,6 @@
 
   background: #ffffff;
   color: var(--brand);
-
-  font-size: 2rem;
-  font-weight: 900;
 
   box-shadow: 0 8px 25px rgba(17, 24, 39, 0.07);
 }
@@ -721,6 +718,9 @@
 }
 
 .summary-comercio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 4px 0 6px;
   color: var(--ink);
   font-size: 0.85rem;

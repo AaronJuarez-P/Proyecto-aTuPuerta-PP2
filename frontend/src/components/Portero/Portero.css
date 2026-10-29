@@ -316,7 +316,7 @@
   }
 }
 
-/* A 320px el botón queda en "🚪 ¿Dudas?" */
+/* A 320px el botón queda en la foto y "¿Dudas?" */
 @media (max-width: 360px) {
   .portero-lanzador-resto {
     display: none;

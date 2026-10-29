@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { createElement, useEffect, useState } from 'react'
+import { ArrowLeft, ArrowRight, Package, X } from 'lucide-react'
+import { iconoDeCategoria } from '../../utils/categorias'
 import { infoEstado } from '../../utils/estados'
 import './Comunes.css'
 
@@ -29,15 +31,25 @@ export function MensajeError({ error, alReintentar }) {
   )
 }
 
-export function EstadoVacio({ icono = '📦', titulo, children, accion }) {
+// icono: un componente de lucide-react (Package, Store...), no el ícono armado
+export function EstadoVacio({ icono: Icono = Package, titulo, children, accion }) {
   return (
     <div className="estado-vacio">
-      <span className="estado-vacio-icono" aria-hidden="true">{icono}</span>
+      <span className="estado-vacio-icono">
+        <Icono size={40} />
+      </span>
       <h2>{titulo}</h2>
       {children && <p>{children}</p>}
       {accion}
     </div>
   )
+}
+
+// El ícono del rubro de una categoría (ver utils/categorias.js). El resto de las props
+// (size, className...) van al ícono. Con createElement porque el componente sale de una
+// lista fija: no se crea uno nuevo en cada render.
+export function IconoRubro({ categoria, porDefecto, ...props }) {
+  return createElement(iconoDeCategoria(categoria, porDefecto), props)
 }
 
 // tipo: 'pedido' | 'pago' | 'reclamo' | 'auditoria'
@@ -67,7 +79,7 @@ export function Paginacion({ paginacion, alCambiar }) {
         disabled={pagina <= 1}
         onClick={() => alCambiar(pagina - 1)}
       >
-        ← Anterior
+        <ArrowLeft size={16} /> Anterior
       </button>
 
       <span>Página {pagina} de {paginas}</span>
@@ -78,7 +90,7 @@ export function Paginacion({ paginacion, alCambiar }) {
         disabled={pagina >= paginas}
         onClick={() => alCambiar(pagina + 1)}
       >
-        Siguiente →
+        Siguiente <ArrowRight size={16} />
       </button>
     </nav>
   )
@@ -118,7 +130,7 @@ export function Modal({ abierto, titulo, children, alCerrar }) {
         <header className="modal-encabezado">
           <h2>{titulo}</h2>
           <button type="button" className="modal-cerrar" onClick={alCerrar} aria-label="Cerrar">
-            ×
+            <X size={22} />
           </button>
         </header>
 

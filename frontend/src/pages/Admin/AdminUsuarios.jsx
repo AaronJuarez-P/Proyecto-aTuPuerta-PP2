@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { ArrowLeft, Plus, Users } from 'lucide-react'
 import { crearUsuario, listarUsuarios } from '../../api/admin'
 import { Cargando, EstadoVacio, MensajeError, Modal, Paginacion } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
@@ -44,7 +45,7 @@ export default function AdminUsuarios() {
   return (
     <main className="admin-page">
       <section className="admin-container">
-        <Link className="volver-link" to="/admin">← Panel</Link>
+        <Link className="volver-link" to="/admin"><ArrowLeft size={16} /> Panel</Link>
 
         <header className="admin-header">
           <div>
@@ -53,7 +54,7 @@ export default function AdminUsuarios() {
             <p>Las cuentas de la plataforma con sus perfiles. Desde acá se suspenden, se reactivan y se eliminan definitivamente.</p>
           </div>
           <button type="button" className="boton boton-primario" onClick={() => setCreando(true)}>
-            + Nuevo usuario
+            <Plus size={18} /> Nuevo usuario
           </button>
         </header>
 
@@ -97,7 +98,7 @@ export default function AdminUsuarios() {
         {cargando && !datos ? (
           <Cargando />
         ) : datos?.usuarios.length === 0 ? (
-          <EstadoVacio icono="👥" titulo="No hay usuarios con estos filtros" />
+          <EstadoVacio icono={Users} titulo="No hay usuarios con estos filtros" />
         ) : datos && (
           <div className="tabla-contenedor">
             <table className="tabla">

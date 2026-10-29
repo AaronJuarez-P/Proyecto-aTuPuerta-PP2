@@ -10,7 +10,9 @@
 }
 
 .pedido-page .pedido-back {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 25px;
   color: var(--muted);
   text-decoration: none;
@@ -87,6 +89,7 @@
 }
 
 .pedido-page .product-icon {
+  color: var(--brand);
   width: 50px;
   height: 50px;
   display: flex;
@@ -94,7 +97,6 @@
   justify-content: center;
   background: var(--surface-2);
   border-radius: 8px;
-  font-size: 24px;
 }
 
 .pedido-page .product-info {
@@ -172,7 +174,9 @@
 }
 
 .pedido-page .pedido-button {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 13px 20px;
   border-radius: 8px;
   background: var(--brand);
@@ -193,6 +197,9 @@
 }
 
 .pedido-page .en-vivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
   font-size: 0.8rem;
   font-weight: 700;
@@ -200,6 +207,20 @@
 
 .pedido-page .en-vivo.conectado {
   color: var(--brand);
+}
+
+/* El punto: hueco mientras conecta, lleno cuando llega la señal */
+.pedido-page .en-vivo::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.pedido-page .en-vivo.conectado::before {
+  border-color: var(--brand-mid);
+  background: var(--brand-mid);
 }
 
 /* Tarjetas de ancho completo arriba de la grilla */
@@ -386,6 +407,14 @@
 
 .pedido-page .resultado-repetir .omitidos {
   color: var(--danger);
+}
+
+.pedido-page .resultado-repetir li .lucide {
+  color: var(--brand);
+}
+
+.pedido-page .resultado-repetir .omitidos .lucide {
+  color: inherit;
 }
 
 @media (max-width: 750px) {

@@ -8,20 +8,35 @@ import './MapaSeguimiento.css'
 // Mapa del seguimiento con OpenStreetMap, que no pide token (Mapbox se usa en el backend
 // para calcular rutas, no para dibujar).
 //
-// Los marcadores son emojis en un divIcon: los íconos por defecto de Leaflet son
-// imágenes que Vite no resuelve sin configuración extra.
-const icono = (emoji, clase = '') =>
+// Los marcadores son pines SVG en un divIcon: los íconos por defecto de Leaflet son
+// imágenes que Vite no resuelve sin configuración extra. El pin tiene la forma del del
+// logo y el color sale del CSS (currentColor), con las variables de la marca.
+const PIN = 'M1 16A15 15 0 0 1 31 16C31 24.21 22.19 34.56 16.67 39.92Q16 40.56 15.33 39.92C9.81 34.56 1 24.21 1 16Z'
+
+// Dibujos de trazo, centrados en la cabeza del pin (16, 16)
+const GLIFOS = {
+  // Un local con su toldo
+  comercio: 'M9.5 13.5h13M11 13.5l1.5-4h7l1.5 4M11 13.5V21h10v-7.5M14.75 21v-3.5h2.5V21',
+  // La casa del logo
+  destino: 'M9.5 16.5 16 11l6.5 5.5M11 15.5V21h10v-5.5M14.6 21v-3.4h2.8V21',
+  // La caja del logo, con su cinta
+  repartidor: 'M16 10.5l5.5 2.5v6l-5.5 2.5-5.5-2.5v-6zM10.5 13l5.5 2.5 5.5-2.5M16 15.5v6M13.25 11.75l5.5 2.5',
+}
+
+const icono = (tipo) =>
   L.divIcon({
-    html: `<span>${emoji}</span>`,
-    className: `marcador-emoji ${clase}`,
-    iconSize: [38, 38],
-    iconAnchor: [19, 19],
+    html: `<svg viewBox="0 0 32 42" width="32" height="42" aria-hidden="true"><path class="marcador-pin" d="${PIN}"/><path class="marcador-glifo" d="${GLIFOS[tipo]}"/></svg>`,
+    className: `marcador marcador-${tipo}`,
+    iconSize: [32, 42],
+    // La punta del pin marca el lugar; el cartel queda arriba de la cabeza
+    iconAnchor: [16, 41],
+    tooltipAnchor: [0, -26],
   })
 
 const ICONOS = {
-  comercio: icono('🏪'),
-  destino: icono('🏠'),
-  repartidor: icono('🛵', 'marcador-repartidor'),
+  comercio: icono('comercio'),
+  destino: icono('destino'),
+  repartidor: icono('repartidor'),
 }
 
 const esPunto = (punto) =>

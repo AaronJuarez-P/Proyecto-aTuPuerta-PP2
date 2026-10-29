@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
+import { ArrowLeft, Check, ReceiptText } from 'lucide-react'
 import { marcarPreparado, obtenerVenta } from '../../api/comercio'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Modal } from '../../components/Comunes/Comunes'
 import FormularioReclamo from '../../components/FormularioReclamo/FormularioReclamo'
@@ -35,11 +36,11 @@ export default function ComercioVenta() {
   return (
     <main className="pagina">
       <div className="pagina-contenido">
-        <Link className="volver-link" to="/comercio?ver=ventas">← Pedidos y ventas</Link>
+        <Link className="volver-link" to="/comercio?ver=ventas"><ArrowLeft size={16} /> Pedidos y ventas</Link>
 
         {error && !venta ? (
           error.codigo === 404 || error.codigo === 403 ? (
-            <EstadoVacio icono="🧾" titulo="Venta no encontrada">{error.message}</EstadoVacio>
+            <EstadoVacio icono={ReceiptText} titulo="Venta no encontrada">{error.message}</EstadoVacio>
           ) : (
             <MensajeError error={error} alReintentar={recargar} />
           )
@@ -73,7 +74,7 @@ export default function ComercioVenta() {
                 {venta.estado === 'en_preparacion' && (
                   <div className="acciones">
                     <button type="button" className="boton boton-primario" disabled={marcando} onClick={marcar}>
-                      {marcando ? 'Marcando…' : '✓ Está listo para retirar'}
+                      {marcando ? 'Marcando…' : <><Check size={18} /> Está listo para retirar</>}
                     </button>
                   </div>
                 )}

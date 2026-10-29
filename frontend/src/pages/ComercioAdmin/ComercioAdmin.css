@@ -210,6 +210,10 @@
   }
   
   .comercio-admin-page .admin-next-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 11px 18px;
     border: none;
     border-radius: 9px;

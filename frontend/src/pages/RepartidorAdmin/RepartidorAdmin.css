@@ -198,6 +198,10 @@
   
   .repartidor-page .accept-button,
   .repartidor-page .deliver-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 11px 18px;
     border: none;
     border-radius: 9px;
@@ -306,6 +310,9 @@
   }
 
   .repartidor-page .en-vivo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     color: var(--muted);
     font-size: 0.8rem;
     font-weight: 700;
@@ -315,6 +322,20 @@
 
   .repartidor-page .en-vivo.conectado {
     color: var(--brand);
+  }
+
+  /* El punto: hueco mientras conecta, lleno cuando llega la señal */
+  .repartidor-page .en-vivo::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+  }
+
+  .repartidor-page .en-vivo.conectado::before {
+    border-color: var(--brand-mid);
+    background: var(--brand-mid);
   }
 
   .repartidor-page .pedido-en-curso {

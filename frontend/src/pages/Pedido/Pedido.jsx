@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useEffectEvent, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
+import { ArrowLeft, ArrowRight, Check, CreditCard, MapPin, Motorbike, Package, Repeat, Store, Timer, X } from 'lucide-react'
 import {
   cancelarMiPedido,
   iniciarPago,
@@ -71,7 +72,7 @@ function LineaDeTiempo({ estado }) {
           className={indice < actual ? 'hecho' : indice === actual ? 'actual' : ''}
           aria-current={indice === actual ? 'step' : undefined}
         >
-          <span className="linea-tiempo-punto" aria-hidden="true">{indice < actual ? '✓' : indice + 1}</span>
+          <span className="linea-tiempo-punto" aria-hidden="true">{indice < actual ? <Check size={16} /> : indice + 1}</span>
           <span>{ESTADOS_PEDIDO[paso].etiqueta}</span>
         </li>
       ))}
@@ -220,7 +221,7 @@ export default function Pedido() {
         <section className="pedido-container pedido-not-found">
           <h1>{noEsSuyo ? 'Pedido no encontrado' : 'No se pudo cargar el pedido'}</h1>
           <p>{detalle.error.message}</p>
-          <Link to="/pedidos" className="pedido-button">← Volver a mis pedidos</Link>
+          <Link to="/pedidos" className="pedido-button"><ArrowLeft size={16} /> Volver a mis pedidos</Link>
         </section>
       </main>
     )
@@ -239,7 +240,7 @@ export default function Pedido() {
   return (
     <main className="pedido-page">
       <section className="pedido-container">
-        <Link to="/pedidos" className="pedido-back">← Volver a mis pedidos</Link>
+        <Link to="/pedidos" className="pedido-back"><ArrowLeft size={16} /> Volver a mis pedidos</Link>
 
         <div className="pedido-header">
           <div>
@@ -252,7 +253,7 @@ export default function Pedido() {
             <EstadoBadge estado={estado} />
             {activo && (
               <span className={`en-vivo ${enVivo ? 'conectado' : ''}`}>
-                {enVivo ? '● En vivo' : '○ Conectando…'}
+                {enVivo ? 'En vivo' : 'Conectando…'}
               </span>
             )}
           </div>
@@ -282,17 +283,17 @@ export default function Pedido() {
                 </p>
                 <div className="acciones">
                   <button type="button" className="boton boton-primario" disabled={pago.procesando} onClick={() => simular('approved')}>
-                    ✓ Aprobar el pago
+                    <Check size={18} /> Aprobar el pago
                   </button>
                   <button type="button" className="boton boton-peligro" disabled={pago.procesando} onClick={() => simular('rejected')}>
-                    ✕ Rechazar el pago
+                    <X size={18} /> Rechazar el pago
                   </button>
                 </div>
               </div>
             ) : (
               <div className="acciones">
                 <button type="button" className="boton boton-primario" disabled={pago.procesando} onClick={pagar}>
-                  {pago.procesando ? 'Abriendo MercadoPago…' : `💳 Pagar ${formatearPrecio(pedido.total)} con MercadoPago`}
+                  {pago.procesando ? 'Abriendo MercadoPago…' : <><CreditCard size={18} /> Pagar {formatearPrecio(pedido.total)} con MercadoPago</>}
                 </button>
                 <button type="button" className="boton boton-secundario" onClick={() => setModal({ tipo: 'cancelar' })}>
                   Cancelar pedido
@@ -344,7 +345,7 @@ export default function Pedido() {
 
                 {datosSeguimiento?.repartidor && (
                   <p className="seguimiento-repartidor">
-                    🛵 {datosSeguimiento.repartidor.nombre}
+                    <Motorbike size={16} /> {datosSeguimiento.repartidor.nombre}
                     {datosSeguimiento.repartidor.tipo_vehiculo && ` · ${VEHICULOS[datosSeguimiento.repartidor.tipo_vehiculo] ?? datosSeguimiento.repartidor.tipo_vehiculo}`}
                     {datosSeguimiento.ubicacion?.registrado_en && ` · última posición a las ${formatearHora(datosSeguimiento.ubicacion.registrado_en)}`}
                   </p>
@@ -373,7 +374,7 @@ export default function Pedido() {
             <div className="pedido-products">
               {pedido.items.map((item) => (
                 <div className="pedido-product" key={item.producto_id}>
-                  <div className="product-icon" aria-hidden="true">📦</div>
+                  <div className="product-icon"><Package size={22} /></div>
                   <div className="product-info">
                     <strong>{item.nombre}</strong>
                     <span>{item.cantidad} × {formatearPrecio(item.precio_unit)}</span>
@@ -393,20 +394,20 @@ export default function Pedido() {
             <div className="pedido-card">
               <h2>Entrega</h2>
               <div className="detail-row">
-                <span>📍 Dirección</span>
+                <span><MapPin size={14} /> Dirección</span>
                 <strong>{pedido.direccion_entrega}</strong>
               </div>
               <div className="detail-row">
-                <span>🏪 Sale de</span>
+                <span><Store size={14} /> Sale de</span>
                 <strong>{pedido.comercio} · {pedido.direccion_comercio}</strong>
               </div>
               <div className="detail-row">
-                <span>⏱ Estimado al comprar</span>
+                <span><Timer size={14} /> Estimado al comprar</span>
                 <strong>{formatearMinutos(pedido.tiempo_estimado)} · {formatearDistancia(pedido.distancia_km)}</strong>
               </div>
               {pedido.repartidor && (
                 <div className="detail-row">
-                  <span>🛵 Repartidor</span>
+                  <span><Motorbike size={14} /> Repartidor</span>
                   <strong>{pedido.repartidor}{pedido.tipo_vehiculo && ` · ${VEHICULOS[pedido.tipo_vehiculo] ?? pedido.tipo_vehiculo}`}</strong>
                 </div>
               )}
@@ -445,7 +446,7 @@ export default function Pedido() {
             <div className="pedido-card pedido-mas-acciones">
               {ESTADOS_TERMINALES.includes(estado) && (
                 <button type="button" className="boton boton-primario boton-bloque" disabled={procesando} onClick={repetir}>
-                  ↻ Volver a pedir lo mismo
+                  <Repeat size={18} /> Volver a pedir lo mismo
                 </button>
               )}
               <button
@@ -500,7 +501,7 @@ function ResultadoRepetir({ resultado, alIrAlCarrito, alCerrar }) {
         <ul>
           {agregados.map((item) => (
             <li key={item.producto_id}>
-              ✓ {item.cantidad} × {item.nombre}
+              <Check size={16} /> {item.cantidad} × {item.nombre}
               {item.parcial && <small> (pediste {item.cantidad_pedida}, había menos stock)</small>}
               {item.precio_actual !== item.precio_anterior && (
                 <small> · antes {formatearPrecio(item.precio_anterior)}, hoy {formatearPrecio(item.precio_actual)}</small>
@@ -513,7 +514,7 @@ function ResultadoRepetir({ resultado, alIrAlCarrito, alCerrar }) {
       {omitidos.length > 0 && (
         <ul className="omitidos">
           {omitidos.map((item) => (
-            <li key={item.producto_id}>✕ {item.nombre ?? `Producto #${item.producto_id}`}: {item.motivo}</li>
+            <li key={item.producto_id}><X size={16} /> {item.nombre ?? `Producto #${item.producto_id}`}: {item.motivo}</li>
           ))}
         </ul>
       )}
@@ -521,7 +522,7 @@ function ResultadoRepetir({ resultado, alIrAlCarrito, alCerrar }) {
       <div className="acciones">
         {agregados.length > 0 && (
           <button type="button" className="boton boton-primario" onClick={alIrAlCarrito}>
-            Revisar el carrito →
+            Revisar el carrito <ArrowRight size={18} />
           </button>
         )}
         <button type="button" className="boton boton-secundario" onClick={alCerrar}>

@@ -42,6 +42,11 @@ button { font: inherit; }
 html { scroll-behavior: smooth; scroll-padding-top: 100px; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition: none !important; } }
 
+/* Íconos de lucide-react: todos con el mismo trazo (2). En una línea de texto quedan
+   centrados con las letras; en un contenedor flex no se achican. lucide ya les pone
+   aria-hidden, salvo que lleven un aria-label. */
+.lucide { flex-shrink: 0; vertical-align: -0.2em; }
+
 /* Rótulo chico sobre los títulos. Estaba definido en Landing.css y en Checkout.css con
    valores distintos; como todo el CSS es global, ganaba el de Checkout: se deja ese. */
 .eyebrow { margin-bottom: 8px; color: var(--brand); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; }

@@ -62,7 +62,13 @@ public/
 Cada página tiene su propio CSS, con las reglas acotadas a su clase raíz
 (`.pedido-page .pedido-card`) para que no choquen entre pantallas. Lo compartido (botones,
 tarjetas, formularios, tablas, pestañas, modales y los cartelitos de estado) está en
-`components/Comunes/Comunes.css`.
+`components/Comunes/Comunes.css`. Los colores, la tinta y las letras son variables de
+`index.css` (`--brand`, `--brand-menta`, `--ink`, `--display`...): no se escriben a mano.
+
+Los íconos son de `lucide-react`, todos con el mismo trazo. Los que dependen de un dato salen
+de `utils/categorias.js` (el rubro) y `utils/notificaciones.js` (el tipo de aviso), que guardan
+el componente; `EstadoVacio` también recibe el componente (`icono={Package}`). lucide los
+oculta para los lectores de pantalla: un botón que solo tiene un ícono lleva `aria-label`.
 
 ## Rutas
 

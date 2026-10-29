@@ -10,7 +10,9 @@
   
   /* Acotado: Checkout.css también define .back-link */
   .comercio-header .back-link {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     width: min(1100px, 100%);
     margin: 0 auto 45px;
     color: var(--brand);
@@ -40,7 +42,7 @@
     border-radius: 18px;
     background: white;
     border: 1px solid var(--border);
-    font-size: 4.5rem;
+    color: var(--brand);
   }
   
   .comercio-header h1 {
@@ -78,6 +80,9 @@
   }
   
   .cart-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     text-decoration: none;
     padding: 10px 16px;
     border-radius: 8px;
@@ -111,7 +116,7 @@
     justify-content: center;
     height: 180px;
     background: var(--surface-2);
-    font-size: 4rem;
+    color: var(--brand);
   }
   
   .producto-info {
@@ -139,6 +144,10 @@
   }
   
   .add-cart-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     width: 100%;
     padding: 12px;
     border: none;
@@ -201,6 +210,9 @@
   }
   
   .comercio-not-found a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     margin-top: 10px;
     color: var(--brand);
     font-weight: 700;

@@ -1,8 +1,8 @@
 import { Link, useSearchParams } from 'react-router'
+import { ArrowRight, Clock, MapPin, Package, Search, Store } from 'lucide-react'
 import { buscarProductos, listarComercios } from '../../api/catalogo'
-import { Cargando, EstadoVacio, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
+import { Cargando, EstadoVacio, IconoRubro, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
 import { useCarga } from '../../hooks/useCarga'
-import { iconoDeCategoria } from '../../utils/categorias'
 import { formatearPrecio, plural } from '../../utils/formato'
 import './Comercios.css'
 
@@ -69,7 +69,7 @@ export default function Comercios() {
 
           {/* key: si la búsqueda cambia desde la URL (atrás, un link), el campo se reinicia con ella */}
           <form className="comercios-search" role="search" onSubmit={manejarBusqueda} key={buscar}>
-            <span aria-hidden="true">🔍</span>
+            <Search size={20} />
             <input
               type="search"
               name="buscar"
@@ -100,7 +100,7 @@ export default function Comercios() {
                 className={categoria === nombre ? 'active' : ''}
                 onClick={() => cambiarFiltros({ categoria: nombre, pagina: undefined })}
               >
-                {iconoDeCategoria(nombre)} {nombre}
+                <IconoRubro categoria={nombre} size={16} /> {nombre}
               </button>
             ))}
           </div>
@@ -125,8 +125,8 @@ export default function Comercios() {
                   className="producto-encontrado"
                   to={`/comercios/${producto.comercio_id}`}
                 >
-                  <span className="producto-encontrado-icono" aria-hidden="true">
-                    {iconoDeCategoria(producto.categoria, '📦')}
+                  <span className="producto-encontrado-icono">
+                    <IconoRubro categoria={producto.categoria} porDefecto={Package} size={26} />
                   </span>
                   <span className="producto-encontrado-info">
                     <strong>{producto.nombre}</strong>
@@ -154,7 +154,7 @@ export default function Comercios() {
           <Cargando texto="Buscando comercios…" />
         ) : lista.length === 0 && !comercios.error ? (
           <EstadoVacio
-            icono="🏪"
+            icono={Store}
             titulo="No encontramos comercios"
             accion={
               (categoria || buscar) && (
@@ -172,21 +172,21 @@ export default function Comercios() {
           <div className="comercios-grid">
             {lista.map((comercio) => (
               <article className="comercio-card" key={comercio.id}>
-                <div className="comercio-icon" aria-hidden="true">
-                  {iconoDeCategoria(comercio.categoria)}
+                <div className="comercio-icon">
+                  <IconoRubro categoria={comercio.categoria} size={56} />
                 </div>
 
                 <div className="comercio-info">
                   <span className="comercio-category">{comercio.categoria}</span>
                   <h3>{comercio.nombre}</h3>
                   <p>
-                    📍 {comercio.direccion}
+                    <MapPin size={16} /> {comercio.direccion}
                     <br />
-                    🕒 {comercio.horario_atencion}
+                    <Clock size={16} /> {comercio.horario_atencion}
                   </p>
 
                   <Link className="comercio-button" to={`/comercios/${comercio.id}`}>
-                    Ver comercio →
+                    Ver comercio <ArrowRight size={16} />
                   </Link>
                 </div>
               </article>

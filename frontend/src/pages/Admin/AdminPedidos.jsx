@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { ArrowLeft, Package, X } from 'lucide-react'
 import { listarPedidosAdmin } from '../../api/admin'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
 import { useCarga } from '../../hooks/useCarga'
@@ -31,7 +32,7 @@ export default function AdminPedidos() {
   return (
     <main className="admin-page">
       <section className="admin-container">
-        <Link className="volver-link" to="/admin">← Panel</Link>
+        <Link className="volver-link" to="/admin"><ArrowLeft size={16} /> Panel</Link>
 
         <header className="admin-header">
           <div>
@@ -82,7 +83,7 @@ export default function AdminPedidos() {
           <div className="chips">
             {actores.map(({ clave, texto }) => (
               <button key={clave} type="button" className="chip activo" onClick={() => cambiar({ [clave]: '' })} aria-label={`Quitar el filtro ${texto} #${filtros[clave]}`}>
-                {texto} #{filtros[clave]} ×
+                {texto} #{filtros[clave]} <X size={14} />
               </button>
             ))}
           </div>
@@ -93,7 +94,7 @@ export default function AdminPedidos() {
         {cargando && !datos ? (
           <Cargando />
         ) : datos?.pedidos.length === 0 ? (
-          <EstadoVacio icono="📦" titulo="No hay pedidos con estos filtros" />
+          <EstadoVacio icono={Package} titulo="No hay pedidos con estos filtros" />
         ) : datos && (
           <div className="tabla-contenedor">
             <table className="tabla">

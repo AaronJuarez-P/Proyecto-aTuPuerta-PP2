@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
+import { ArrowLeft, Motorbike, ShieldCheck, ShoppingBag, Store, Users } from 'lucide-react'
 import {
   cambiarEstadoComercio,
   cambiarEstadoUsuario,
@@ -33,7 +34,7 @@ export default function AdminUsuario() {
   if (error && !cuenta) {
     return (
       <Pantalla>
-        {error.codigo === 404 ? <EstadoVacio icono="👥" titulo="Usuario no encontrado" /> : <MensajeError error={error} alReintentar={recargar} />}
+        {error.codigo === 404 ? <EstadoVacio icono={Users} titulo="Usuario no encontrado" /> : <MensajeError error={error} alReintentar={recargar} />}
       </Pantalla>
     )
   }
@@ -196,7 +197,7 @@ export default function AdminUsuario() {
 
             {cliente && (
               <div className="admin-perfil">
-                <h3>🛍️ Cliente</h3>
+                <h3><ShoppingBag size={18} /> Cliente</h3>
                 <div className="dato-fila"><span>Dirección de entrega</span><strong>{cliente.direccion_entrega}</strong></div>
                 <Link to={`/admin/pedidos?clienteId=${cliente.id}`}>
                   Ver sus compras ({datos.pedidos.como_cliente})
@@ -206,7 +207,7 @@ export default function AdminUsuario() {
 
             {comercio && (
               <div className="admin-perfil">
-                <h3>🏪 Comercio</h3>
+                <h3><Store size={18} /> Comercio</h3>
                 <div className="dato-fila"><span>Nombre</span><strong>{comercio.nombre}</strong></div>
                 <div className="dato-fila">
                   <span>Estado</span>
@@ -234,7 +235,7 @@ export default function AdminUsuario() {
 
             {repartidor && (
               <div className="admin-perfil">
-                <h3>🛵 Repartidor</h3>
+                <h3><Motorbike size={18} /> Repartidor</h3>
                 <div className="dato-fila"><span>Vehículo</span><strong>{VEHICULOS[repartidor.tipo_vehiculo] ?? repartidor.tipo_vehiculo}</strong></div>
                 <div className="dato-fila"><span>Servicio</span><strong>{repartidor.disponible ? 'En servicio' : 'Fuera de servicio'}</strong></div>
                 <Link to={`/admin/pedidos?repartidorId=${repartidor.id}`}>
@@ -245,7 +246,7 @@ export default function AdminUsuario() {
 
             {administrador && (
               <div className="admin-perfil">
-                <h3>⚙️ Administrador</h3>
+                <h3><ShieldCheck size={18} /> Administrador</h3>
                 <p className="texto-apagado">Puede entrar al panel de administración.</p>
               </div>
             )}
@@ -302,7 +303,7 @@ function Pantalla({ children }) {
   return (
     <main className="admin-page">
       <section className="admin-container">
-        <Link className="volver-link" to="/admin/usuarios">← Usuarios</Link>
+        <Link className="volver-link" to="/admin/usuarios"><ArrowLeft size={16} /> Usuarios</Link>
         {children}
       </section>
     </main>

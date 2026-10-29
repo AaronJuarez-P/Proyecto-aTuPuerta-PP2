@@ -85,7 +85,9 @@
   }
   
   .perfil-page .perfil-button {
-    display: inline-block;
+    align-items: center;
+    gap: 8px;
+    display: inline-flex;
     padding: 13px 20px;
     border: none;
     border-radius: 8px;

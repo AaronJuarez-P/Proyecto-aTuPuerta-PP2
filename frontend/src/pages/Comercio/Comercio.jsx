@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
+import { ArrowLeft, ArrowRight, Clock, MapPin, Package, Plus, ShoppingCart } from 'lucide-react'
 import { listarProductosDeComercio, obtenerComercio } from '../../api/catalogo'
-import { Cargando, EstadoVacio, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
+import { Cargando, EstadoVacio, IconoRubro, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
 import { useCarrito } from '../../context/carrito'
 import { useSesion } from '../../context/sesion'
 import { useCarga } from '../../hooks/useCarga'
-import { iconoDeCategoria } from '../../utils/categorias'
 import { formatearPrecio, plural } from '../../utils/formato'
 import './Comercio.css'
 
@@ -78,7 +78,7 @@ export default function Comercio() {
         <section className="comercio-not-found">
           <h1>Comercio no encontrado</h1>
           <p>El comercio que buscás no existe o no está disponible en este momento.</p>
-          <Link to="/comercios">← Volver a comercios</Link>
+          <Link to="/comercios"><ArrowLeft size={16} /> Volver a comercios</Link>
         </section>
       </main>
     )
@@ -91,20 +91,20 @@ export default function Comercio() {
     <main className="comercio-page">
       <section className="comercio-header">
         <Link to="/comercios" className="back-link">
-          ← Volver a comercios
+          <ArrowLeft size={16} /> Volver a comercios
         </Link>
 
         {datosComercio ? (
           <div className="comercio-header-content">
-            <div className="comercio-large-icon" aria-hidden="true">
-              {iconoDeCategoria(datosComercio.categoria)}
+            <div className="comercio-large-icon">
+              <IconoRubro categoria={datosComercio.categoria} size={64} />
             </div>
 
             <div>
               <span className="comercio-category">{datosComercio.categoria}</span>
               <h1>{datosComercio.nombre}</h1>
-              <p>📍 {datosComercio.direccion}</p>
-              <p>🕒 {datosComercio.horario_atencion}</p>
+              <p><MapPin size={18} /> {datosComercio.direccion}</p>
+              <p><Clock size={18} /> {datosComercio.horario_atencion}</p>
             </div>
           </div>
         ) : (
@@ -123,7 +123,7 @@ export default function Comercio() {
 
           {cantidadCarrito > 0 && (
             <Link to="/carrito" className="cart-indicator">
-              🛒 {plural(cantidadCarrito, 'producto')} en tu carrito · Ver carrito →
+              <ShoppingCart size={18} /> {plural(cantidadCarrito, 'producto')} en tu carrito · Ver carrito <ArrowRight size={16} />
             </Link>
           )}
         </div>
@@ -151,7 +151,7 @@ export default function Comercio() {
         {productos.cargando && !productos.datos ? (
           <Cargando texto="Cargando productos…" />
         ) : lista.length === 0 && !productos.error ? (
-          <EstadoVacio icono="📦" titulo="Todavía no hay productos">
+          <EstadoVacio icono={Package} titulo="Todavía no hay productos">
             Este comercio no tiene productos cargados{categoria ? ' en esta categoría' : ''}.
           </EstadoVacio>
         ) : (
@@ -163,8 +163,8 @@ export default function Comercio() {
 
               return (
                 <article className="producto-card" key={producto.id}>
-                  <div className="producto-icon" aria-hidden="true">
-                    {iconoDeCategoria(producto.categoria, '📦')}
+                  <div className="producto-icon">
+                    <IconoRubro categoria={producto.categoria} porDefecto={Package} size={64} />
                   </div>
 
                   <div className="producto-info">
@@ -194,7 +194,7 @@ export default function Comercio() {
                           ? 'Sin stock'
                           : yaEnCarrito >= stock
                             ? 'Ya tenés todo el stock'
-                            : '+ Agregar al carrito'}
+                            : <><Plus size={18} /> Agregar al carrito</>}
                     </button>
                   </div>
                 </article>

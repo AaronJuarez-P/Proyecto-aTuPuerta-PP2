@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { Cargando, MensajeError } from '../../components/Comunes/Comunes'
+import { ArrowLeft, ArrowRight, Minus, Package, Plus, ShoppingCart, Store, TriangleAlert } from 'lucide-react'
+import { Cargando, IconoRubro, MensajeError } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
 import { useCarrito } from '../../context/carrito'
-import { iconoDeCategoria } from '../../utils/categorias'
 import { formatearPrecio, plural } from '../../utils/formato'
 import './Carrito.css'
 
@@ -77,10 +77,10 @@ export default function Carrito() {
           error ? <MensajeError error={error} alReintentar={() => recargar().catch(() => {})} /> : <Cargando />
         ) : comercios.length === 0 ? (
           <div className="carrito-vacio">
-            <span aria-hidden="true">🛒</span>
+            <ShoppingCart size={56} />
             <h2>Tu carrito está vacío</h2>
             <p>Explorá los comercios y agregá productos para empezar tu pedido.</p>
-            <Link to="/comercios">Explorar comercios →</Link>
+            <Link to="/comercios">Explorar comercios <ArrowRight size={16} /></Link>
           </div>
         ) : (
           <div className="carrito-layout">
@@ -88,8 +88,8 @@ export default function Carrito() {
               {comercios.map((grupo) => (
                 <section className="carrito-comercio" key={grupo.comercio_id}>
                   <header className="carrito-comercio-encabezado">
-                    <h2>🏪 {grupo.comercio_nombre}</h2>
-                    <Link to={`/comercios/${grupo.comercio_id}`}>Agregar más →</Link>
+                    <h2><Store size={20} /> {grupo.comercio_nombre}</h2>
+                    <Link to={`/comercios/${grupo.comercio_id}`}>Agregar más <ArrowRight size={14} /></Link>
                   </header>
 
                   {grupo.items.map((item) => (
@@ -97,8 +97,8 @@ export default function Carrito() {
                       className={`carrito-producto ${item.disponible ? '' : 'no-disponible'}`}
                       key={item.producto_id}
                     >
-                      <div className="carrito-producto-icon" aria-hidden="true">
-                        {iconoDeCategoria(item.categoria, '📦')}
+                      <div className="carrito-producto-icon">
+                        <IconoRubro categoria={item.categoria} porDefecto={Package} size={36} />
                       </div>
 
                       <div className="carrito-producto-info">
@@ -108,7 +108,7 @@ export default function Carrito() {
 
                         {!item.disponible && (
                           <p className="carrito-alerta">
-                            ⚠ {motivoNoDisponible(item, grupo.comercio_activo)}
+                            <TriangleAlert size={16} /> {motivoNoDisponible(item, grupo.comercio_activo)}
                             {grupo.comercio_activo && item.producto_activo && item.stock_disponible > 0 && (
                               <button
                                 type="button"
@@ -129,7 +129,7 @@ export default function Carrito() {
                           disabled={ocupado === item.producto_id}
                           onClick={() => restar(item)}
                         >
-                          −
+                          <Minus size={16} />
                         </button>
 
                         <span>{item.cantidad}</span>
@@ -140,7 +140,7 @@ export default function Carrito() {
                           disabled={ocupado === item.producto_id || item.cantidad >= item.stock_disponible}
                           onClick={() => sumar(item)}
                         >
-                          +
+                          <Plus size={16} />
                         </button>
                       </div>
 
@@ -200,7 +200,7 @@ export default function Carrito() {
               )}
 
               <Link className="seguir-comprando" to="/comercios">
-                ← Seguir comprando
+                <ArrowLeft size={16} /> Seguir comprando
               </Link>
             </aside>
           </div>

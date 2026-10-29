@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { ArrowRight, Bell, Check } from 'lucide-react'
 import { listarNotificaciones, marcarLeida, marcarTodasLeidas } from '../../api/notificaciones'
 import { Cargando, EstadoVacio, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
@@ -74,7 +75,7 @@ export default function Notificaciones() {
 
           {noLeidas > 0 && (
             <button type="button" className="boton boton-secundario" onClick={leerTodas}>
-              ✓ Marcar todas como leídas
+              <Check size={18} /> Marcar todas como leídas
             </button>
           )}
         </div>
@@ -89,17 +90,20 @@ export default function Notificaciones() {
         {cargando && !datos ? (
           <Cargando />
         ) : notificaciones.length === 0 && !error ? (
-          <EstadoVacio icono="🔔" titulo={soloNoLeidas ? 'No tenés notificaciones sin leer' : 'Todavía no tenés notificaciones'}>
+          <EstadoVacio icono={Bell} titulo={soloNoLeidas ? 'No tenés notificaciones sin leer' : 'Todavía no tenés notificaciones'}>
             Te avisamos acá cuando pase algo con tus pedidos o tus reclamos.
           </EstadoVacio>
         ) : (
           <ul className="lista-notificaciones">
             {notificaciones.map((notificacion) => {
               const enlace = enlaceDeNotificacion(notificacion, usuario.rol)
+              const Icono = iconoDeNotificacion(notificacion.tipo)
 
               return (
                 <li key={notificacion.id} className={notificacion.leida ? '' : 'sin-leer'}>
-                  <span className="notificacion-icono" aria-hidden="true">{iconoDeNotificacion(notificacion.tipo)}</span>
+                  <span className="notificacion-icono">
+                    <Icono size={20} />
+                  </span>
 
                   <div className="notificacion-cuerpo">
                     <p>{notificacion.mensaje}</p>
@@ -112,7 +116,7 @@ export default function Notificaciones() {
                   <div className="notificacion-acciones">
                     {enlace && (
                       <Link className="boton boton-secundario boton-chico" to={enlace} onClick={() => leer(notificacion)}>
-                        Ver →
+                        Ver <ArrowRight size={14} />
                       </Link>
                     )}
                     {!notificacion.leida && (
@@ -179,7 +183,7 @@ function PanelPush() {
           <p className="texto-apagado">Recibí los avisos de tus pedidos aunque no tengas ATuPuerta abierto.</p>
           <div className="acciones">
             <button type="button" className="boton boton-primario" disabled={activando} onClick={activar}>
-              {activando ? 'Activando…' : '🔔 Activar en este navegador'}
+              {activando ? 'Activando…' : <><Bell size={18} /> Activar en este navegador</>}
             </button>
           </div>
         </>

@@ -56,7 +56,7 @@
     height: 90px;
     border-radius: 8px;
     background: var(--surface-2);
-    font-size: 2.5rem;
+    color: var(--brand);
   }
   
   .carrito-producto-info h3 {
@@ -83,6 +83,8 @@
   }
   
   .cantidad-control button {
+    display: grid;
+    place-items: center;
     width: 32px;
     height: 32px;
     border: 1px solid var(--border);
@@ -193,9 +195,11 @@
   }
   
   .seguir-comprando {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     margin-top: 18px;
-    text-align: center;
     color: var(--brand);
     font-size: 0.9rem;
     font-weight: 700;
@@ -215,9 +219,9 @@
     text-align: center;
   }
   
-  .carrito-vacio > span {
+  .carrito-vacio > .lucide {
     margin-bottom: 20px;
-    font-size: 4rem;
+    color: var(--brand);
   }
   
   .carrito-vacio h2 {
@@ -234,6 +238,9 @@
   }
   
   .carrito-vacio a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 12px 20px;
     border-radius: 8px;
     background: var(--brand);
@@ -261,12 +268,18 @@
   }
 
   .carrito-comercio-encabezado h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     color: var(--ink);
     font-family: var(--display);
     font-size: 1.15rem;
   }
 
   .carrito-comercio-encabezado a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     color: var(--brand);
     font-size: 0.85rem;
     font-weight: 700;

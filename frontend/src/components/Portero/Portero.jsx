@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
+import { BrushCleaning, X } from 'lucide-react'
 import { LARGO_MAXIMO_PREGUNTA, LARGO_MINIMO_PREGUNTA, estadoAyuda, preguntarAlPortero } from '../../api/ayuda'
 import { useSesion } from '../../context/sesion'
 import { useCarga } from '../../hooks/useCarga'
@@ -183,12 +184,12 @@ function Porteria({ rol, clave }) {
               aria-label="Borrar la charla"
               title="Borrar la charla"
             >
-              🧹
+              <BrushCleaning size={18} />
             </button>
           )}
 
           <button type="button" onClick={cerrar} aria-label="Cerrar el Portero" title="Cerrar">
-            ×
+            <X size={20} />
           </button>
         </header>
 

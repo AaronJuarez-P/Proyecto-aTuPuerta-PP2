@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { Check, Motorbike, Package, ReceiptText, ShoppingBasket } from 'lucide-react'
 import { listarVentas, marcarPreparado, obtenerVenta } from '../../api/comercio'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
@@ -60,7 +61,7 @@ export default function ComercioAdmin() {
               <span>por preparar</span>
             </div>
             <Link className="boton boton-secundario" to="/comercio/productos">
-              📦 Mis productos
+              <Package size={18} /> Mis productos
             </Link>
           </div>
         </div>
@@ -117,7 +118,7 @@ function ParaPreparar({ bandeja }) {
 
   if (bandeja.datos.length === 0) {
     return (
-      <EstadoVacio icono="🧺" titulo="No hay pedidos para preparar">
+      <EstadoVacio icono={ShoppingBasket} titulo="No hay pedidos para preparar">
         Cuando un cliente pague un pedido, aparece acá con sus productos. La lista se actualiza sola.
       </EstadoVacio>
     )
@@ -174,7 +175,7 @@ function ParaPreparar({ bandeja }) {
               disabled={marcando === venta.id}
               onClick={() => marcar(venta)}
             >
-              {marcando === venta.id ? 'Marcando…' : '✓ Está listo para retirar'}
+              {marcando === venta.id ? 'Marcando…' : <><Check size={18} /> Está listo para retirar</>}
             </button>
           </div>
         </article>
@@ -208,7 +209,7 @@ function EnCurso() {
 
   if (datos.length === 0) {
     return (
-      <EstadoVacio icono="🛵" titulo="No hay pedidos en curso">
+      <EstadoVacio icono={Motorbike} titulo="No hay pedidos en curso">
         Acá aparecen los pedidos listos que esperan a un repartidor y los que ya van en camino.
       </EstadoVacio>
     )
@@ -309,7 +310,7 @@ function Ventas() {
       {cargando && !datos ? (
         <Cargando texto="Cargando ventas…" />
       ) : datos?.ventas.length === 0 ? (
-        <EstadoVacio icono="🧾" titulo="No hay ventas con estos filtros">
+        <EstadoVacio icono={ReceiptText} titulo="No hay ventas con estos filtros">
           Una venta es un pedido pagado: los que esperan el pago todavía no aparecen.
         </EstadoVacio>
       ) : datos && (

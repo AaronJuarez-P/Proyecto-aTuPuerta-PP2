@@ -153,10 +153,11 @@
   
   .cart-link {
     position: relative;
-  
+
     display: flex;
     align-items: center;
-  
+    gap: 6px;
+
     white-space: nowrap;
   }
   
@@ -193,8 +194,12 @@
      ========================================= */
   
   .profile-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
     color: var(--ink);
-  
+
     white-space: nowrap;
   }
   
@@ -234,8 +239,12 @@
      ========================================= */
   
   .nav-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
     color: var(--ink);
-  
+
     text-decoration: none;
   
     font-size: 14px;

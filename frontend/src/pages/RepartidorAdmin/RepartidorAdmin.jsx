@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
+import { ArrowRight, Bike, Check, LocateFixed, MapPin, Motorbike, Package, Play, Route, Store, Wallet } from 'lucide-react'
 import {
   cambiarDisponibilidad,
   confirmarEntrega,
@@ -147,7 +148,7 @@ export default function RepartidorAdmin() {
           <PedidosDisponibles alTomar={recargarTodo} />
         ) : (
           <EstadoVacio
-            icono="🛵"
+            icono={Motorbike}
             titulo="Estás fuera de servicio"
             accion={
               <button type="button" className="boton boton-primario" disabled={cambiandoServicio} onClick={() => cambiarServicio(true)}>
@@ -208,7 +209,7 @@ function PedidosDisponibles({ alTomar }) {
       {cargando && !datos ? (
         <Cargando texto="Buscando pedidos…" />
       ) : pedidos.length === 0 ? (
-        <EstadoVacio icono="🚲" titulo="No hay pedidos para repartir">
+        <EstadoVacio icono={Bike} titulo="No hay pedidos para repartir">
           Cuando un cliente pague un pedido, aparece acá. La lista se actualiza sola.
         </EstadoVacio>
       ) : (
@@ -230,26 +231,26 @@ function PedidosDisponibles({ alTomar }) {
 
               <div className="repartidor-card-info">
                 <div>
-                  <span>🏪 Retirás en</span>
+                  <span><Store size={14} /> Retirás en</span>
                   <strong>{pedido.direccion_comercio}</strong>
                 </div>
                 <div>
-                  <span>📍 Entregás en</span>
+                  <span><MapPin size={14} /> Entregás en</span>
                   <strong>La dirección la ves al tomarlo</strong>
                 </div>
                 <div>
-                  <span>🛣 Recorrido</span>
+                  <span><Route size={14} /> Recorrido</span>
                   <strong>{formatearDistancia(pedido.distancia_km)} · {formatearMinutos(pedido.tiempo_estimado)}</strong>
                 </div>
                 <div>
-                  <span>💰 Ganás</span>
+                  <span><Wallet size={14} /> Ganás</span>
                   <strong>{formatearPrecio(pedido.comision)}</strong>
                 </div>
               </div>
 
               <div className="repartidor-actions">
                 <button type="button" className="accept-button" disabled={tomando !== null} onClick={() => tomar(pedido)}>
-                  {tomando === pedido.id ? 'Tomando…' : 'Tomar pedido →'}
+                  {tomando === pedido.id ? 'Tomando…' : <>Tomar pedido <ArrowRight size={18} /></>}
                 </button>
               </div>
             </article>
@@ -448,7 +449,7 @@ function PedidoEnCurso({ pedido, alTerminar }) {
           </div>
           <div className="en-curso-estado">
             <EstadoBadge estado="en_camino" />
-            <span className={`en-vivo ${enVivo ? 'conectado' : ''}`}>{enVivo ? '● En vivo' : '○ Conectando…'}</span>
+            <span className={`en-vivo ${enVivo ? 'conectado' : ''}`}>{enVivo ? 'En vivo' : 'Conectando…'}</span>
           </div>
         </div>
 
@@ -462,11 +463,11 @@ function PedidoEnCurso({ pedido, alTerminar }) {
             <strong>{pedido.direccion_entrega}</strong>
           </div>
           <div>
-            <span>💰 Ganás</span>
+            <span><Wallet size={14} /> Ganás</span>
             <strong>{formatearPrecio(pedido.comision)}</strong>
           </div>
           <div>
-            <span>📦 Llevás</span>
+            <span><Package size={14} /> Llevás</span>
             <strong>{pedido.items.map((item) => `${item.cantidad}× ${item.nombre}`).join(', ')}</strong>
           </div>
         </div>
@@ -487,11 +488,11 @@ function PedidoEnCurso({ pedido, alTerminar }) {
 
             <div className="acciones">
               <button type="button" className={`boton ${compartiendo ? 'boton-acento' : 'boton-secundario'}`} onClick={alternarGps}>
-                {compartiendo ? '📡 Compartiendo ubicación' : '📍 Compartir mi ubicación'}
+                {compartiendo ? <><LocateFixed size={18} /> Compartiendo ubicación</> : <><MapPin size={18} /> Compartir mi ubicación</>}
               </button>
               {mostrarSimulador && (
                 <button type="button" className="boton boton-secundario" onClick={simularAvance}>
-                  ▶ Simular avance (demo)
+                  <Play size={18} /> Simular avance (demo)
                 </button>
               )}
             </div>
@@ -510,7 +511,7 @@ function PedidoEnCurso({ pedido, alTerminar }) {
                   placeholder="Te lo dicta el cliente"
                 />
                 <button type="submit" className="deliver-button" disabled={entregando}>
-                  {entregando ? 'Confirmando…' : 'Confirmar entrega ✓'}
+                  {entregando ? 'Confirmando…' : <>Confirmar entrega <Check size={18} /></>}
                 </button>
               </div>
               {errorEntrega && <p className="aviso-form aviso-form-error">{errorEntrega}</p>}
@@ -576,7 +577,7 @@ function Historial({ entregas, alCambiarPagina }) {
       {entregas.cargando && !entregas.datos ? (
         <Cargando />
       ) : lista.length === 0 ? (
-        <EstadoVacio icono="📦" titulo="Todavía no hiciste entregas">
+        <EstadoVacio icono={Package} titulo="Todavía no hiciste entregas">
           Cuando entregues tu primer pedido, lo vas a ver acá con lo que ganaste.
         </EstadoVacio>
       ) : (

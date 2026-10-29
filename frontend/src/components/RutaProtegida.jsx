@@ -1,4 +1,5 @@
 import { Link, Navigate, Outlet, useLocation } from 'react-router'
+import { Lock } from 'lucide-react'
 import { useSesion } from '../context/sesion'
 import { etiquetaDelRol, inicioDelRol } from '../utils/roles'
 import { EstadoVacio } from './Comunes/Comunes'
@@ -24,7 +25,7 @@ export default function RutaProtegida({ roles }) {
       <main className="pagina">
         <div className="pagina-angosta">
           <EstadoVacio
-            icono="🔒"
+            icono={Lock}
             titulo="Esta sección no es para tu sesión"
             accion={
               <Link className="boton boton-primario" to={inicioDelRol(usuario.rol)}>

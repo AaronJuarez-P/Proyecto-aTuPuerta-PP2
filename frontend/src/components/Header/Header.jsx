@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router'
+import { ArrowUpRight, Bell, CircleUser, Menu, ShoppingCart, X } from 'lucide-react'
 import { useCarrito } from '../../context/carrito'
 import { useNotificaciones } from '../../context/notificaciones'
 import { useSesion } from '../../context/sesion'
@@ -63,13 +64,13 @@ export default function Header() {
   const acciones = usuario ? (
     <>
       <Link to="/notificaciones" className="cart-link" onClick={cerrarMenu} aria-label={noLeidas > 0 ? `Notificaciones: ${noLeidas} sin leer` : 'Notificaciones'}>
-        🔔
+        <Bell size={20} />
         {noLeidas > 0 && <span className="cart-counter campanita-contador">{noLeidas > 99 ? '99+' : noLeidas}</span>}
       </Link>
 
       {usuario.rol === 'cliente' && (
         <Link to="/carrito" className="cart-link" onClick={cerrarMenu}>
-          🛒 Carrito
+          <ShoppingCart size={18} /> Carrito
           {cantidadCarrito > 0 && (
             <span className="cart-counter" aria-label={`${cantidadCarrito} productos`}>
               {cantidadCarrito}
@@ -79,7 +80,7 @@ export default function Header() {
       )}
 
       <Link to="/perfil" className="profile-button" onClick={cerrarMenu}>
-        👤 {usuario.nombre}
+        <CircleUser size={18} /> {usuario.nombre}
         {usuario.rol !== 'cliente' && (
           <span className="rol-sesion">{etiquetaDelRol(usuario.rol)}</span>
         )}
@@ -97,7 +98,7 @@ export default function Header() {
 
       <Link className="nav-cta" to="/login" onClick={cerrarMenu}>
         Iniciar sesión
-        <span aria-hidden="true">↗</span>
+        <ArrowUpRight size={16} />
       </Link>
     </>
   )
@@ -123,7 +124,7 @@ export default function Header() {
           onClick={() => setMenuAbierto(!menuAbierto)}
         >
           {menuAbierto ? 'Cerrar menú' : 'Menú'}
-          <span aria-hidden="true">{menuAbierto ? '×' : '☰'}</span>
+          {menuAbierto ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 

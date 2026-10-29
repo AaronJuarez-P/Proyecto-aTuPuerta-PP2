@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { ArrowLeft, ReceiptText, X } from 'lucide-react'
 import { listarAuditoriaPedidos, listarAuditoriaProductos, listarUsuarios } from '../../api/admin'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
 import { useCarga } from '../../hooks/useCarga'
@@ -53,7 +54,7 @@ export default function AdminAuditoria() {
   return (
     <main className="admin-page">
       <section className="admin-container">
-        <Link className="volver-link" to="/admin">← Panel</Link>
+        <Link className="volver-link" to="/admin"><ArrowLeft size={16} /> Panel</Link>
 
         <header className="admin-header">
           <div>
@@ -132,7 +133,7 @@ export default function AdminAuditoria() {
           <div className="chips">
             {chips.map(({ clave, texto }) => (
               <button key={clave} type="button" className="chip activo" onClick={() => cambiar({ [clave]: '' })} aria-label={`Quitar el filtro ${texto}`}>
-                {texto} ×
+                {texto} <X size={14} />
               </button>
             ))}
           </div>
@@ -143,7 +144,7 @@ export default function AdminAuditoria() {
         {cargando && !datos ? (
           <Cargando />
         ) : datos?.auditoria.length === 0 ? (
-          <EstadoVacio icono="🧾" titulo="No hay registros con estos filtros" />
+          <EstadoVacio icono={ReceiptText} titulo="No hay registros con estos filtros" />
         ) : datos && (
           <div className="tabla-contenedor">
             {ver === 'pedidos' ? (

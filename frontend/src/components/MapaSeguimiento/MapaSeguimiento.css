@@ -25,20 +25,43 @@
   text-align: center;
 }
 
-.marcador-emoji {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid white;
-  border-radius: 50%;
-  background: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  font-size: 1.3rem;
+/* Los pines: el color de cada uno va en color y el SVG lo toma con currentColor */
+.marcador svg {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.3));
+}
+
+.marcador-pin {
+  fill: currentColor;
+  stroke: white;
+  stroke-width: 2;
+}
+
+.marcador-glifo {
+  fill: none;
+  stroke: white;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.marcador-comercio {
+  color: var(--brand);
+}
+
+/* El destino es el pin del logo: menta con la casa */
+.marcador-destino {
+  color: var(--brand-menta);
+}
+
+.marcador-destino .marcador-glifo {
+  stroke: var(--brand-noche);
 }
 
 /* El repartidor, que es lo que se mueve, con el color de acento */
 .marcador-repartidor {
-  border-color: var(--accent);
+  color: var(--accent-strong);
 }
 
 /* Por encima del header fijo no: Leaflet usa z-index altos por defecto */

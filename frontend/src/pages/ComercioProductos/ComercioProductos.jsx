@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { Check, Minus, Package, Pencil, Plus, X } from 'lucide-react'
 import {
   actualizarPrecio,
   actualizarStock,
@@ -8,10 +9,9 @@ import {
   listarMisProductos,
   obtenerAuditoriaProducto,
 } from '../../api/comercio'
-import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Modal, Paginacion } from '../../components/Comunes/Comunes'
+import { Cargando, EstadoBadge, EstadoVacio, IconoRubro, MensajeError, Modal, Paginacion } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
 import { useCarga } from '../../hooks/useCarga'
-import { iconoDeCategoria } from '../../utils/categorias'
 import { formatearFecha, formatearPrecio } from '../../utils/formato'
 import './ComercioProductos.css'
 
@@ -98,7 +98,7 @@ export default function ComercioProductos() {
           </div>
 
           <button type="button" className="boton boton-primario" onClick={() => setModal({ tipo: 'producto' })}>
-            + Nuevo producto
+            <Plus size={18} /> Nuevo producto
           </button>
         </div>
 
@@ -145,11 +145,11 @@ export default function ComercioProductos() {
           <Cargando texto="Cargando tus productos…" />
         ) : productos.length === 0 && !error ? (
           <EstadoVacio
-            icono="📦"
+            icono={Package}
             titulo={filtros.buscar || filtros.categoria || filtros.activo !== 'true' ? 'No hay productos con estos filtros' : 'Todavía no cargaste productos'}
             accion={
               <button type="button" className="boton boton-primario" onClick={() => setModal({ tipo: 'producto' })}>
-                + Cargar un producto
+                <Plus size={18} /> Cargar un producto
               </button>
             }
           >
@@ -172,7 +172,7 @@ export default function ComercioProductos() {
                   <tr key={producto.id} className={producto.activo ? '' : 'fila-baja'}>
                     <td>
                       <div className="producto-celda">
-                        <span aria-hidden="true">{iconoDeCategoria(producto.categoria, '📦')}</span>
+                        <span><IconoRubro categoria={producto.categoria} porDefecto={Package} size={22} /></span>
                         <div>
                           <strong>{producto.nombre}</strong>
                           <small>{producto.categoria}{producto.descripcion ? ` · ${producto.descripcion}` : ''}</small>
@@ -284,7 +284,7 @@ function CeldaPrecio({ producto, deshabilitado, alGuardar }) {
           setEditando(true)
         }}
       >
-        {formatearPrecio(producto.precio)} <span aria-hidden="true">✎</span>
+        {formatearPrecio(producto.precio)} <Pencil size={14} />
       </button>
     )
   }
@@ -312,8 +312,12 @@ function CeldaPrecio({ producto, deshabilitado, alGuardar }) {
         aria-label={`Precio de ${producto.nombre}`}
         autoFocus
       />
-      <button type="submit" className="boton boton-primario boton-chico" disabled={!valido}>✓</button>
-      <button type="button" className="boton boton-secundario boton-chico" onClick={() => setEditando(false)}>✕</button>
+      <button type="submit" className="boton boton-primario boton-chico" disabled={!valido} aria-label="Guardar" title="Guardar">
+        <Check size={16} />
+      </button>
+      <button type="button" className="boton boton-secundario boton-chico" onClick={() => setEditando(false)} aria-label="Cancelar" title="Cancelar">
+        <X size={16} />
+      </button>
     </form>
   )
 }
@@ -347,8 +351,12 @@ function CeldaStock({ producto, deshabilitado, alAjustar, alFijar }) {
           aria-label={`Stock de ${producto.nombre}`}
           autoFocus
         />
-        <button type="submit" className="boton boton-primario boton-chico" disabled={!valido}>✓</button>
-        <button type="button" className="boton boton-secundario boton-chico" onClick={() => setEditando(false)}>✕</button>
+        <button type="submit" className="boton boton-primario boton-chico" disabled={!valido} aria-label="Guardar" title="Guardar">
+          <Check size={16} />
+        </button>
+        <button type="button" className="boton boton-secundario boton-chico" onClick={() => setEditando(false)} aria-label="Cancelar" title="Cancelar">
+          <X size={16} />
+        </button>
       </form>
     )
   }
@@ -361,7 +369,7 @@ function CeldaStock({ producto, deshabilitado, alAjustar, alFijar }) {
         disabled={deshabilitado || stock <= 0}
         onClick={() => alAjustar(-1)}
       >
-        −
+        <Minus size={16} />
       </button>
       <button
         type="button"
@@ -381,7 +389,7 @@ function CeldaStock({ producto, deshabilitado, alAjustar, alFijar }) {
         disabled={deshabilitado}
         onClick={() => alAjustar(1)}
       >
-        +
+        <Plus size={16} />
       </button>
     </div>
   )

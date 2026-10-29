@@ -1,24 +1,41 @@
+import {
+  Ban,
+  Bell,
+  CircleCheck,
+  CircleX,
+  CreditCard,
+  HandCoins,
+  LockOpen,
+  Megaphone,
+  Motorbike,
+  ReceiptText,
+  ShoppingBasket,
+  Store,
+  TriangleAlert,
+} from 'lucide-react'
+
 // Ícono y link de cada notificación. El backend no guarda a dónde lleva cada una (eso
 // viaja solo en el push), pero todos los mensajes nombran primero a su pedido o reclamo
 // ("Tu pago del pedido #5 fue aprobado", "Tu reclamo #3 ya está en revisión").
 
+// El componente de lucide de cada tipo
 const ICONOS = {
-  pedido_creado: '🧾',
-  pago_aprobado: '💳',
-  pago_rechazado: '⚠️',
-  pago_a_devolver: '💸',
-  pedido_preparado: '🧺',
-  pedido_disponible: '🛵',
-  pedido_en_camino: '🛵',
-  pedido_entregado: '✅',
-  pedido_cancelado: '✖️',
-  cuenta_reactivada: '🔓',
-  comercio_suspendido: '⛔',
-  comercio_reactivado: '🏪',
+  pedido_creado: ReceiptText,
+  pago_aprobado: CreditCard,
+  pago_rechazado: TriangleAlert,
+  pago_a_devolver: HandCoins,
+  pedido_preparado: ShoppingBasket,
+  pedido_disponible: Motorbike,
+  pedido_en_camino: Motorbike,
+  pedido_entregado: CircleCheck,
+  pedido_cancelado: CircleX,
+  cuenta_reactivada: LockOpen,
+  comercio_suspendido: Ban,
+  comercio_reactivado: Store,
 }
 
 export const iconoDeNotificacion = (tipo) =>
-  ICONOS[tipo] ?? (tipo?.startsWith('reclamo') ? '📣' : '🔔')
+  ICONOS[tipo] ?? (tipo?.startsWith('reclamo') ? Megaphone : Bell)
 
 const RUTAS_DE_PEDIDO = {
   cliente: (id) => `/pedidos/${id}`,

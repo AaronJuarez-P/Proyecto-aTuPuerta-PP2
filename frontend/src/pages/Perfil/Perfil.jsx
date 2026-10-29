@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { Bell, Megaphone, Motorbike, Package, Store } from 'lucide-react'
 import { actualizarPerfil, cambiarContrasena, darDeBajaCuenta, obtenerPerfil } from '../../api/perfil'
 import { actualizarPerfilComercio, obtenerPerfilComercio } from '../../api/comercio'
 import { actualizarPerfilRepartidor, obtenerPerfilRepartidor } from '../../api/repartidor'
@@ -60,9 +61,9 @@ export default function Perfil() {
         <Perfiles cuenta={cuenta} />
 
         <div className="perfil-acciones">
-          {usuario.rol === 'cliente' && <Link to="/pedidos" className="perfil-button">📦 Mis pedidos</Link>}
-          {usuario.rol !== 'administrador' && <Link to="/reclamos" className="perfil-button secondary">📣 Mis reclamos</Link>}
-          <Link to="/notificaciones" className="perfil-button secondary">🔔 Notificaciones</Link>
+          {usuario.rol === 'cliente' && <Link to="/pedidos" className="perfil-button"><Package size={18} /> Mis pedidos</Link>}
+          {usuario.rol !== 'administrador' && <Link to="/reclamos" className="perfil-button secondary"><Megaphone size={18} /> Mis reclamos</Link>}
+          <Link to="/notificaciones" className="perfil-button secondary"><Bell size={18} /> Notificaciones</Link>
           <button type="button" className="perfil-button logout" onClick={cerrarSesion}>Cerrar sesión</button>
         </div>
 
@@ -433,8 +434,8 @@ function Perfiles({ cuenta }) {
 
       {usuario.rol === 'cliente' && (!cuenta.perfiles.comercio || !cuenta.perfiles.repartidor) && (
         <div className="acciones">
-          {!cuenta.perfiles.comercio && <Link className="boton boton-secundario" to="/registro/comercio">🏪 Sumar mi comercio</Link>}
-          {!cuenta.perfiles.repartidor && <Link className="boton boton-secundario" to="/registro/repartidor">🛵 Quiero repartir</Link>}
+          {!cuenta.perfiles.comercio && <Link className="boton boton-secundario" to="/registro/comercio"><Store size={18} /> Sumar mi comercio</Link>}
+          {!cuenta.perfiles.repartidor && <Link className="boton boton-secundario" to="/registro/repartidor"><Motorbike size={18} /> Quiero repartir</Link>}
         </div>
       )}
     </section>

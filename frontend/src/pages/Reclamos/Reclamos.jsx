@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { Megaphone, Plus } from 'lucide-react'
 import { listarMisReclamos } from '../../api/reclamos'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, Modal, Paginacion } from '../../components/Comunes/Comunes'
 import FormularioReclamo from '../../components/FormularioReclamo/FormularioReclamo'
@@ -32,7 +33,7 @@ export default function Reclamos() {
           </div>
 
           <button type="button" className="boton boton-primario" onClick={() => setNuevo(true)}>
-            + Nuevo reclamo
+            <Plus size={18} /> Nuevo reclamo
           </button>
         </div>
 
@@ -57,7 +58,7 @@ export default function Reclamos() {
         {cargando && !datos ? (
           <Cargando />
         ) : reclamos.length === 0 && !error ? (
-          <EstadoVacio icono="📣" titulo={estado ? 'No hay reclamos en este estado' : 'No hiciste reclamos'}>
+          <EstadoVacio icono={Megaphone} titulo={estado ? 'No hay reclamos en este estado' : 'No hiciste reclamos'}>
             Ojalá siga así. Si tenés un problema con un pedido, podés reclamar desde acá o desde el pedido.
           </EstadoVacio>
         ) : (
