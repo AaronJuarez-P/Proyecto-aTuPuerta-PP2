@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { ArrowLeft, ArrowRight, Clock, MapPin, Package, Plus, ShoppingCart } from 'lucide-react'
 import { listarProductosDeComercio, obtenerComercio } from '../../api/catalogo'
-import { Cargando, EstadoVacio, IconoRubro, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
+import { Cargando, EstadoVacio, MensajeError, MiniaturaRubro, Paginacion } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
 import { useCarrito } from '../../context/carrito'
 import { useSesion } from '../../context/sesion'
@@ -96,9 +96,7 @@ export default function Comercio() {
 
         {datosComercio ? (
           <div className="comercio-header-content">
-            <div className="comercio-large-icon">
-              <IconoRubro categoria={datosComercio.categoria} size={64} />
-            </div>
+            <MiniaturaRubro categoria={datosComercio.categoria} className="comercio-large-icon" />
 
             <div>
               <span className="comercio-category">{datosComercio.categoria}</span>
@@ -163,9 +161,7 @@ export default function Comercio() {
 
               return (
                 <article className="producto-card" key={producto.id}>
-                  <div className="producto-icon">
-                    <IconoRubro categoria={producto.categoria} porDefecto={Package} size={64} />
-                  </div>
+                  <MiniaturaRubro categoria={producto.categoria} porDefecto={Package} className="producto-icon" />
 
                   <div className="producto-info">
                     <span className="producto-categoria">{producto.categoria}</span>

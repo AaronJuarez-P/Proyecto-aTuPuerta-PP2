@@ -1,15 +1,18 @@
 import { Link } from 'react-router'
-import { ArrowDown, BookOpen, Check, CircleUser, DoorOpen, MapPin, Motorbike, Repeat, Search, Shirt, ShoppingCart, Store, Wrench } from 'lucide-react'
+import { ArrowDown, Check, CircleUser, DoorOpen, MapPin, Motorbike, Repeat, Search, ShoppingCart, Store } from 'lucide-react'
+import { IconoRubro } from '../../components/Comunes/Comunes'
 import Marca from '../../components/Marca/Marca'
+import { tonoDeCategoria } from '../../utils/categorias'
 import './Landing.css'
 
-// icon: el componente de lucide-react
+// El ícono y el tono de cada rubro salen de la categoría (utils/categorias.js), como en las
+// miniaturas de los comercios. En los pasos y los roles, icon es el componente de lucide.
 const categories = [
 
-  { icon: ShoppingCart, title: 'Supermercados', description: 'Lo que necesitás para todos los días.', color: 'super', categoria: 'Supermercado' },
-  { icon: BookOpen, title: 'Librerías', description: 'Para estudiar, trabajar y crear.', color: 'books', categoria: 'Librería' },
-  { icon: Wrench, title: 'Ferreterías', description: 'Todo para ese próximo proyecto.', color: 'hardware', categoria: 'Ferretería' },
-  { icon: Shirt, title: 'Ropa', description: 'Tu próximo favorito, cerca de casa.', color: 'clothes', categoria: 'Indumentaria' },
+  { title: 'Supermercados', description: 'Lo que necesitás para todos los días.', categoria: 'Supermercado' },
+  { title: 'Librerías', description: 'Para estudiar, trabajar y crear.', categoria: 'Librería' },
+  { title: 'Ferreterías', description: 'Todo para ese próximo proyecto.', categoria: 'Ferretería' },
+  { title: 'Ropa', description: 'Tu próximo favorito, cerca de casa.', categoria: 'Indumentaria' },
 ]
 
 const steps = [
@@ -56,9 +59,11 @@ export default function Landing() {
           <h2 id="categories-title">Tu barrio tiene lo que buscás</h2>
           <p className="section-description">Una plataforma para comprar en comercios de distintos rubros.</p>
           <div className="category-grid">
-            {categories.map(({ icon: Icono, ...category }) => (
-              <Link className={`category-card category-${category.color}`} key={category.title} to={`/comercios?categoria=${encodeURIComponent(category.categoria)}`}>
-                <div className="category-banner"><Icono size={44} /></div>
+            {categories.map(category => (
+              <Link className="category-card" key={category.title} to={`/comercios?categoria=${encodeURIComponent(category.categoria)}`}>
+                <div className={`category-banner rubro-${tonoDeCategoria(category.categoria)}`}>
+                  <span className="category-banner-icono"><IconoRubro categoria={category.categoria} size={32} /></span>
+                </div>
                 <div className="category-body"><h3>{category.title}</h3><p>{category.description}</p></div>
               </Link>
             ))}

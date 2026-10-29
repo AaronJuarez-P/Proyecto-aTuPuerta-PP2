@@ -10,7 +10,7 @@ import {
   simularPago,
 } from '../../api/pedidos'
 import { seguirPedidoEnVivo } from '../../api/tiempoReal'
-import { Cargando, EstadoBadge, MensajeError, Modal } from '../../components/Comunes/Comunes'
+import { Cargando, EstadoBadge, MensajeError, MiniaturaRubro, Modal } from '../../components/Comunes/Comunes'
 import FormularioReclamo from '../../components/FormularioReclamo/FormularioReclamo'
 import MapaSeguimiento from '../../components/MapaSeguimiento/MapaSeguimiento'
 import { useAvisos } from '../../context/avisos'
@@ -374,7 +374,7 @@ export default function Pedido() {
             <div className="pedido-products">
               {pedido.items.map((item) => (
                 <div className="pedido-product" key={item.producto_id}>
-                  <div className="product-icon"><Package size={22} /></div>
+                  <MiniaturaRubro porDefecto={Package} className="product-icon miniatura-chica" />
                   <div className="product-info">
                     <strong>{item.nombre}</strong>
                     <span>{item.cantidad} × {formatearPrecio(item.precio_unit)}</span>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { ArrowLeft, ArrowRight, Minus, Package, Plus, ShoppingCart, Store, TriangleAlert } from 'lucide-react'
-import { Cargando, IconoRubro, MensajeError } from '../../components/Comunes/Comunes'
+import { Cargando, IlustracionVacia, MensajeError, MiniaturaRubro } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
 import { useCarrito } from '../../context/carrito'
 import { formatearPrecio, plural } from '../../utils/formato'
@@ -77,7 +77,7 @@ export default function Carrito() {
           error ? <MensajeError error={error} alReintentar={() => recargar().catch(() => {})} /> : <Cargando />
         ) : comercios.length === 0 ? (
           <div className="carrito-vacio">
-            <ShoppingCart size={56} />
+            <IlustracionVacia icono={ShoppingCart} />
             <h2>Tu carrito está vacío</h2>
             <p>Explorá los comercios y agregá productos para empezar tu pedido.</p>
             <Link to="/comercios">Explorar comercios <ArrowRight size={16} /></Link>
@@ -97,9 +97,7 @@ export default function Carrito() {
                       className={`carrito-producto ${item.disponible ? '' : 'no-disponible'}`}
                       key={item.producto_id}
                     >
-                      <div className="carrito-producto-icon">
-                        <IconoRubro categoria={item.categoria} porDefecto={Package} size={36} />
-                      </div>
+                      <MiniaturaRubro categoria={item.categoria} porDefecto={Package} className="carrito-producto-icon" />
 
                       <div className="carrito-producto-info">
                         <h3>{item.nombre}</h3>

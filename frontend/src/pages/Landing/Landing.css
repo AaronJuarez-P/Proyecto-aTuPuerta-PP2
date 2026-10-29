@@ -32,23 +32,32 @@
 /* Las tarjetas llevan al filtro de ese rubro en /comercios */
 .category-card { display: block; color: inherit; text-decoration: none; transition: transform .2s, box-shadow .2s; }
 .category-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0, 0, 0, .08); }
-.category-banner { height: 110px; display: grid; place-items: center; color: var(--brand); }
-.category-super .category-banner { background: #e8f5e9; }
-.category-books .category-banner { background: #e3f2fd; }
-.category-hardware .category-banner { background: #fff3e0; }
-.category-clothes .category-banner { background: #fce4ec; }
+/* Cada rubro con su tono (las clases .rubro-* de Comunes.css, las mismas de las miniaturas).
+   De fondo, las líneas de velocidad y el pin del logo, teñidos con la tinta del rubro. */
+.category-banner { position: relative; overflow: hidden; height: 132px; display: grid; place-items: center; background: linear-gradient(135deg, var(--rubro-fondo) 40%, color-mix(in srgb, var(--rubro-fondo) 55%, white)); color: var(--rubro-tinta); }
+.category-banner::before, .category-banner::after { content: ''; position: absolute; background: currentColor; pointer-events: none; }
+.category-banner::before { top: 50%; left: 9%; width: 30%; aspect-ratio: 46.4 / 31.6; opacity: .2; translate: 0 -50%; -webkit-mask: url('../../assets/marca/lineas.svg') no-repeat center / contain; mask: url('../../assets/marca/lineas.svg') no-repeat center / contain; transition: translate .3s ease; }
+.category-banner::after { right: -5%; bottom: -36%; height: 105%; aspect-ratio: 77.2 / 101.8; opacity: .12; -webkit-mask: url('../../assets/marca/pin.svg') no-repeat center / contain; mask: url('../../assets/marca/pin.svg') no-repeat center / contain; }
+.category-card:hover .category-banner::before { translate: -8px -50%; }
+.category-banner-icono { position: relative; z-index: 1; display: grid; place-items: center; width: 68px; height: 68px; border-radius: 50%; background: white; box-shadow: 0 6px 18px color-mix(in srgb, currentColor 22%, transparent); }
 .category-body { padding: 1rem; }
 .category-body h3, .step-card h3 { font-size: 1rem; font-weight: 700; }
 .category-body p { margin-top: .35rem; font-size: .875rem; color: var(--muted); }
 .how-section { border-top: 1px solid var(--border); text-align: center; }
 .steps-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2rem; margin-top: 2.5rem; }
-.step-icon { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 1rem; border-radius: 12px; background: var(--brand-light); color: var(--brand); position: relative; }
-.step-icon span { position: absolute; top: -8px; right: -8px; width: 23px; height: 23px; border-radius: 50%; background: var(--brand); border: 2px solid white; color: white; font-size: .75rem; font-weight: 700; }
+/* Cada paso va en un pin menta como el del logo, con el ícono en la cabeza y su número.
+   La línea punteada que une los pasos es la ruta, como en el mapa del seguimiento. */
+.step-card { position: relative; }
+.step-card:not(:last-child)::after { content: ''; position: absolute; top: 30px; left: calc(50% + 44px); width: calc(100% + 2rem - 88px); border-top: 3px dotted color-mix(in srgb, var(--brand) 35%, transparent); }
+.step-icon { position: relative; display: grid; justify-items: center; align-content: start; width: 60px; height: 79px; margin: 0 auto 1rem; padding-top: 16px; color: var(--brand-noche); }
+.step-icon::before { content: ''; position: absolute; inset: 0; background: var(--brand-menta); -webkit-mask: url('../../assets/marca/pin.svg') no-repeat center / contain; mask: url('../../assets/marca/pin.svg') no-repeat center / contain; }
+.step-icon .lucide { position: relative; }
+.step-icon span { position: absolute; top: -6px; right: -10px; display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; background: var(--brand); border: 2px solid white; color: white; font-size: .75rem; font-weight: 700; }
 .step-card p { margin-top: .5rem; color: var(--muted); font-size: .875rem; }
 .roles-section { background: var(--surface); border-top: 1px solid var(--border); text-align: center; }
 .roles-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.25rem; margin-top: 2rem; text-align: left; }
 .role-card { padding: 1.5rem; border: 1px solid var(--border); background: white; border-radius: 16px; }
-.role-icon { display: block; margin-bottom: .75rem; color: var(--brand); }
+.role-icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: .75rem; border-radius: 14px; background: var(--brand-light); color: var(--brand); }
 .role-card h3 { font-size: 1.1rem; }
 .role-card p { font-size: .875rem; color: var(--muted); margin-top: .4rem; }
 .role-card ul { list-style: none; padding: 1rem 0 0; margin: 1rem 0 0; border-top: 1px solid var(--border); display: grid; gap: .5rem; }
@@ -56,6 +65,7 @@
 .role-card li .lucide { margin-top: .2em; color: var(--brand); }
 @media (max-width: 850px) {
   .category-grid, .steps-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .step-card::after { display: none; }
   .roles-grid { grid-template-columns: 1fr; max-width: 540px; margin-inline: auto; }
   .benefits-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

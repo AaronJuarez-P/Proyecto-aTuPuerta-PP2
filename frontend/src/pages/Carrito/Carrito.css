@@ -49,14 +49,9 @@
   }
   
   .carrito-producto-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     width: 90px;
     height: 90px;
-    border-radius: 8px;
-    background: var(--surface-2);
-    color: var(--brand);
+    border-radius: 10px;
   }
   
   .carrito-producto-info h3 {
@@ -217,11 +212,6 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     text-align: center;
-  }
-  
-  .carrito-vacio > .lucide {
-    margin-bottom: 20px;
-    color: var(--brand);
   }
   
   .carrito-vacio h2 {

@@ -9,7 +9,7 @@ import {
   listarMisProductos,
   obtenerAuditoriaProducto,
 } from '../../api/comercio'
-import { Cargando, EstadoBadge, EstadoVacio, IconoRubro, MensajeError, Modal, Paginacion } from '../../components/Comunes/Comunes'
+import { Cargando, EstadoBadge, EstadoVacio, MensajeError, MiniaturaRubro, Modal, Paginacion } from '../../components/Comunes/Comunes'
 import { useAvisos } from '../../context/avisos'
 import { useCarga } from '../../hooks/useCarga'
 import { formatearFecha, formatearPrecio } from '../../utils/formato'
@@ -172,7 +172,7 @@ export default function ComercioProductos() {
                   <tr key={producto.id} className={producto.activo ? '' : 'fila-baja'}>
                     <td>
                       <div className="producto-celda">
-                        <span><IconoRubro categoria={producto.categoria} porDefecto={Package} size={22} /></span>
+                        <MiniaturaRubro categoria={producto.categoria} porDefecto={Package} className="producto-celda-miniatura miniatura-chica" />
                         <div>
                           <strong>{producto.nombre}</strong>
                           <small>{producto.categoria}{producto.descripcion ? ` · ${producto.descripcion}` : ''}</small>

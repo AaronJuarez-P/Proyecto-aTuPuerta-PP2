@@ -403,10 +403,54 @@
   text-align: center;
 }
 
-.estado-vacio-icono {
+/* El pin del logo con el ícono en la cabeza y las líneas de velocidad. Las medidas salen
+   del isotipo: el pin de 76px de ancho y las líneas terminando en su borde. */
+.ilustracion-vacia {
+  position: relative;
   display: block;
-  margin-bottom: 12px;
-  color: var(--brand);
+  width: 128px;
+  height: 100px;
+  margin: 0 auto 16px;
+  color: var(--brand-noche);
+}
+
+.ilustracion-vacia::before,
+.ilustracion-vacia::after {
+  content: '';
+  position: absolute;
+  background: var(--brand-menta);
+}
+
+.ilustracion-vacia::before {
+  top: 30px;
+  left: 7.5px;
+  width: 45.7px;
+  height: 31.1px;
+  -webkit-mask: url('../../assets/marca/lineas.svg') no-repeat center / contain;
+  mask: url('../../assets/marca/lineas.svg') no-repeat center / contain;
+}
+
+.ilustracion-vacia::after {
+  top: 0;
+  left: 52px;
+  width: 76px;
+  height: 100px;
+  -webkit-mask: url('../../assets/marca/pin.svg') no-repeat center / contain;
+  mask: url('../../assets/marca/pin.svg') no-repeat center / contain;
+}
+
+.ilustracion-vacia .lucide {
+  position: absolute;
+  z-index: 1;
+  top: 21px;
+  left: 73px;
+}
+
+.estado-vacio-ilustracion {
+  display: block;
+  width: min(220px, 100%);
+  height: auto;
+  margin: 0 auto 12px;
 }
 
 .estado-vacio h2 {
@@ -420,6 +464,58 @@
   max-width: 460px;
   margin: 0 auto 18px;
   color: var(--muted);
+}
+
+/* =========================================
+   RUBROS Y MINIATURAS
+   Cada rubro tiene un tono (tonoDeCategoria en utils/categorias.js). Las miniaturas y
+   los banners de la portada usan las mismas clases. La tinta pasa 4,5:1 sobre su fondo.
+   ========================================= */
+
+.rubro-menta { --rubro-fondo: var(--brand-light); --rubro-tinta: var(--brand); }
+.rubro-verde { --rubro-fondo: #e6f6ea; --rubro-tinta: var(--brand); }
+.rubro-azul { --rubro-fondo: #e3f2fd; --rubro-tinta: #1d5fa8; }
+.rubro-naranja { --rubro-fondo: #fff1e0; --rubro-tinta: var(--accent-strong); }
+.rubro-rosa { --rubro-fondo: #fce4ec; --rubro-tinta: #be185d; }
+.rubro-turquesa { --rubro-fondo: #dff7f4; --rubro-tinta: #0f766e; }
+.rubro-amarillo { --rubro-fondo: #fff6d6; --rubro-tinta: #a16207; }
+.rubro-violeta { --rubro-fondo: #ede9fe; --rubro-tinta: #6d28d9; }
+
+/* Miniatura de un comercio o un producto: el backend no guarda fotos. El tamaño lo pone
+   cada página; acá van el tono, el ícono y el pin del logo asomando por una esquina. */
+.miniatura-rubro {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--rubro-fondo);
+  color: var(--rubro-tinta);
+}
+
+.miniatura-rubro .lucide {
+  position: relative;
+  width: auto;
+  height: min(42%, 60px);
+}
+
+.miniatura-rubro::after {
+  content: '';
+  position: absolute;
+  right: -10%;
+  bottom: -46%;
+  height: 105%;
+  aspect-ratio: 77 / 102;
+  background: currentColor;
+  opacity: 0.1;
+  -webkit-mask: url('../../assets/marca/pin.svg') no-repeat center / contain;
+  mask: url('../../assets/marca/pin.svg') no-repeat center / contain;
+  pointer-events: none;
+}
+
+/* En las chicas (un renglón, una fila de tabla) el pin no se llega a leer */
+.miniatura-chica::after {
+  display: none;
 }
 
 /* =========================================

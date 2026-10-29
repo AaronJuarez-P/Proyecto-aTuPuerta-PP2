@@ -1,6 +1,6 @@
 import { createElement, useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, Package, X } from 'lucide-react'
-import { iconoDeCategoria } from '../../utils/categorias'
+import { iconoDeCategoria, tonoDeCategoria } from '../../utils/categorias'
 import { infoEstado } from '../../utils/estados'
 import './Comunes.css'
 
@@ -31,17 +31,30 @@ export function MensajeError({ error, alReintentar }) {
   )
 }
 
-// icono: un componente de lucide-react (Package, Store...), no el ícono armado
-export function EstadoVacio({ icono: Icono = Package, titulo, children, accion }) {
+// icono: un componente de lucide-react (Package, Store...), no el ícono armado.
+// ilustracion: una imagen propia en lugar del pin con el ícono (la usa la página 404).
+export function EstadoVacio({ icono = Package, ilustracion, titulo, children, accion }) {
   return (
     <div className="estado-vacio">
-      <span className="estado-vacio-icono">
-        <Icono size={40} />
-      </span>
+      {ilustracion ? (
+        <img className="estado-vacio-ilustracion" src={ilustracion} alt="" width="220" height="150" />
+      ) : (
+        <IlustracionVacia icono={icono} />
+      )}
       <h2>{titulo}</h2>
       {children && <p>{children}</p>}
       {accion}
     </div>
+  )
+}
+
+// Ilustración de los estados vacíos, con el estilo del logo: el pin menta con el ícono
+// en la cabeza y las líneas de velocidad (las dibuja Comunes.css)
+export function IlustracionVacia({ icono: Icono = Package }) {
+  return (
+    <span className="ilustracion-vacia">
+      <Icono size={34} />
+    </span>
   )
 }
 
@@ -50,6 +63,17 @@ export function EstadoVacio({ icono: Icono = Package, titulo, children, accion }
 // lista fija: no se crea uno nuevo en cada render.
 export function IconoRubro({ categoria, porDefecto, ...props }) {
   return createElement(iconoDeCategoria(categoria, porDefecto), props)
+}
+
+// Miniatura de un comercio o de un producto. El backend no guarda fotos: es un recuadro
+// con el tono y el ícono del rubro. El tamaño lo pone el CSS de cada página (className);
+// miniatura-chica saca el adorno en las que van en un renglón.
+export function MiniaturaRubro({ categoria, porDefecto, className = '' }) {
+  return (
+    <div className={`miniatura-rubro rubro-${tonoDeCategoria(categoria)} ${className}`.trim()}>
+      <IconoRubro categoria={categoria} porDefecto={porDefecto} />
+    </div>
+  )
 }
 
 // tipo: 'pedido' | 'pago' | 'reclamo' | 'auditoria'

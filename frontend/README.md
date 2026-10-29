@@ -45,11 +45,13 @@ src/
   context/      sesión, carrito (contador del header), notificaciones (campanita) y avisos
   hooks/        useCarga (pedir datos con estado de carga y error) y useFiltrosUrl
                 (filtros de los listados guardados en la URL)
-  assets/marca/ el isotipo en SVG y el logo original en PNG (solo de referencia, la app
-                no lo usa)
+  assets/       marca/: el isotipo en SVG, el pin y las líneas de velocidad sueltos (los
+                usa el CSS como máscara) y el logo original en PNG (solo de referencia, la
+                app no lo usa). ilustraciones/: la de la página 404
   components/   Header, Footer, Layout, Marca (isotipo y nombre), RutaProtegida,
                 MapaSeguimiento, FormularioReclamo y Comunes (Cargando, MensajeError,
-                EstadoVacio, EstadoBadge, Paginacion, Modal, Confirmacion)
+                EstadoVacio, IlustracionVacia, MiniaturaRubro, IconoRubro, EstadoBadge,
+                Paginacion, Modal, Confirmacion)
   utils/        formato (precios y fechas), estados, roles, categorías, notificaciones,
                 push y polilínea
   pages/        una carpeta por pantalla, con su .jsx y su .css

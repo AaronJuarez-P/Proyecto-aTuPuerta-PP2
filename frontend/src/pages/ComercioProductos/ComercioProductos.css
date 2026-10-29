@@ -15,19 +15,14 @@
   min-width: 220px;
 }
 
-.productos-comercio .producto-celda > span {
-  color: var(--brand);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.productos-comercio .producto-celda-miniatura {
   width: 42px;
   height: 42px;
   flex-shrink: 0;
   border-radius: 10px;
-  background: var(--surface);
 }
 
-.productos-comercio .producto-celda div {
+.productos-comercio .producto-celda > div:not(.miniatura-rubro) {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -51,7 +46,7 @@
   color: var(--muted);
 }
 
-.productos-comercio .fila-baja .producto-celda > span {
+.productos-comercio .fila-baja .producto-celda-miniatura {
   filter: grayscale(1);
   opacity: 0.6;
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { ArrowLeft, ArrowRight, Check, CreditCard, Lock, MapPin, ShoppingCart, Store } from 'lucide-react'
-import { Cargando, MensajeError } from '../../components/Comunes/Comunes'
+import { Cargando, IlustracionVacia, MensajeError } from '../../components/Comunes/Comunes'
 import { useCarrito } from '../../context/carrito'
 import { formatearDistancia, formatearMinutos, formatearPrecio, plural } from '../../utils/formato'
 import './Checkout.css'
@@ -107,7 +107,7 @@ export default function Checkout() {
     return (
       <main className="checkout-page">
         <section className="checkout-empty">
-          <div className="checkout-empty-icon"><ShoppingCart size={40} /></div>
+          <IlustracionVacia icono={ShoppingCart} />
           <p className="eyebrow">CHECKOUT</p>
           <h1>Tu carrito está vacío</h1>
           <p>Agregá algunos productos antes de continuar con tu pedido.</p>

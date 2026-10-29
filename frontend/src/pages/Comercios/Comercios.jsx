@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router'
 import { ArrowRight, Clock, MapPin, Package, Search, Store } from 'lucide-react'
 import { buscarProductos, listarComercios } from '../../api/catalogo'
-import { Cargando, EstadoVacio, IconoRubro, MensajeError, Paginacion } from '../../components/Comunes/Comunes'
+import { Cargando, EstadoVacio, IconoRubro, MensajeError, MiniaturaRubro, Paginacion } from '../../components/Comunes/Comunes'
 import { useCarga } from '../../hooks/useCarga'
 import { formatearPrecio, plural } from '../../utils/formato'
 import './Comercios.css'
@@ -125,9 +125,7 @@ export default function Comercios() {
                   className="producto-encontrado"
                   to={`/comercios/${producto.comercio_id}`}
                 >
-                  <span className="producto-encontrado-icono">
-                    <IconoRubro categoria={producto.categoria} porDefecto={Package} size={26} />
-                  </span>
+                  <MiniaturaRubro categoria={producto.categoria} porDefecto={Package} className="producto-encontrado-icono miniatura-chica" />
                   <span className="producto-encontrado-info">
                     <strong>{producto.nombre}</strong>
                     <small>en {producto.comercio_nombre}</small>
@@ -172,9 +170,7 @@ export default function Comercios() {
           <div className="comercios-grid">
             {lista.map((comercio) => (
               <article className="comercio-card" key={comercio.id}>
-                <div className="comercio-icon">
-                  <IconoRubro categoria={comercio.categoria} size={56} />
-                </div>
+                <MiniaturaRubro categoria={comercio.categoria} className="comercio-icon" />
 
                 <div className="comercio-info">
                   <span className="comercio-category">{comercio.categoria}</span>
