@@ -43,7 +43,7 @@
 .checkout-title h1 {
   margin: 0 0 12px;
 
-  color: #111827;
+  color: var(--ink);
   font-family: var(--display);
   font-size: clamp(2.6rem, 5vw, 4.2rem);
   line-height: 1;
@@ -125,7 +125,7 @@
 .card-heading h2 {
   margin: 0 0 5px;
 
-  color: #111827;
+  color: var(--ink);
   font-family: var(--display);
   font-size: 1.3rem;
 }
@@ -156,7 +156,7 @@
   display: block;
   margin-bottom: 9px;
 
-  color: #1f2937;
+  color: var(--ink);
   font-size: 0.84rem;
   font-weight: 800;
 }
@@ -174,10 +174,10 @@
   height: 56px;
   padding: 0 16px;
 
-  border: 1.5px solid #dce1e6;
+  border: 1.5px solid var(--border);
   border-radius: 12px;
 
-  background: #f8faf9;
+  background: var(--surface);
 
   transition:
     border-color 0.2s ease,
@@ -187,7 +187,7 @@
 }
 
 .input-wrapper:hover {
-  border-color: #b9c2ca;
+  border-color: var(--disabled);
   background: #ffffff;
 }
 
@@ -223,17 +223,17 @@
 
   background: transparent;
 
-  color: #111827;
+  color: var(--ink);
   font-family: inherit;
   font-size: 0.95rem;
 }
 
 .input-wrapper input::placeholder {
-  color: #9ca3af;
+  color: var(--disabled);
 }
 
 .input-wrapper input:focus::placeholder {
-  color: #b8bec5;
+  opacity: 0.7;
 }
 
 .input-help {
@@ -256,7 +256,7 @@
 
   padding: 16px 18px;
 
-  border: 1px solid #dce1e6;
+  border: 1px solid var(--border);
   border-radius: 12px;
 
   background: #ffffff;
@@ -271,7 +271,7 @@
 
 .payment-option:hover {
   border-color: var(--brand);
-  background: #fafdfb;
+  background: var(--surface);
   transform: translateY(-1px);
 }
 
@@ -299,7 +299,7 @@
 
   border-radius: 10px;
 
-  background: #f3f5f4;
+  background: var(--surface-2);
 
   font-size: 1.15rem;
 }
@@ -311,7 +311,7 @@
 }
 
 .payment-content strong {
-  color: #111827;
+  color: var(--ink);
   font-size: 0.9rem;
 }
 
@@ -403,7 +403,7 @@
 .summary-heading h2 {
   margin: 0;
 
-  color: #111827;
+  color: var(--ink);
   font-family: var(--display);
   font-size: 1.35rem;
 }
@@ -419,7 +419,7 @@
   justify-content: space-between;
   gap: 15px;
 
-  color: #374151;
+  color: var(--ink-soft);
   font-size: 0.88rem;
 }
 
@@ -432,7 +432,7 @@
 }
 
 .summary-product-info strong {
-  color: #111827;
+  color: var(--ink);
   overflow-wrap: anywhere;
 }
 
@@ -444,7 +444,7 @@
 .summary-product > strong {
   flex-shrink: 0;
 
-  color: #111827;
+  color: var(--ink);
   white-space: nowrap;
 }
 
@@ -458,7 +458,7 @@
 
   border-top: 1px solid var(--border);
 
-  color: #111827;
+  color: var(--ink);
   font-size: 1rem;
   font-weight: 700;
 }
@@ -476,7 +476,7 @@
   margin-top: 22px;
   padding-top: 18px;
 
-  border-top: 1px solid #eef0f1;
+  border-top: 1px solid var(--border);
 }
 
 .summary-note span {
@@ -530,7 +530,7 @@
 .order-success h1 {
   margin: 8px 0 12px;
 
-  color: #111827;
+  color: var(--ink);
   font-family: var(--display);
   font-size: clamp(2rem, 5vw, 3.5rem);
   letter-spacing: -0.03em;
@@ -704,7 +704,7 @@
 
 .pago-informativo:hover {
   background: #ffffff;
-  border-color: #dce1e6;
+  border-color: var(--border);
   transform: none;
 }
 
@@ -722,7 +722,7 @@
 
 .summary-comercio {
   margin: 4px 0 6px;
-  color: #111827;
+  color: var(--ink);
   font-size: 0.85rem;
   font-weight: 800;
 }

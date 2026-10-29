@@ -214,7 +214,7 @@
   }
   
   .repartidor-page .deliver-button {
-    background: #166534;
+    background: var(--brand);
     color: white;
   }
   
@@ -252,7 +252,7 @@
     width: 44px;
     height: 24px;
     border-radius: 999px;
-    background: #d1d5db;
+    background: var(--disabled);
     transition: background 0.2s;
   }
 
@@ -314,7 +314,7 @@
   }
 
   .repartidor-page .en-vivo.conectado {
-    color: #16a34a;
+    color: var(--brand);
   }
 
   .repartidor-page .pedido-en-curso {

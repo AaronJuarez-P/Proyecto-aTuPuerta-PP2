@@ -2,7 +2,11 @@
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: #eef2ef;
+  background: var(--surface-2);
+}
+
+.mapa-seguimiento .mapa-ruta {
+  stroke: var(--brand);
 }
 
 /* Leaflet necesita una altura explícita */

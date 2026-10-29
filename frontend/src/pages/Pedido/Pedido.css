@@ -38,7 +38,7 @@
 
 .pedido-page .pedido-header h1 {
   margin: 0;
-  color: #111827;
+  color: var(--ink);
   font-size: 32px;
 }
 
@@ -58,13 +58,13 @@
 .pedido-page .pedido-card {
   padding: 25px;
   background: white;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--border);
   border-radius: 12px;
 }
 
 .pedido-page .pedido-card h2 {
   margin: 0 0 22px;
-  color: #111827;
+  color: var(--ink);
   font-size: 20px;
 }
 
@@ -79,7 +79,7 @@
   align-items: center;
   gap: 14px;
   padding: 15px 0;
-  border-bottom: 1px solid #eeeeee;
+  border-bottom: 1px solid var(--border);
 }
 
 .pedido-page .pedido-product:first-child {
@@ -92,7 +92,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  background: var(--surface-2);
   border-radius: 8px;
   font-size: 24px;
 }
@@ -104,7 +104,7 @@
 }
 
 .pedido-page .product-info strong {
-  color: #111827;
+  color: var(--ink);
 }
 
 .pedido-page .product-info span {
@@ -113,7 +113,7 @@
 }
 
 .pedido-page .product-subtotal {
-  color: #111827;
+  color: var(--ink);
 }
 
 .pedido-page .pedido-total {
@@ -140,7 +140,7 @@
   flex-direction: column;
   gap: 7px;
   padding: 13px 0;
-  border-bottom: 1px solid #eeeeee;
+  border-bottom: 1px solid var(--border);
 }
 
 .pedido-page .detail-row:last-child {
@@ -153,7 +153,7 @@
 }
 
 .pedido-page .detail-row strong {
-  color: #111827;
+  color: var(--ink);
 }
 
 .pedido-page .pedido-not-found {
@@ -163,7 +163,7 @@
 
 .pedido-page .pedido-not-found h1 {
   margin: 0 0 10px;
-  color: #111827;
+  color: var(--ink);
 }
 
 .pedido-page .pedido-not-found p {
@@ -199,7 +199,7 @@
 }
 
 .pedido-page .en-vivo.conectado {
-  color: #16a34a;
+  color: var(--brand);
 }
 
 /* Tarjetas de ancho completo arriba de la grilla */
@@ -269,7 +269,7 @@
 }
 
 .pedido-page .linea-tiempo li.actual {
-  color: #111827;
+  color: var(--ink);
 }
 
 .pedido-page .linea-tiempo li.actual .linea-tiempo-punto {
@@ -336,7 +336,7 @@
 }
 
 .pedido-page .seguimiento-eta {
-  color: #111827;
+  color: var(--ink);
 }
 
 .pedido-page .seguimiento-eta strong {
@@ -346,7 +346,7 @@
 
 .pedido-page .seguimiento-mensaje {
   margin: 0 0 6px;
-  color: #111827;
+  color: var(--ink);
   font-weight: 600;
 }
 
@@ -385,7 +385,7 @@
 }
 
 .pedido-page .resultado-repetir .omitidos {
-  color: #b91c1c;
+  color: var(--danger);
 }
 
 @media (max-width: 750px) {

@@ -38,7 +38,7 @@
   .perfil-page .perfil-header h1 {
     margin: 0;
     font-size: 32px;
-    color: #111827;
+    color: var(--ink);
   }
   
   .perfil-page .perfil-rol {
@@ -49,13 +49,13 @@
   .perfil-page .perfil-card {
     padding: 30px;
     background: white;
-    border: 1px solid #e5e5e5;
+    border: 1px solid var(--border);
     border-radius: 12px;
   }
   
   .perfil-page .perfil-card h2 {
     margin: 0 0 25px;
-    color: #111827;
+    color: var(--ink);
   }
   
   .perfil-page .dato {
@@ -63,7 +63,7 @@
     flex-direction: column;
     gap: 6px;
     padding: 16px;
-    background: #f7f7f7;
+    background: var(--surface);
     border-radius: 8px;
   }
   
@@ -73,7 +73,7 @@
   }
   
   .perfil-page .dato strong {
-    color: #111827;
+    color: var(--ink);
     font-size: 16px;
   }
   
@@ -98,14 +98,14 @@
   }
   
   .perfil-page .perfil-button.secondary {
-    background: #eeeeee;
-    color: #111827;
+    background: var(--surface-2);
+    color: var(--ink);
   }
   
   .perfil-page .perfil-button.logout {
     background: transparent;
-    color: #c0392b;
-    border: 1px solid #c0392b;
+    color: var(--danger);
+    border: 1px solid var(--danger);
   }
   
   .perfil-page .perfil-button:hover {
@@ -156,9 +156,9 @@
   }
 
   .perfil-page .zona-baja {
-    border-color: #fecaca;
+    border-color: var(--danger-border);
   }
 
   .perfil-page .zona-baja h2 {
-    color: #b91c1c;
+    color: var(--danger);
   }

@@ -13,7 +13,7 @@
     z-index: 1000;
   
     background: #ffffff;
-    border-bottom: 1px solid #eeeeee;
+    border-bottom: 1px solid var(--border);
   }
   
   
@@ -55,7 +55,7 @@
      ========================================= */
   
   .header-left a {
-    color: #222222;
+    color: var(--ink);
   
     text-decoration: none;
   
@@ -130,7 +130,7 @@
      ========================================= */
   
   .header-right a {
-    color: #222222;
+    color: var(--ink);
   
     text-decoration: none;
   
@@ -180,7 +180,7 @@
   
     border-radius: 50%;
   
-    background: #111111;
+    background: var(--ink);
     color: #ffffff;
   
     font-size: 10px;
@@ -193,7 +193,7 @@
      ========================================= */
   
   .profile-button {
-    color: #222222;
+    color: var(--ink);
   
     white-space: nowrap;
   }
@@ -210,7 +210,7 @@
   
     background: transparent;
   
-    color: #222222;
+    color: var(--ink);
   
     font-family: inherit;
   
@@ -234,7 +234,7 @@
      ========================================= */
   
   .nav-cta {
-    color: #222222;
+    color: var(--ink);
   
     text-decoration: none;
   
@@ -257,7 +257,7 @@
     border: none;
     background: transparent;
   
-    color: #222222;
+    color: var(--ink);
   
     font-family: inherit;
   
@@ -335,11 +335,11 @@
   
       background: #ffffff;
   
-      border-bottom: 1px solid #eeeeee;
+      border-bottom: 1px solid var(--border);
     }
   
     .main-navigation a {
-      color: #222222;
+      color: var(--ink);
   
       text-decoration: none;
   
@@ -353,7 +353,7 @@
       border: none;
       background: transparent;
   
-      color: #222222;
+      color: var(--ink);
   
       font-family: inherit;
   

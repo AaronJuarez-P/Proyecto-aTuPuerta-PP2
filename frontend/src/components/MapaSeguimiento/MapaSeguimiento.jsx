@@ -85,10 +85,11 @@ export default function MapaSeguimiento({ comercio, destino, repartidor, polilin
 
         <Encuadrar puntos={puntos} clave={marcadores.map(([tipo]) => tipo).join(',')} />
 
-        {ruta.length > 1 && <Polyline positions={ruta} pathOptions={{ color: '#1d6a3a', weight: 5, opacity: 0.8 }} />}
+        {/* El color de las líneas sale del CSS (.mapa-ruta), con las variables de la marca */}
+        {ruta.length > 1 && <Polyline positions={ruta} pathOptions={{ className: 'mapa-ruta', weight: 5, opacity: 0.8 }} />}
 
         {lineaRecta && (
-          <Polyline positions={lineaRecta} pathOptions={{ color: '#1d6a3a', weight: 3, dashArray: '8 8', opacity: 0.7 }} />
+          <Polyline positions={lineaRecta} pathOptions={{ className: 'mapa-ruta', weight: 3, dashArray: '8 8', opacity: 0.7 }} />
         )}
 
         {marcadores.map(([tipo, punto]) => (

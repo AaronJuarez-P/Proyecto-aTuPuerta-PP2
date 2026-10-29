@@ -48,7 +48,7 @@
     font-family: var(--display);
     font-size: clamp(2rem, 5vw, 3.5rem);
     line-height: 1.05;
-    color: #111827;
+    color: var(--ink);
   }
   
   .comercio-header p:not(.eyebrow) {
@@ -74,7 +74,7 @@
     margin-top: 8px;
     font-family: var(--display);
     font-size: 2rem;
-    color: #111827;
+    color: var(--ink);
   }
   
   .cart-indicator {
@@ -110,7 +110,7 @@
     align-items: center;
     justify-content: center;
     height: 180px;
-    background: #f3f4f6;
+    background: var(--surface-2);
     font-size: 4rem;
   }
   
@@ -120,7 +120,7 @@
   
   .producto-info h3 {
     margin-bottom: 8px;
-    color: #111827;
+    color: var(--ink);
     font-family: var(--display);
   }
   
@@ -134,7 +134,7 @@
   .producto-info strong {
     display: block;
     margin-bottom: 18px;
-    color: #111827;
+    color: var(--ink);
     font-size: 1.25rem;
   }
   
@@ -155,7 +155,7 @@
   }
 
   .add-cart-button:disabled {
-    background: #9ca3af;
+    background: var(--disabled);
     cursor: not-allowed;
   }
 

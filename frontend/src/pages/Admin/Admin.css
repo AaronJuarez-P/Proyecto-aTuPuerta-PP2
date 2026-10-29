@@ -274,7 +274,7 @@
   }
 
   .admin-page .admin-zona-peligro {
-    border-color: #fecaca;
+    border-color: var(--danger-border);
   }
 
   /* Listados */
@@ -292,7 +292,7 @@
 
   .admin-page .admin-celda-texto {
     min-width: 220px;
-    color: #374151;
+    color: var(--ink-soft);
   }
 
   .admin-page .admin-perfiles {

@@ -20,7 +20,7 @@
 /* Las nuevas se distinguen con el borde de la marca */
 .notificaciones-pagina .lista-notificaciones li.sin-leer {
   border-left: 4px solid var(--brand);
-  background: #fbfefc;
+  background: var(--brand-light);
 }
 
 .notificaciones-pagina .notificacion-icono {
@@ -41,7 +41,7 @@
 }
 
 .notificaciones-pagina .notificacion-cuerpo p {
-  color: #111827;
+  color: var(--ink);
   line-height: 1.5;
 }
 

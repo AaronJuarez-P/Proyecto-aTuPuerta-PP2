@@ -1,5 +1,38 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap');
-:root { font-family: 'Inter', sans-serif; color: #1a1a1a; background: white; font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; --brand: #1d6a3a; --brand-light: #e8f5ee; --brand-mid: #2e8b57; --accent: #f97316; --muted: #6b7280; --surface: #f9fafb; --border: #e5e7eb; --marca: 'Outfit', 'Inter', sans-serif; --display: var(--marca); --brand-menta: #72eda2; --brand-noche: #0d1f14; --ink: #111827; }
+:root {
+  font-family: 'Inter', sans-serif; color: var(--ink); background: white; font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
+
+  /* Marca. El verde oscuro es el de los textos y los botones sobre blanco (6,6:1). El
+     menta es el del logo: va en rellenos, detalles y sobre fondos oscuros, nunca como
+     texto sobre blanco (1,5:1). Los verdes tienen el mismo tono que el menta. */
+  --brand: #1d6a3a;
+  --brand-mid: #2e8b57;
+  --brand-light: #eafcf1;
+  --brand-menta: #72eda2;
+  --brand-deep: #0d3d21;
+  --brand-noche: #0d1f14;
+  /* El naranja va en bordes y detalles; con texto blanco encima, el fuerte (5,2:1) */
+  --accent: #f97316;
+  --accent-strong: #c2410c;
+
+  /* Tinta y grises */
+  --ink: #111827;
+  --ink-soft: #374151;
+  --muted: #6b7280;
+  --disabled: #9ca3af;
+  --surface: #f9fafb;
+  --surface-2: #f3f4f6;
+  --border: #e5e7eb;
+
+  /* Errores */
+  --danger: #b91c1c;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
+
+  /* Outfit es la letra del logo, y la de los títulos */
+  --marca: 'Outfit', 'Inter', sans-serif;
+  --display: var(--marca);
+}
 *, *::before, *::after { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; line-height: 1.6; }
 h1, h2, h3, p { margin: 0; }

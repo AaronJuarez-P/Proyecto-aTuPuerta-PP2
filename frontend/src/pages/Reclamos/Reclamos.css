@@ -33,7 +33,7 @@
 }
 
 .reclamos-pagina .reclamo-encabezado strong {
-  color: #111827;
+  color: var(--ink);
 }
 
 .reclamos-pagina .reclamo-encabezado small,
@@ -46,14 +46,14 @@
 .reclamos-pagina .lista-reclamos a > p {
   display: -webkit-box;
   overflow: hidden;
-  color: #374151;
+  color: var(--ink-soft);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
 }
 
 .reclamos-pagina .reclamo-texto {
-  color: #111827;
+  color: var(--ink);
   line-height: 1.6;
   white-space: pre-wrap;
 }

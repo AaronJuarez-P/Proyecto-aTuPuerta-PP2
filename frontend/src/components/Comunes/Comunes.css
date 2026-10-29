@@ -34,7 +34,7 @@
   margin: 4px 0 6px;
   font-family: var(--display);
   font-size: clamp(2rem, 4vw, 2.7rem);
-  color: #111827;
+  color: var(--ink);
 }
 
 .pagina-encabezado p {
@@ -81,7 +81,7 @@
   margin-bottom: 14px;
   font-family: var(--display);
   font-size: 1.2rem;
-  color: #111827;
+  color: var(--ink);
 }
 
 .grilla-dos {
@@ -113,7 +113,7 @@
 }
 
 .dato-fila strong {
-  color: #111827;
+  color: var(--ink);
   text-align: right;
 }
 
@@ -159,22 +159,23 @@
 .boton-secundario {
   background: white;
   border-color: var(--border);
-  color: #111827;
+  color: var(--ink);
 }
 
 .boton-secundario:hover:not(:disabled) {
   background: var(--brand-light);
 }
 
+/* El naranja fuerte: con el de --accent el texto blanco no se lee bien (2,8:1) */
 .boton-acento {
-  background: var(--accent);
+  background: var(--accent-strong);
   color: white;
 }
 
 .boton-peligro {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #b91c1c;
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger);
 }
 
 .boton-peligro:hover:not(:disabled) {
@@ -214,7 +215,7 @@
 }
 
 .campo-form label {
-  color: #111827;
+  color: var(--ink);
   font-size: 0.9rem;
   font-weight: 700;
 }
@@ -227,7 +228,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   background: white;
-  color: #111827;
+  color: var(--ink);
   font-family: inherit;
   font-size: 0.95rem;
   outline: none;
@@ -265,8 +266,8 @@
 }
 
 .aviso-form-error {
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 .aviso-form-ok {
@@ -295,7 +296,7 @@
   border: 1px solid var(--border);
   border-radius: 999px;
   background: white;
-  color: #374151;
+  color: var(--ink-soft);
   font-family: inherit;
   font-size: 0.85rem;
   font-weight: 600;
@@ -380,10 +381,10 @@
   gap: 12px;
   margin-bottom: 18px;
   padding: 14px 16px;
-  border: 1px solid #fecaca;
+  border: 1px solid var(--danger-border);
   border-radius: 12px;
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--danger-bg);
+  color: var(--danger);
   font-weight: 600;
 }
 
@@ -405,7 +406,7 @@
   margin-bottom: 8px;
   font-family: var(--display);
   font-size: 1.3rem;
-  color: #111827;
+  color: var(--ink);
 }
 
 .estado-vacio p {
@@ -502,7 +503,7 @@
   margin-top: 4px;
   font-family: var(--display);
   font-size: 1.6rem;
-  color: #111827;
+  color: var(--ink);
 }
 
 /* =========================================
@@ -569,7 +570,7 @@
 .modal-encabezado h2 {
   font-family: var(--display);
   font-size: 1.25rem;
-  color: #111827;
+  color: var(--ink);
 }
 
 .modal-cerrar {
@@ -607,8 +608,8 @@
 }
 
 .aviso-exito { background: var(--brand); }
-.aviso-error { background: #b91c1c; }
-.aviso-info { background: #1f2937; }
+.aviso-error { background: var(--danger); }
+.aviso-info { background: var(--ink); }
 
 @keyframes aparecer {
   from { opacity: 0; transform: translateY(8px); }

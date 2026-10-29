@@ -34,7 +34,7 @@
 }
 
 .productos-comercio .producto-celda strong {
-  color: #111827;
+  color: var(--ink);
 }
 
 .productos-comercio .producto-celda small {
@@ -47,7 +47,7 @@
 
 /* Un producto dado de baja se ve apagado */
 .productos-comercio .fila-baja td {
-  background: #fafafa;
+  background: var(--surface);
   color: var(--muted);
 }
 
@@ -62,7 +62,7 @@
   border: 1px dashed transparent;
   border-radius: 8px;
   background: none;
-  color: #111827;
+  color: var(--ink);
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 700;

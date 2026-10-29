@@ -17,7 +17,7 @@
     margin: 8px 0;
     font-family: var(--display);
     font-size: clamp(2.5rem, 5vw, 4rem);
-    color: #111827;
+    color: var(--ink);
 }
 
 .pedidos-page .pedidos-title > p:last-child {
@@ -63,7 +63,7 @@
 }
 
 .pedidos-page .pedido-info strong {
-    color: #111827;
+    color: var(--ink);
     font-size: 0.95rem;
 }
 
@@ -88,7 +88,7 @@
   .pedidos-page .pedido-card {
     padding: 24px;
     background: white;
-    border: 1px solid #e5e5e5;
+    border: 1px solid var(--border);
     border-radius: 12px;
   }
 
@@ -98,13 +98,13 @@
     justify-content: space-between;
     gap: 20px;
     padding-bottom: 18px;
-    border-bottom: 1px solid #eeeeee;
+    border-bottom: 1px solid var(--border);
   }
 
   .pedidos-page .pedido-label {
     font-size: 14px;
     font-weight: 700;
-    color: #111827;
+    color: var(--ink);
   }
 
   .pedidos-page .pedido-fecha {
@@ -132,7 +132,7 @@
   }
 
   .pedidos-page .pedido-info strong {
-    color: #111827;
+    color: var(--ink);
   }
 
   .pedidos-page .pedido-bottom {
@@ -141,7 +141,7 @@
     justify-content: space-between;
     gap: 20px;
     padding-top: 18px;
-    border-top: 1px solid #eeeeee;
+    border-top: 1px solid var(--border);
     color: var(--muted);
     font-size: 14px;
   }

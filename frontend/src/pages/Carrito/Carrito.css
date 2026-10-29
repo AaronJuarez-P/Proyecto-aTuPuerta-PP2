@@ -17,7 +17,7 @@
     margin: 8px 0;
     font-family: var(--display);
     font-size: clamp(2.5rem, 5vw, 4rem);
-    color: #111827;
+    color: var(--ink);
   }
   
   .carrito-title > p:last-child {
@@ -55,13 +55,13 @@
     width: 90px;
     height: 90px;
     border-radius: 8px;
-    background: #f3f4f6;
+    background: var(--surface-2);
     font-size: 2.5rem;
   }
   
   .carrito-producto-info h3 {
     margin-bottom: 6px;
-    color: #111827;
+    color: var(--ink);
     font-family: var(--display);
     font-size: 1.05rem;
   }
@@ -73,7 +73,7 @@
   }
   
   .carrito-producto-info strong {
-    color: #111827;
+    color: var(--ink);
   }
   
   .cantidad-control {
@@ -116,13 +116,13 @@
   }
   
   .producto-subtotal strong {
-    color: #111827;
+    color: var(--ink);
   }
   
   .eliminar-button {
     border: none;
     background: transparent;
-    color: #b91c1c;
+    color: var(--danger);
     font-family: inherit;
     font-size: 0.8rem;
     cursor: pointer;
@@ -145,7 +145,7 @@
     margin-bottom: 25px;
     font-family: var(--display);
     font-size: 1.3rem;
-    color: #111827;
+    color: var(--ink);
   }
   
   .resumen-linea,
@@ -164,7 +164,7 @@
     margin-top: 20px;
     padding-top: 20px;
     border-top: 1px solid var(--border);
-    color: #111827;
+    color: var(--ink);
     font-size: 1.1rem;
   }
   
@@ -223,7 +223,7 @@
   .carrito-vacio h2 {
     margin-bottom: 10px;
     font-family: var(--display);
-    color: #111827;
+    color: var(--ink);
   }
   
   .carrito-vacio p {
@@ -261,7 +261,7 @@
   }
 
   .carrito-comercio-encabezado h2 {
-    color: #111827;
+    color: var(--ink);
     font-family: var(--display);
     font-size: 1.15rem;
   }
@@ -274,8 +274,8 @@
   }
 
   .carrito-producto.no-disponible {
-    border-color: #fecaca;
-    background: #fffafa;
+    border-color: var(--danger-border);
+    background: var(--danger-bg);
   }
 
   .carrito-producto-info .carrito-alerta {
@@ -284,17 +284,17 @@
     align-items: center;
     gap: 8px;
     margin: 8px 0 0;
-    color: #b91c1c;
+    color: var(--danger);
     font-size: 0.85rem;
     font-weight: 600;
   }
 
   .carrito-alerta button {
     padding: 4px 10px;
-    border: 1px solid #fecaca;
+    border: 1px solid var(--danger-border);
     border-radius: 999px;
     background: white;
-    color: #b91c1c;
+    color: var(--danger);
     font-family: inherit;
     font-size: 0.8rem;
     font-weight: 700;
@@ -309,12 +309,12 @@
   }
 
   .resumen-nota-alerta {
-    color: #b91c1c;
+    color: var(--danger);
     font-weight: 600;
   }
 
   .confirmar-button.deshabilitado {
-    background: #9ca3af;
+    background: var(--disabled);
     cursor: not-allowed;
   }
 

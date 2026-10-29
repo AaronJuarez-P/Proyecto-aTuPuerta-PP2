@@ -1,21 +1,23 @@
 .skip-link { position: fixed; top: -100px; left: 1rem; z-index: 30; background: white; color: var(--brand); padding: .8rem 1rem; border-radius: 8px; }
 .skip-link:focus { top: .5rem; }
-/* Arriba suma los 76px del header fijo, para que la marca no quede pegada */
-.landing-hero { position: relative; overflow: hidden; padding: calc(76px + 2.5rem) 1.5rem 4.5rem; text-align: center; color: white; background: linear-gradient(135deg, #0d3d21 0%, #1d6a3a 60%, #2e8b57 100%); }
-.landing-hero::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.07) 2px, transparent 2px); background-size: 40px 40px; pointer-events: none; }
+/* Arriba suma los 76px del header fijo, para que la marca no quede pegada. El fondo es
+   casi negro, como el del logo original, con un resplandor menta arriba y verde abajo. */
+.landing-hero { position: relative; overflow: hidden; padding: calc(76px + 2.5rem) 1.5rem 4.5rem; text-align: center; color: white; background: radial-gradient(ellipse 60% 70% at 50% 0%, color-mix(in srgb, var(--brand-menta) 14%, transparent), transparent 70%), radial-gradient(ellipse 55% 60% at 100% 100%, color-mix(in srgb, var(--brand) 55%, transparent), transparent 70%), var(--brand-noche); }
+.landing-hero::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.06) 2px, transparent 2px); background-size: 40px 40px; pointer-events: none; }
 .hero-content { position: relative; max-width: 750px; margin: auto; }
 /* En su propio renglón: .hero-badge también es inline-flex */
 .hero-content .hero-marca { display: flex; width: fit-content; margin: 0 auto 1.75rem; font-size: clamp(1.9rem, 4.5vw, 2.6rem); }
 .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); padding: 6px 14px; border-radius: 999px; font-size: .875rem; margin-bottom: 1.5rem; }
-.hero-badge span { width: 7px; height: 7px; border-radius: 50%; background: #86efac; flex-shrink: 0; }
+.hero-badge span { width: 7px; height: 7px; border-radius: 50%; background: var(--brand-menta); flex-shrink: 0; }
 .landing-hero h1 { font: 800 clamp(2.6rem, 5.5vw, 3.8rem)/1.15 var(--display); letter-spacing: -1.5px; }
-.landing-hero h1 em { font-style: normal; color: #86efac; }
+.landing-hero h1 em { font-style: normal; color: var(--brand-menta); }
 .hero-description { max-width: 540px; margin: 1.4rem auto 2rem; font-size: 1.05rem; color: #dfebe3; }
 .hero-actions { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 22px; border-radius: 8px; font-weight: 600; text-decoration: none; transition: transform .15s, background .15s; }
 .button:hover { transform: translateY(-2px); }
-.button-primary { background: white; color: var(--brand); box-shadow: 0 4px 12px #0002; }
-.button-primary:hover { background: var(--brand-light); }
+/* Menta con texto casi negro: 11,6:1 */
+.button-primary { background: var(--brand-menta); color: var(--brand-noche); box-shadow: 0 4px 14px color-mix(in srgb, var(--brand-menta) 25%, transparent); }
+.button-primary:hover { background: white; }
 .button-outline { border: 1px solid #ffffff70; color: white; }
 .button-outline:hover { background: #ffffff15; }
 .benefits-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; padding: 1.5rem max(1.5rem, calc((100% - 1050px)/2)); background: var(--surface); border-bottom: 1px solid var(--border); text-align: center; }
@@ -50,7 +52,7 @@
 .role-card h3 { font-size: 1.1rem; }
 .role-card p { font-size: .875rem; color: var(--muted); margin-top: .4rem; }
 .role-card ul { list-style: none; padding: 1rem 0 0; margin: 1rem 0 0; border-top: 1px solid var(--border); display: grid; gap: .5rem; }
-.role-card li { display: flex; align-items: baseline; gap: 8px; font-size: .875rem; color: #4b5563; }
+.role-card li { display: flex; align-items: baseline; gap: 8px; font-size: .875rem; color: var(--ink-soft); }
 .role-card li span { color: var(--brand); font-weight: 700; }
 @media (max-width: 850px) {
   .category-grid, .steps-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

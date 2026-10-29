@@ -28,7 +28,7 @@
     margin-bottom: 8px;
     font-family: var(--display);
     font-size: 2rem;
-    color: #111827;
+    color: var(--ink);
   }
   
   .login-description {
@@ -44,7 +44,7 @@
   .login-card .form-group label {
     display: block;
     margin-bottom: 8px;
-    color: #374151;
+    color: var(--ink-soft);
     font-weight: 600;
   }
 
@@ -146,7 +146,7 @@
     border: 1px solid var(--border);
     border-radius: 999px;
     background: white;
-    color: #374151;
+    color: var(--ink-soft);
     font-family: inherit;
     font-size: 0.8rem;
     cursor: pointer;
@@ -161,8 +161,8 @@
     margin-bottom: 18px;
     padding: 12px;
     border-radius: 8px;
-    background: #fef2f2;
-    color: #b91c1c;
+    background: var(--danger-bg);
+    color: var(--danger);
     font-size: 0.9rem;
   }
   
@@ -200,4 +200,11 @@
     color: var(--brand);
     font-weight: 700;
     text-decoration: none;
+  }
+
+  /* A 375px, con 40px de cada lado, "Repartidor" no entraba en su pestaña */
+  @media (max-width: 420px) {
+    .login-card {
+      padding: 32px 22px;
+    }
   }
