@@ -161,7 +161,8 @@ sin llamar a Gemini, y con `--faq` contesta como el modo faq.
    Eso sí: mientras indexa, unos 20 segundos, el Portero puede contestar "No lo encuentro",
    porque la tabla se vacía al empezar.
 4. Si se agregan muchas preguntas, volver a revisar el umbral con
-   `node --env-file=.env distribucion.mjs` (ver "Umbral" en `DECISIONES.md`).
+   `node --env-file=.env distribucion.mjs`, y confirmar que la búsqueda no empeoró con
+   `node --env-file=.env evaluar.mjs` (ver "Umbral" y "Extras" en `DECISIONES.md`).
 
 **Cambiar algo de `backend/rag/.env`, como el `UMBRAL`, obliga a reiniciar el backend:**
 ese archivo se carga una sola vez, con la primera pregunta.

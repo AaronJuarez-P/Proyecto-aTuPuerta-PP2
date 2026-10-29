@@ -7,6 +7,8 @@ import { MARCA } from "./marca.mjs";
 
 const TAMANO_LOTE = 32;   // Ollama no tiene el tope de 100 de Google, pero corre en tu compu
 await db.query("TRUNCATE fragmentos RESTART IDENTITY");   // arranca de cero: sin duplicados
+// --fijo: ignora la marca y corta cada 1000 caracteres, para comparar los dos troceados (Fase 9)
+const FIJO = process.argv.includes("--fijo");
 
 const archivos = (await readdir("corpus")).filter(a => /\.(txt|md)$/i.test(a));
 if (archivos.length === 0) throw new Error("No hay archivos .txt ni .md en la carpeta corpus");
@@ -15,7 +17,7 @@ console.time("tiempo total");
 let total = 0;
 for (const archivo of archivos) {
   const texto = await readFile(`corpus/${archivo}`, "utf8");
-  const fragmentos = MARCA ? trocearPorMarca(texto, MARCA) : trocear(texto, 1000, 150);
+  const fragmentos = MARCA && !FIJO ? trocearPorMarca(texto, MARCA) : trocear(texto, 1000, 150);
   const lotes = agrupar(fragmentos, TAMANO_LOTE);
   console.log(`${archivo}: ${fragmentos.length} fragmentos en ${lotes.length} lote(s)`);
 

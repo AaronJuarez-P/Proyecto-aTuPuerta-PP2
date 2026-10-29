@@ -15,7 +15,9 @@ por fase, a medida que se tomaba cada decisión.
    las [preguntas de la demo](#preguntas-de-la-demo)
 8. [Backend](#backend-fase-6) y [front](#front-fase-7)
 9. [Documentación y prueba final](#documentación-y-prueba-final-fase-8)
-10. [Qué probé y descarté](#qué-probé-y-descarté)
+10. [Extras](#extras-fase-9): la medición propia, troceado por pregunta contra fijo, y
+    `faq` contra `rag`
+11. [Qué probé y descarté](#qué-probé-y-descarté)
 
 ## Entorno y base (Fase 1)
 
@@ -148,6 +150,9 @@ como preguntas cuya respuesta no está, que el Portero tiene que rechazar.
   mitad de camino entre los dos temas, y la fuente no dice nada útil. Cortado por
   pregunta, cada fragmento es una idea completa, con la pregunta adentro, que se parece
   a cómo pregunta la gente, y con una etiqueta que se entiende.
+- **Medido en la Fase 9:** con 15 preguntas nuevas, el fragmento correcto le llega al
+  modelo en 13 de 15 con el troceado por pregunta, y en 9 de 15 con el fijo (ver
+  "Extras").
 
 ## Indexado (Fase 3)
 
@@ -681,12 +686,109 @@ un celular de verdad. Las dos cosas quedan para la prueba de Santiago.
   eso la pregunta que falla en la demo es una falla de la búsqueda, que no depende del
   modelo.
 
+## Extras (Fase 9)
+
+### evaluar.mjs: la medición propia
+
+`node --env-file=.env evaluar.mjs` mide la búsqueda sin llamar a Gemini. Para cada
+pregunta, dice en qué puesto de los 3 sale el fragmento correcto y si le llega al modelo.
+
+**Cómo se armó:**
+- **20 preguntas, que aprobó Santiago.** Todas son nuevas: ninguna se usó para elegir el
+  umbral (Fase 4) ni es una sugerida del front. Así, la medición dice si 0.57 sirve con
+  preguntas que el umbral nunca "vio". Se fijaron antes de ver cualquier resultado.
+  - **15 que están**, escritas como las haría la gente: 4 de clientes, 3 de comercios, 3
+    de repartidores y 5 de políticas. Cada una tiene su sección esperada.
+  - **5 que no están.** Cuatro se parecen a algo que sí está: los envíos a Santa Fe
+    capital, el monotributo, el monto mínimo y el remís. La quinta, el asado, no tiene
+    nada que ver.
+- **El criterio es una frase clave.** Para cada pregunta se anotó una frase de la
+  respuesta correcta, y un fragmento acierta si la contiene.
+  - No se usó la sección porque el troceado fijo no tiene secciones. Así, los dos
+    troceados se miden con la misma vara.
+  - Cada clave mide menos de 150 caracteres, que es el solapamiento del troceado fijo,
+    así que entra entera en algún fragmento.
+  - Antes de medir, el script verifica que cada clave esté una sola vez en el corpus y en
+    la sección esperada. Con `--solo-claves` hace solo eso.
+- **Qué no mide:** si el modelo contesta bien con lo que recibe. Eso se revisó a mano en
+  la Ficha 5.
+
+### Troceado por pregunta contra troceado fijo
+
+`indexar.mjs --fijo` ignora la marca y corta cada 1000 caracteres, con 150 de
+solapamiento: son dos renglones nuevos (`indexar.mjs:10-11` y `:20`). Se midió con los dos
+troceados y después se volvió a indexar con la marca. La segunda medición con la marca dio
+exactamente igual que la primera.
+
+| Medida | Por pregunta (la marca) | Fijo, de 1000 caracteres |
+|---|---|---|
+| Fragmentos | 35, todos con sección | 24, ninguno con sección |
+| La correcta sale primera | 9 de 15 | 8 de 15 |
+| La correcta está entre las 3 | 14 de 15 | 12 de 15 |
+| La correcta le llega al modelo (está entre las 3 y pasa el umbral) | 13 de 15 | 9 de 15 |
+| Las que no están, rechazadas por el umbral | 5 de 5 | 4 de 5: el remís pasa, con 0.577 |
+
+**Lectura:**
+- **El troceado por pregunta gana en todo.** En "sale primera" la diferencia es de una
+  sola pregunta, y con 15 preguntas eso no alcanza para concluir nada. La diferencia
+  grande está en lo que le llega al modelo: 13 contra 9.
+- **Por qué:** un fragmento fijo junta el final de una pregunta con el principio de
+  otra, y su vector queda a mitad de camino entre los dos temas. Por eso la parte
+  correcta se parece menos a la pregunta:
+  - "¿dónde veo cuánta plata vendí este mes?" baja de 0.536 a 0.477;
+  - "mandé una queja hace dos días…" baja de 0.581 a 0.568, y ya no pasa el umbral;
+  - "puse mal la contraseña varias veces…" pasa de primera, con 0.620, a tercera, con
+    0.551.
+- **Y la fuente no dice nada:** el fijo cita "politicas-y-cuenta.md · fragmento 3" en vez
+  de la pregunta.
+- **Una salvedad:** el umbral se calibró con el troceado por pregunta, y con el fijo
+  habría que recalibrarlo. Pero "sale primera" y "está entre las 3" no dependen del
+  umbral, y ahí también gana el troceado por pregunta.
+
+**Lo que mostró la medición del troceado de hoy:**
+- **Dos fallas nuevas.**
+  - "ahora cierro los domingos, ¿cómo lo actualizo en la app?": la correcta ni está
+    entre las 3. Primero trae "¿Por qué se me cerró la sesión?" (0.511), porque "cierro"
+    se parece a "cerró" y el corpus dice "horario de atención". Es otra falla de
+    vocabulario, como la de la sesión en la Ficha 5.
+  - "¿dónde veo cuánta plata vendí este mes?": la correcta sale primera, pero con 0.536
+    no pasa el umbral. Es un falso negativo.
+- **El margen del umbral es finito de los dos lados.** El remís, que no está, sacó 0.566:
+  apenas 0.004 abajo de 0.57. Es lo que avisaba la Fase 4, con un margen de 0.02.
+- **Traer 3 compensa una búsqueda imperfecta.** En 5 de las 15 la correcta salió segunda
+  o tercera, y le llegó igual al modelo porque pasaba el umbral. Con un solo fragmento se
+  habría perdido.
+
+### faq contra rag
+
+- **En la medición:** el modo `faq` muestra el primer fragmento que pasa el umbral. Solo
+  contesta bien si la correcta sale primera y pasa el umbral: 8 de 15. En `rag`, la
+  correcta le llega al modelo en 13 de 15. Si después el modelo la usa bien, eso
+  `evaluar.mjs` no lo mide.
+- **Con una pregunta que necesita dos documentos.** Se corrieron dos versiones, que
+  aprobó Santiago (2 llamadas a Gemini):
+
+| Pregunta | faq | rag |
+|---|---|---|
+| "Soy repartidor: ¿cómo le llega el código al cliente y cómo confirmo la entrega?", la de la consigna | Muestra "¿Cómo confirmo la entrega…?" (0.813), que ya dice que el código "le llegó por notificación". Alcanza con un fragmento | Junta los dos: que le llega por notificación cuando un repartidor toma el pedido, y cómo confirmar |
+| "Soy repartidor: ¿en qué momento le llega el código al cliente y cómo confirmo la entrega?" | El mismo fragmento, que no dice en qué momento: la respuesta queda incompleta | Junta los dos: "en qué momento" sale del archivo de clientes ("cuando un repartidor toma su pedido"), y cómo confirmar, del de repartidores |
+
+- **Hallazgo: cuando junta dos fragmentos, el modelo cita uno solo.**
+  - En la primera citó `ayuda-clientes.md` y en la segunda `ayuda-repartidores.md`,
+    aunque en las dos usó los dos archivos. El prompt pide "la etiqueta del fragmento",
+    en singular.
+  - En el front no se pierde, porque las etiquetas 📄 muestran todos los fragmentos que
+    pasaron el umbral. Pero el pie dice menos de lo que se usó.
+  - Cambiar la regla del prompt para que cite cada fragmento que usó queda como decisión
+    pendiente de Santiago.
+
 ## Qué probé y descarté
 
 ### Probado y descartado, con evidencia
 
 | Qué se probó | Qué pasó | Qué quedó |
 |---|---|---|
+| Troceado fijo de 1000 caracteres, con 150 de solapamiento (Fase 9) | Con `evaluar.mjs` y 15 preguntas nuevas, la correcta le llega al modelo en 9 de 15, contra 13 con la marca, y la fuente dice "fragmento 3" | La marca `/^## .+/` (`marca.mjs:8`) |
 | Indexar dos veces sin `TRUNCATE` (Fase 3) | 70 filas en vez de 35, con "¿Cómo pago mi pedido?" guardada dos veces (Ficha 3) | `TRUNCATE fragmentos RESTART IDENTITY` al empezar (`indexar.mjs:9`) |
 | Umbral 0.64 (Fase 4) | Bloquea las tres preguntas reformuladas: plata, tarjeta y sesión | 0.57 |
 | Umbral 0.54 (Fase 4) | Deja pasar envío, wifi y horario, que no están | 0.57 |
@@ -700,9 +802,6 @@ un celular de verdad. Las dos cosas quedan para la prueba de Santiago.
 
 ### Pensado y descartado, sin probar
 
-- **Troceo fijo de 1000 caracteres**, la otra opción de la clase. Partiría las respuestas
-  por la mitad y mezclaría temas (ver "Troceado"). No se midió: compararlos con
-  `evaluar.mjs` es un extra de la Fase 9.
 - **Aflojar el "EXCLUSIVAMENTE" del prompt** para que el modelo saque conclusiones, como la
   del efectivo. La misma regla frenó el envío, y en una app con plata de por medio una
   respuesta inventada hace más daño que un "No lo encuentro".
