@@ -98,6 +98,78 @@ Con el `.env.example` tal cual, nada depende de cuentas externas:
 Cómo funciona el front por dentro (estructura, rutas, sesión) está en
 [`frontend/README.md`](frontend/README.md).
 
+---
+
+## Asistente de ayuda: El Portero
+
+El Portero es el asistente de ayuda de la app: el botón "🚪 ¿Dudas? Preguntale al
+Portero" que aparece abajo a la derecha en todas las pantallas menos el login. Contesta
+las dudas de clientes, comercios y repartidores con lo que dice el Centro de ayuda
+(`backend/rag/corpus/`), y muestra de qué parte sacó cada respuesta.
+
+Es un RAG: busca las partes del Centro de ayuda más parecidas a la pregunta, y un modelo
+de lenguaje redacta la respuesta solo con ellas. Se hizo para la materia Desarrollo con
+IA. Las decisiones, con su evidencia, están en
+[`backend/rag/DECISIONES.md`](backend/rag/DECISIONES.md).
+
+**Es opcional.** Con `AYUDA_MODO=off`, que es el valor por defecto, el backend no carga
+nada de `backend/rag` y el front no muestra el botón. No hace falta Docker, ni Ollama, ni
+ninguna clave.
+
+| `AYUDA_MODO` | Qué hace | Qué necesita |
+|---|---|---|
+| `off` | Nada: el Portero no aparece | Nada |
+| `faq` | Muestra tal cual la parte del Centro de ayuda más parecida a la pregunta | Docker y Ollama |
+| `rag` | Gemini redacta la respuesta con las partes más parecidas | Docker, Ollama y una clave de Google AI Studio |
+
+### Cómo prenderlo
+
+1. **Postgres con pgvector, en Docker.** La primera vez se crea el contenedor; después
+   alcanza con `docker start rag-db`.
+   ```sh
+   docker run -d --name rag-db -e POSTGRES_PASSWORD=rag -p 5433:5432 -v rag-datos:/var/lib/postgresql/data pgvector/pgvector:pg17
+   ```
+2. **Ollama** abierto, con el modelo de embeddings:
+   ```sh
+   ollama pull bge-m3
+   ```
+3. **`backend/rag/.env`:** copiar `backend/rag/.env.example` y completar `API_KEY` con una
+   clave de Google AI Studio. Ese `.env` no se sube a Git, y la clave nunca llega al
+   navegador.
+4. **Dependencias, tabla e índice**, desde `backend/rag`:
+   ```sh
+   cd backend/rag
+   npm install
+   node --env-file=.env crear-tabla.mjs
+   node --env-file=.env indexar.mjs
+   ```
+   `crear-tabla.mjs` borra la tabla si ya existía. `indexar.mjs` vacía la tabla y vuelve a
+   cargar todo el corpus, así que se puede correr las veces que haga falta.
+5. **`AYUDA_MODO=rag`** (o `faq`) en `backend/.env`, y reiniciar el backend.
+
+Para probarlo sin el front, desde `backend/rag`:
+`node --env-file=.env preguntar.mjs "¿Cómo pago?"`. Con `--sin-modelo` muestra el prompt
+sin llamar a Gemini, y con `--faq` contesta como el modo faq.
+
+### Cómo agregar una pregunta nueva
+
+1. Escribirla en el `.md` que corresponda de `backend/rag/corpus/`, con el título en un
+   renglón propio: `## ¿…?`. Cada respuesta tiene que entenderse sola y decir para qué rol
+   es ("Como repartidor, …").
+2. Desde `backend/rag`, volver a indexar: `node --env-file=.env indexar.mjs`.
+3. **No hace falta reiniciar el backend:** la próxima pregunta ya busca en la tabla nueva.
+   Eso sí: mientras indexa, unos 20 segundos, el Portero puede contestar "No lo encuentro",
+   porque la tabla se vacía al empezar.
+4. Si se agregan muchas preguntas, volver a revisar el umbral con
+   `node --env-file=.env distribucion.mjs` (ver "Umbral" en `DECISIONES.md`).
+
+**Cambiar algo de `backend/rag/.env`, como el `UMBRAL`, obliga a reiniciar el backend:**
+ese archivo se carga una sola vez, con la primera pregunta.
+
+**Regla del grupo: si cambia una regla de la app, se actualiza el corpus y se vuelve a
+indexar.** El Portero solo sabe lo que dice el Centro de ayuda: si cambia la app y el
+corpus no, va a contestar con la regla vieja.
+
 ## Changelog
 
 > **Esto es el registro histórico de las primeras semanas.** Varias cosas cambiaron después

@@ -1,8 +1,21 @@
 # DECISIONES: El Portero
 
 Bitácora del asistente de ayuda de ATuPuerta: el RAG de la clase 8 de Desarrollo con IA,
-adentro del backend. Cada decisión va con la evidencia que la respalda. Se completa fase
-por fase.
+adentro del backend. Cada decisión va con la evidencia que la respalda. Se escribió fase
+por fase, a medida que se tomaba cada decisión.
+
+**Índice:**
+1. [Entorno y base](#entorno-y-base-fase-1)
+2. [Corpus](#corpus-fase-2): qué es, por qué y quién lo usa
+3. [Troceado](#troceado-fase-2)
+4. [Indexado](#indexado-fase-3)
+5. [Umbral](#umbral-fase-4), con la recta
+6. [Prompt](#prompt-fase-5), con los cambios
+7. [rag.mjs y preguntar.mjs](#ragmjs-y-preguntarmjs-fase-5), la [Ficha 5](#ficha-5) y
+   las [preguntas de la demo](#preguntas-de-la-demo)
+8. [Backend](#backend-fase-6) y [front](#front-fase-7)
+9. [Documentación y prueba final](#documentación-y-prueba-final-fase-8)
+10. [Qué probé y descarté](#qué-probé-y-descarté)
 
 ## Entorno y base (Fase 1)
 
@@ -66,6 +79,12 @@ quienes usan la app.
 **Por qué este corpus:** las reglas de la app existen, pero están repartidas en el código
 y en el readme técnico, que nadie que usa la app va a leer. El Portero las pone al
 alcance de clientes, comercios y repartidores, adentro de la misma app.
+
+**Quién lo usa:** las personas que usan ATuPuerta, desde adentro de la app, en la pantalla
+donde les surge la duda. Son clientes, comercios y repartidores, y también quien todavía
+no tiene cuenta y quiere saber cómo registrarse o cómo funciona. Por eso cada archivo
+está escrito para un rol, y el front sugiere preguntas según el rol de la sesión (Fase
+7).
 
 **Cómo se escribió:**
 - Cada afirmación se verificó contra el código antes de escribirla. Las pantallas del
@@ -286,6 +305,9 @@ Lo eligió Santiago, entre las tres opciones.
   a correr `distribucion.mjs` si cambia el modelo de embeddings (cambia la escala), si
   cambia el corpus (por ejemplo, al agregar muchas preguntas) o si cambia el troceado
   (cambian los fragmentos y sus vectores).
+- **Dónde quedó:** en `backend/rag/.env` y, desde la Fase 8, también en
+  `backend/rag/.env.example`. Así, quien copie el ejemplo arranca con el valor calibrado y
+  no con el vacío de la clase, que vale 0 y no descarta nada.
 
 ## Prompt (Fase 5)
 
@@ -398,6 +420,20 @@ Las eligió Santiago, entre las candidatas de la Ficha 5:
 | Una que no está | "¿Tienen descuentos para estudiantes?" | Ningún fragmento llega al umbral (el mejor saca 0.457). Responde "No lo encuentro en los documentos." sin llamar al modelo, así que sale igual siempre. Si preguntan por la segunda barrera, se cuenta el caso del envío. |
 | Una que falla | "¿por qué me sacó de la cuenta si no toqué nada?" | Falla la búsqueda: el fragmento correcto queda en el puesto 5. Sale igual siempre, porque no llega al modelo. |
 | De reserva, si sobra tiempo | "¿puedo pagar en efectivo?" | Falla el modelo: el fragmento correcto llega primero y el modelo igual dice "No lo encuentro". Puede variar de una corrida a otra. |
+
+**Ensayo (Fase 8, 28/10/2026):** se levantó un backend nuevo en modo `rag` y se le hicieron
+las cuatro, en orden, por la API. Salieron como se esperaba:
+
+| Pregunta | Mejor fragmento | ¿Llamó al modelo? | Respuesta | Tiempo |
+|---|---|---|---|---|
+| "¿Cómo pago?" | 0.699, "¿Cómo pago mi pedido?" | Sí | La correcta, citando "¿Cómo pago mi pedido?" | 2,4 s, contando la carga del RAG |
+| "¿Tienen descuentos para estudiantes?" | ✗ 0.457 | No | "No lo encuentro en los documentos." | 0,1 s |
+| "¿por qué me sacó de la cuenta si no toqué nada?" | ✗ 0.547, "¿Cómo elimino mi cuenta?" | No | "No lo encuentro en los documentos." | 0,1 s |
+| "¿puedo pagar en efectivo?" | 0.616, "¿Cómo pago mi pedido?" | Sí | "No lo encuentro en los documentos.", igual que en las dos corridas de la Fase 5 | 0,9 s |
+
+La primera pregunta del día tarda más: con `bge-m3` fuera de memoria, una pregunta con
+`--sin-modelo` tardó 2,5 s, contra 0,34 s con el modelo ya cargado. Ollama lo saca de la
+memoria a los 5 minutos sin uso.
 
 ## Backend (Fase 6)
 
@@ -619,8 +655,62 @@ del modelo. En el proyecto, lo que da formato vive en `utils/` (`estados.js`,
 **Lo que se corrigió con la prueba del celular:** el encabezado se partía en muchos
 renglones y el texto gris del campo ("Escribí tu pregunta…") se cortaba. Se acortó el
 subtítulo, se achicó el ícono del encabezado y el texto del campo pasó a "Escribí tu
-duda…". Este último cambio no se volvió a probar en el navegador.
+duda…". Este último cambio se probó en la Fase 8: entra entero a 320 px.
 
 **Lo que no se probó acá:** las sugeridas y el link a reclamos con sesión de cliente,
 comercio, repartidor y administrador, porque hacen falta cuentas. Tampoco se probó en
 un celular de verdad. Las dos cosas quedan para la prueba de Santiago.
+
+## Documentación y prueba final (Fase 8)
+
+- **`README.md`**, sección "Asistente de ayuda: El Portero". Cuenta:
+  - qué es, y que es opcional;
+  - cómo prenderlo, con el `docker run` de la clase;
+  - cómo agregar una pregunta nueva;
+  - que cambiar `backend/rag/.env` obliga a reiniciar el backend;
+  - la regla del grupo: si cambia una regla de la app, se actualiza el corpus y se vuelve
+    a indexar.
+- **`backend/rag/.env.example`:** `UMBRAL=0.57`, en vez de vacío (ver "Umbral").
+- **Ensayo de la demo:** las cuatro preguntas, por la API (ver "Preguntas de la demo").
+- **Prueba de punta a punta en el navegador:** se repitió la de la Fase 7. Pasaron todos
+  los chequeos, y la consola quedó sin errores.
+- **El modelo no contesta siempre con las mismas palabras.** En tres corridas de "¿Cómo
+  pago mi pedido?" salieron tres redacciones distintas: "¡Hola, vecino! Por ahora, el
+  único medio de pago…", "Hola, vecino. Para pagar tu pedido, por ahora el único medio
+  disponible…" y otra parecida. Las tres dijeron lo mismo y citaron la misma fuente. Por
+  eso la pregunta que falla en la demo es una falla de la búsqueda, que no depende del
+  modelo.
+
+## Qué probé y descarté
+
+### Probado y descartado, con evidencia
+
+| Qué se probó | Qué pasó | Qué quedó |
+|---|---|---|
+| Indexar dos veces sin `TRUNCATE` (Fase 3) | 70 filas en vez de 35, con "¿Cómo pago mi pedido?" guardada dos veces (Ficha 3) | `TRUNCATE fragmentos RESTART IDENTITY` al empezar (`indexar.mjs:9`) |
+| Umbral 0.64 (Fase 4) | Bloquea las tres preguntas reformuladas: plata, tarjeta y sesión | 0.57 |
+| Umbral 0.54 (Fase 4) | Deja pasar envío, wifi y horario, que no están | 0.57 |
+| Umbral vacío, que vale 0, como en la clase (Fase 4) | No descarta nada: hasta "cómo se hace una milanesa" (0.334) le llegaría al modelo | 0.57, también en `.env.example` |
+| `ORDER BY` por la similitud en vez de por la distancia (Fase 8, con `EXPLAIN`) | Prohibiéndole a Postgres leer la tabla entera, como pasaría con miles de filas: por la distancia usa el índice (`Index Scan using fragmentos_embedding_idx`); por la similitud no puede (`Seq Scan` + `Sort`). Con las 35 filas de hoy, las dos leen todo, porque es más barato | `ORDER BY embedding <=> $1` (`buscar.mjs:10`) |
+| "¿puedo pagar en efectivo?" como la pregunta que falla en la demo (Fase 5) | Falla siempre igual (tres corridas), pero depende del modelo, que puede cambiar | Una falla de la búsqueda, que no llega al modelo y sale siempre igual. La del efectivo queda de reserva |
+| Cargar el RAG con `require()` (Fase 6) | `ERR_REQUIRE_ASYNC_MODULE`: `rag.mjs` es ESM y tiene un `await` afuera de toda función | `import()` dinámico (`ayuda.service.js:69`) |
+| El pool de `pg` sin `db.on("error")` (Fase 6) | Al cortar la conexión ociosa, el proceso se cae: `Unhandled 'error' event`, código 1 | El listener (`ayuda.service.js:77`) |
+| `Date.now()` para el id de cada pregunta (Fase 7) | Aviso de oxlint: es una función impura y el compilador de React no optimiza el componente | El id sale del historial (`Portero.jsx:123`) |
+| El encabezado y el campo del Portero a 320 px (Fase 7) | El título se partía en varios renglones y el texto gris del campo se cortaba | Subtítulo más corto, ícono más chico y "Escribí tu duda…" |
+
+### Pensado y descartado, sin probar
+
+- **Troceo fijo de 1000 caracteres**, la otra opción de la clase. Partiría las respuestas
+  por la mitad y mezclaría temas (ver "Troceado"). No se midió: compararlos con
+  `evaluar.mjs` es un extra de la Fase 9.
+- **Aflojar el "EXCLUSIVAMENTE" del prompt** para que el modelo saque conclusiones, como la
+  del efectivo. La misma regla frenó el envío, y en una app con plata de por medio una
+  respuesta inventada hace más daño que un "No lo encuentro".
+- **Cambiar la regla de "Fuente:" del prompt** para que el modelo no copie los guiones. Se
+  dejó la plantilla de la clase y el front limpia la fuente (`utils/portero.js:29`).
+- **Mandarle el historial al backend**, para que el Portero entienda "¿y si ya pagué?". La
+  consigna pide preguntas independientes, y hacerlo bien exige reescribir la pregunta con
+  la charla antes de buscar. Queda anotado como algo que le falta.
+- **Poner en el corpus los temas que el grupo no definió**: costo de envío, horarios,
+  contacto, promociones y efectivo. No se inventan reglas. Sirven como preguntas cuya
+  respuesta no está.
