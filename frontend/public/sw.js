@@ -14,7 +14,8 @@ self.addEventListener('push', (evento) => {
   evento.waitUntil(
     self.registration.showNotification(datos.title || 'ATuPuerta', {
       body: datos.body || '',
-      icon: '/favicon.svg',
+      // Un PNG: Chrome no muestra bien un SVG como ícono de la notificación
+      icon: '/icon-192.png',
       data: { url: datos.url || '/' },
     })
   )

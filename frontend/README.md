@@ -45,14 +45,18 @@ src/
   context/      sesión, carrito (contador del header), notificaciones (campanita) y avisos
   hooks/        useCarga (pedir datos con estado de carga y error) y useFiltrosUrl
                 (filtros de los listados guardados en la URL)
-  components/   Header, Footer, Layout, RutaProtegida, MapaSeguimiento, FormularioReclamo
-                y Comunes (Cargando, MensajeError, EstadoVacio, EstadoBadge, Paginacion,
-                Modal, Confirmacion)
+  assets/marca/ el isotipo en SVG y el logo original en PNG (solo de referencia, la app
+                no lo usa)
+  components/   Header, Footer, Layout, Marca (isotipo y nombre), RutaProtegida,
+                MapaSeguimiento, FormularioReclamo y Comunes (Cargando, MensajeError,
+                EstadoVacio, EstadoBadge, Paginacion, Modal, Confirmacion)
   utils/        formato (precios y fechas), estados, roles, categorías, notificaciones,
                 push y polilínea
   pages/        una carpeta por pantalla, con su .jsx y su .css
 public/
   sw.js         service worker de las notificaciones push del navegador
+  favicon.svg, icon-192.png, icon-512.png y apple-touch-icon.png: el isotipo sobre el
+                fondo oscuro de la marca (los PNG salen de renderizar el SVG)
 ```
 
 Cada página tiene su propio CSS, con las reglas acotadas a su clase raíz

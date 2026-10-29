@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import Marca from '../../components/Marca/Marca'
 import './Landing.css'
 
 const categories = [
@@ -29,6 +30,7 @@ export default function Landing() {
       <main id="contenido">
         <section className="landing-hero" id="inicio" aria-labelledby="hero-title">
           <div className="hero-content">
+            <Marca variante="oscura" className="marca-apilada hero-marca" />
             <p className="hero-badge"><span aria-hidden="true" />Comercios locales, delivery justo</p>
             <h1 id="hero-title">Delivery justo,<br /><em>a tu puerta</em></h1>
             <p className="hero-description">Pedí de supermercados, ferreterías, librerías y más — sin el sobrecosto de las apps tradicionales.</p>

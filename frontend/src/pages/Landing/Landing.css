@@ -1,8 +1,11 @@
 .skip-link { position: fixed; top: -100px; left: 1rem; z-index: 30; background: white; color: var(--brand); padding: .8rem 1rem; border-radius: 8px; }
 .skip-link:focus { top: .5rem; }
-.landing-hero { position: relative; overflow: hidden; padding: 5rem 1.5rem 4.5rem; text-align: center; color: white; background: linear-gradient(135deg, #0d3d21 0%, #1d6a3a 60%, #2e8b57 100%); }
+/* Arriba suma los 76px del header fijo, para que la marca no quede pegada */
+.landing-hero { position: relative; overflow: hidden; padding: calc(76px + 2.5rem) 1.5rem 4.5rem; text-align: center; color: white; background: linear-gradient(135deg, #0d3d21 0%, #1d6a3a 60%, #2e8b57 100%); }
 .landing-hero::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.07) 2px, transparent 2px); background-size: 40px 40px; pointer-events: none; }
 .hero-content { position: relative; max-width: 750px; margin: auto; }
+/* En su propio renglón: .hero-badge también es inline-flex */
+.hero-content .hero-marca { display: flex; width: fit-content; margin: 0 auto 1.75rem; font-size: clamp(1.9rem, 4.5vw, 2.6rem); }
 .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); padding: 6px 14px; border-radius: 999px; font-size: .875rem; margin-bottom: 1.5rem; }
 .hero-badge span { width: 7px; height: 7px; border-radius: 50%; background: #86efac; flex-shrink: 0; }
 .landing-hero h1 { font: 800 clamp(2.6rem, 5.5vw, 3.8rem)/1.15 var(--display); letter-spacing: -1.5px; }
@@ -56,7 +59,7 @@
 }
 @media (max-width: 480px) {
   .landing-section { padding: 3rem 1rem; }
-  .landing-hero { padding: 3.5rem 1rem; }
+  .landing-hero { padding: calc(70px + 2rem) 1rem 3.5rem; }
   .hero-actions { flex-direction: column; }
   .hero-badge { font-size: .8rem; }
   .category-grid { gap: .75rem; }

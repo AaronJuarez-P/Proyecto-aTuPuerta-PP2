@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useSesion } from '../../context/sesion'
 import { esRutaInterna, inicioDelRol } from '../../utils/roles'
+import Marca from '../../components/Marca/Marca'
 import './Login.css'
 
 // El backend tiene un login por rol: cada uno abre esa sesión en la cuenta. El de
@@ -92,7 +93,7 @@ export default function Login() {
     <main className="login-page">
       <section className="login-card">
         <Link to="/" className="login-brand">
-          🚪 ATuPuerta
+          <Marca variante="clara" />
         </Link>
 
         <h1>{esAdministrador ? 'Administración' : 'Iniciar sesión'}</h1>

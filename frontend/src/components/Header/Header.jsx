@@ -4,6 +4,7 @@ import { useCarrito } from '../../context/carrito'
 import { useNotificaciones } from '../../context/notificaciones'
 import { useSesion } from '../../context/sesion'
 import { etiquetaDelRol } from '../../utils/roles'
+import Marca from '../Marca/Marca'
 import './Header.css'
 
 // Qué ve cada rol en la barra. La sesión es una sola por cuenta (usuarios.rol en el
@@ -109,8 +110,7 @@ export default function Header() {
         </nav>
 
         <Link className="brand" to="/" aria-label="ATuPuerta, volver al inicio" onClick={cerrarMenu}>
-          <span aria-hidden="true">🚪</span>
-          ATuPuerta
+          <Marca variante="clara" />
         </Link>
 
         <div className="header-right">{acciones}</div>

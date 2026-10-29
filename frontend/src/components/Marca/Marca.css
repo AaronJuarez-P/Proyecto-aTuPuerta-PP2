@@ -1,0 +1,71 @@
+/* =========================================
+   MARCA (isotipo + nombre)
+   Todo está en em: el tamaño sale del font-size del contenedor.
+   ========================================= */
+
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-family: var(--marca);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.marca-isotipo {
+  display: block;
+  flex-shrink: 0;
+  width: auto;
+  height: 1.45em;
+}
+
+.marca-textos {
+  display: flex;
+  flex-direction: column;
+}
+
+.marca-lema {
+  margin-top: 0.5em;
+  font-size: 0.4em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.marca-clara .marca-atu {
+  color: var(--ink);
+}
+
+.marca-clara .marca-puerta {
+  color: var(--brand);
+}
+
+.marca-clara .marca-lema {
+  color: var(--muted);
+}
+
+/* Como el logo original: blanco y menta */
+.marca-oscura .marca-atu,
+.marca-oscura .marca-lema {
+  color: white;
+}
+
+.marca-oscura .marca-puerta {
+  color: var(--brand-menta);
+}
+
+/* Apilada, como el logo original: el isotipo arriba y el nombre abajo */
+.marca-apilada {
+  flex-direction: column;
+  gap: 0.35em;
+  text-align: center;
+}
+
+.marca-apilada .marca-isotipo {
+  height: 2.3em;
+}
+
+.marca-apilada .marca-lema {
+  font-size: 0.45em;
+}

@@ -18,12 +18,9 @@
   }
   
   .login-brand {
-    display: block;
+    display: inline-block;
     margin-bottom: 32px;
-    color: var(--brand);
-    font-family: var(--display);
-    font-size: 1.4rem;
-    font-weight: 700;
+    font-size: 1.5rem;
     text-decoration: none;
   }
   

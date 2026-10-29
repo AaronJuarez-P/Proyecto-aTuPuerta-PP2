@@ -100,23 +100,15 @@
      LOGO
      ========================================= */
   
+  /* El isotipo y el nombre los pone el componente Marca; acá solo el tamaño */
   .brand {
     display: flex;
     align-items: center;
     justify-content: center;
-  
-    gap: 6px;
-  
-    color: #111111;
-  
+
     text-decoration: none;
-  
+
     font-size: 24px;
-    font-weight: 800;
-  
-    letter-spacing: -0.5px;
-  
-    white-space: nowrap;
   }
   
   
