@@ -1,0 +1,472 @@
+/* =========================================
+   EL PORTERO (asistente de ayuda)
+   Flota abajo a la derecha con z-index 1500: por encima del header (1000) y por debajo
+   de los modales (2000) y de los avisos (3000), que también salen abajo a la derecha.
+   Usa .chip, .boton y .cargando-rueda de Comunes.css.
+   ========================================= */
+
+/* Un display propio le gana al atributo hidden: sin esto, cerrado se seguiría viendo */
+.portero-lanzador[hidden],
+.portero-panel[hidden] {
+  display: none;
+}
+
+/* =========================================
+   BOTÓN FLOTANTE
+   ========================================= */
+
+.portero-lanzador {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1500;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 18px 7px 7px;
+  border: none;
+  border-radius: 999px;
+  background: var(--brand);
+  color: white;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  box-shadow: 0 10px 28px rgba(13, 61, 33, 0.35);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.portero-lanzador:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(13, 61, 33, 0.42);
+}
+
+.portero-lanzador-icono,
+.portero-avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+/* =========================================
+   PANEL
+   ========================================= */
+
+.portero-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  width: min(390px, calc(100vw - 40px));
+  /* Deja ver el header, que mide 76px */
+  height: min(620px, calc(100vh - 110px));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+  animation: portero-abrir 0.2s ease-out;
+}
+
+@keyframes portero-abrir {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* El mismo verde que la portada (.landing-hero) */
+.portero-encabezado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 14px 14px 16px;
+  background: linear-gradient(135deg, #0d3d21 0%, var(--brand) 60%, var(--brand-mid) 100%);
+  color: white;
+}
+
+.portero-encabezado-textos {
+  flex: 1;
+  min-width: 0;
+}
+
+.portero-encabezado h2 {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.portero-encabezado p {
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+
+.portero-encabezado button {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: white;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.portero-encabezado button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.portero-encabezado button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   CHARLA
+   ========================================= */
+
+.portero-mensajes {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+  /* Al llegar al final, la rueda del mouse no sigue moviendo la página de atrás */
+  overscroll-behavior: contain;
+}
+
+.portero-burbuja {
+  max-width: 88%;
+  padding: 11px 14px;
+  border-radius: 16px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.portero-burbuja-portero {
+  align-self: flex-start;
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+  background: white;
+  color: #1f2937;
+}
+
+.portero-burbuja-persona {
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+  background: var(--brand);
+  color: white;
+}
+
+.portero-burbuja-error {
+  align-self: flex-start;
+  border: 1px solid #fecaca;
+  border-bottom-left-radius: 4px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.portero-burbuja-no-esta {
+  display: grid;
+  gap: 6px;
+  align-self: flex-start;
+  border: 1px dashed var(--accent);
+  border-bottom-left-radius: 4px;
+  background: #fff7ed;
+  color: #1f2937;
+}
+
+.portero-no-esta-titulo {
+  color: #9a3412;
+  font-weight: 700;
+}
+
+.portero-burbuja-no-esta a {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.portero-buscando {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.portero-buscando .cargando-rueda {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+
+.portero-texto {
+  white-space: pre-line;
+}
+
+.portero-sugeridas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.portero-sugeridas .chip {
+  text-align: left;
+}
+
+/* =========================================
+   FUENTES
+   ========================================= */
+
+.portero-fuentes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portero-fuentes li {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: #374151;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.portero-fuentes li.citada {
+  border-color: var(--brand);
+  background: var(--brand-light);
+  color: var(--brand);
+}
+
+.portero-pie {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+/* =========================================
+   ¿DE DÓNDE LO SAQUÉ?
+   ========================================= */
+
+.portero-origen {
+  margin-top: 10px;
+  font-size: 0.8rem;
+}
+
+.portero-origen > summary,
+.portero-fragmento > summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.portero-origen > summary {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.portero-origen ul {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portero-origen li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.portero-origen-etiqueta,
+.portero-fragmento {
+  grid-column: 1 / -1;
+}
+
+.portero-origen-etiqueta {
+  color: #374151;
+  font-weight: 600;
+}
+
+.portero-barra {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.portero-barra-relleno {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  background: var(--brand-mid);
+}
+
+/* El umbral, como una rayita sobre la barra */
+.portero-barra-umbral {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent);
+}
+
+.portero-origen-numero {
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.portero-origen li.no-paso .portero-origen-etiqueta,
+.portero-origen li.no-paso .portero-origen-numero {
+  color: var(--muted);
+}
+
+.portero-origen li.no-paso .portero-barra-relleno {
+  background: #9ca3af;
+}
+
+.portero-fragmento > summary {
+  color: var(--muted);
+}
+
+.portero-fragmento p {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface);
+  white-space: pre-line;
+}
+
+.portero-origen-nota {
+  margin-top: 10px;
+  color: var(--muted);
+}
+
+/* =========================================
+   PREGUNTA
+   ========================================= */
+
+.portero-formulario {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  background: white;
+}
+
+.portero-formulario input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: #111827;
+  font-family: inherit;
+  font-size: 0.92rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.portero-formulario input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-light);
+}
+
+.portero-formulario .boton {
+  padding: 10px 16px;
+  border-radius: 999px;
+}
+
+/* Para lectores de pantalla: no se ve, pero se lee */
+.portero-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+
+/* En el celular, el panel ocupa toda la pantalla */
+@media (max-width: 480px) {
+  .portero-lanzador {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .portero-panel {
+    inset: 8px;
+    width: auto;
+    height: auto;
+    border-radius: 16px;
+  }
+
+  /* Más lugar para el título, que a 320px se partía en dos renglones */
+  .portero-encabezado {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .portero-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 1.05rem;
+  }
+
+  .portero-encabezado h2 {
+    font-size: 0.98rem;
+  }
+
+  .portero-burbuja {
+    max-width: 94%;
+  }
+
+  /* Con menos de 16px, Safari del iPhone agranda la página al tocar el campo */
+  .portero-formulario input {
+    font-size: 1rem;
+  }
+}
+
+/* A 320px el botón queda en "🚪 ¿Dudas?" */
+@media (max-width: 360px) {
+  .portero-lanzador-resto {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portero-panel {
+    animation: none;
+  }
+}

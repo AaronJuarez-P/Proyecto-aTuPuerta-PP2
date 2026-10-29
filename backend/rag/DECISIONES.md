@@ -513,3 +513,114 @@ el `.env` de Santiago o borrar `node_modules`. Son dos `fs.existsSync`.
   está buscando.
 - Si cambia `backend/rag/.env`, por ejemplo el umbral, hay que reiniciar el backend:
   `loadEnvFile` corre una sola vez, con la primera pregunta.
+
+## Front (Fase 7)
+
+**Archivos nuevos:**
+- `frontend/src/api/ayuda.js`: `estadoAyuda()` y `preguntarAlPortero(pregunta)`, con
+  `pedir()` y `token: null` (`ayuda.js:11` y `:16`). Las rutas son públicas, así que
+  una respuesta del Portero nunca dispara "sesión vencida".
+- `frontend/src/components/Portero/Portero.jsx` y `Portero.css`: el botón flotante y el
+  panel.
+- `frontend/src/utils/portero.js`: cómo se muestra una respuesta. Limpia la fuente,
+  reconoce "No lo encuentro" y arma la etiqueta.
+
+**Archivo compartido que se tocó:** `Layout.jsx`. Tiene el import, `<Portero />` después
+del footer y el comentario de arriba. Así el Portero está en todas las pantallas menos
+el login.
+
+**Cambio respecto de la consigna:** se agregó `utils/portero.js`. Son funciones sin
+imports, que se pueden probar con Node, sin navegador, contra las respuestas reales
+del modelo. En el proyecto, lo que da formato vive en `utils/` (`estados.js`,
+`formato.js`).
+
+**Decisiones:**
+- **Si está apagado o falla, no hay nada** (`Portero.jsx:53`): al montar consulta
+  `estadoAyuda()` con `useCarga`. Si no recibe `activo: true`, devuelve `null`.
+- **Preguntas sugeridas según el rol** (`Portero.jsx:18`). Se probaron las 14 con Ollama
+  y Postgres, sin Gemini. Todas traen primero su parte del Centro de ayuda, con
+  similitudes de 0.695 a 0.789, por encima del umbral. El administrador recibe
+  preguntas generales sobre cómo funciona la app.
+- **Una charla por cuenta** (`Portero.jsx:64`): el panel se monta con `key` igual al id
+  del usuario, o "anonimo" sin sesión. Al entrar o salir arranca una charla nueva, con
+  las sugeridas del rol, y el historial de una cuenta no se ve en otra.
+- **Historial** (`Portero.jsx:35`):
+  - Se guarda en `sessionStorage`, con try/catch, bajo `atupuerta:portero:<id>`.
+  - Guarda las últimas 20 preguntas.
+  - Si una pregunta estaba esperando cuando se recargó la página, se descarta.
+  - **Nunca viaja al backend**: cada pregunta se busca sola. Por eso "¿y si ya pagué?"
+    falla (Ficha 5).
+- **La fuente, bien visible** (`Respuesta`, `Portero.jsx:258`):
+  - Muestra una etiqueta 📄 `archivo · sección`, sin "##", por cada fragmento que pasó
+    el umbral. La que cita el modelo aparece resaltada en verde.
+  - El renglón "Fuente:" del modelo va aparte, como pie de la burbuja. `separarFuente`
+    (`utils/portero.js:29`) lo saca del texto y le limpia los guiones, el "##" y los
+    `**` que copia el modelo (la observación de la Fase 5).
+- **"¿De dónde lo saqué?"** (`Portero.jsx:328`) es un desplegable con los 3 fragmentos
+  que trajo la búsqueda:
+  - de cada uno, la similitud en número y en barra, con una rayita naranja en el umbral
+    y ✗ en los que no lo pasaron;
+  - en cada uno, "Leer esta parte" muestra el texto del fragmento: por eso
+    `recuperados` trae el texto;
+  - una nota explica lo que pasó. Si ninguno pasó el umbral, dice que "ni se le preguntó
+    al modelo". Si alguno pasó y la respuesta igual es "No lo encuentro", dice que "el
+    Portero prefirió no inventar": son las dos barreras de la Fase 5.
+- **"No lo encuentro"** (`Portero.jsx:262`) se ve con borde naranja punteado y sugiere
+  reformular la pregunta. A cliente, comercio y repartidor les ofrece "Hacé un reclamo",
+  que lleva a `/reclamos`. Se reconoce por el comienzo de la frase exacta
+  (`esNoLoEncuentro`, `utils/portero.js:20`).
+- **Estados:**
+  - mientras espera muestra "El Portero está buscando en sus papeles…", con la rueda de
+    `Comunes.css`;
+  - los errores del backend se ven en una burbuja roja;
+  - "Preguntar" se desactiva mientras espera y con menos de 3 caracteres;
+  - el campo no deja escribir más de 300.
+- **Accesibilidad:**
+  - el panel es un `dialog` no modal, y la charla es un `log` (`aria-live`), así un
+    lector de pantalla lee cada respuesta nueva;
+  - Escape cierra el panel cuando el foco está adentro (`Portero.jsx:105`);
+  - al abrir, el foco va al campo, y al cerrar vuelve al botón;
+  - el campo tiene una `label` oculta, y las ✗ tienen un texto para lectores de
+    pantalla.
+- **Estilo:**
+  - usa las variables de `index.css`, Sora en el título y, en el encabezado, el mismo
+    verde que la portada;
+  - la escoba 🧹 borra la charla: el portero barre;
+  - `z-index` 1500: arriba del header (1000) y abajo de los modales (2000) y de los
+    avisos (3000);
+  - en el celular el panel ocupa toda la pantalla, y a 320 px el botón queda en "🚪
+    ¿Dudas?".
+- **El id de cada pregunta** sale del historial: es el de la última más uno
+  (`Portero.jsx:123`). No sale de `Date.now()`, porque oxlint avisaba que es una
+  función impura y que así el compilador de React no optimiza el componente.
+
+### Pruebas
+
+- `npm run lint`: 0 avisos y 0 errores, en 72 archivos. Antes eran 69, también sin
+  avisos.
+- `npm run build`: sin errores.
+- `utils/portero.js` con Node: 12 casos. Entre ellos están las dos respuestas reales del
+  modelo, una con "Fuente: --- …" y otra con "Fuente: -- …".
+- **En un navegador de verdad:** un script temporal levantó el backend en el puerto
+  4100, el front con Vite en el 5180 y Edge sin ventana, y lo manejó como lo haría una
+  persona. Cada corrida gastó una llamada a Gemini: dos en toda la fase.
+
+| Qué se probó | Resultado |
+|---|---|
+| Backend en `rag`, sin sesión | Aparece "🚪 ¿Dudas? Preguntale al Portero". Al abrir, el foco va al campo y aparecen las 4 sugeridas sin sesión. |
+| La sugerida "¿Cómo pago mi pedido?" | Mientras espera dice "El Portero está buscando en sus papeles…" y "Preguntar" sigue desactivado aunque haya texto. La respuesta llega sin "Fuente:", "##" ni guiones, con 3 etiquetas y la citada resaltada. El pie dice "Fuente: ayuda-clientes.md · ¿Cómo pago mi pedido?", y "¿De dónde lo saqué?" muestra 0.752, 0.672 y 0.662. |
+| "¿Tienen descuentos para estudiantes?", escrita a mano | Burbuja distinta con "No lo encuentro en los documentos.", sin link a reclamos porque no hay sesión. Los 3 fragmentos tienen ✗ y la nota dice que ni se le preguntó al modelo. |
+| Escape | Cierra el panel, y el foco vuelve al botón. |
+| Recargar la página | La charla sigue: `sessionStorage` tiene las dos preguntas. |
+| Celular, 320 × 640 | El botón queda entre x=171 y x=308, sin scroll horizontal. El panel ocupa [8, 8, 312, 632]. |
+| Backend con `AYUDA_MODO=off` | `estado` da `{ activo: false, modo: "off" }`, y no hay botón ni panel. |
+| Consola del navegador | Sin errores ni avisos. |
+
+**Lo que se corrigió con la prueba del celular:** el encabezado se partía en muchos
+renglones y el texto gris del campo ("Escribí tu pregunta…") se cortaba. Se acortó el
+subtítulo, se achicó el ícono del encabezado y el texto del campo pasó a "Escribí tu
+duda…". Este último cambio no se volvió a probar en el navegador.
+
+**Lo que no se probó acá:** las sugeridas y el link a reclamos con sesión de cliente,
+comercio, repartidor y administrador, porque hacen falta cuentas. Tampoco se probó en
+un celular de verdad. Las dos cosas quedan para la prueba de Santiago.
