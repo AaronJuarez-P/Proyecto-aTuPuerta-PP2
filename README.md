@@ -164,8 +164,8 @@ sin llamar a Gemini, y con `--faq` contesta como el modo faq.
    `node --env-file=.env distribucion.mjs`, y confirmar que la búsqueda no empeoró con
    `node --env-file=.env evaluar.mjs` (ver "Umbral" y "Extras" en `DECISIONES.md`).
 
-**Cambiar algo de `backend/rag/.env`, como el `UMBRAL`, obliga a reiniciar el backend:**
-ese archivo se carga una sola vez, con la primera pregunta.
+**Cambiar algo de `backend/rag/.env`, como el `UMBRAL`, o de `backend/rag/prompt.txt`
+obliga a reiniciar el backend:** los dos se cargan una sola vez, con la primera pregunta.
 
 **Regla del grupo: si cambia una regla de la app, se actualiza el corpus y se vuelve a
 indexar.** El Portero solo sabe lo que dice el Centro de ayuda: si cambia la app y el

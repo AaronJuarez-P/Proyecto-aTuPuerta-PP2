@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { BrushCleaning, X } from 'lucide-react'
+import { BrushCleaning, FileText, X } from 'lucide-react'
 import { LARGO_MAXIMO_PREGUNTA, LARGO_MINIMO_PREGUNTA, estadoAyuda, preguntarAlPortero } from '../../api/ayuda'
 import { useSesion } from '../../context/sesion'
 import { useCarga } from '../../hooks/useCarga'
-import { NO_LO_ENCUENTRO, esNoLoEncuentro, sinFuente } from '../../utils/portero'
+import { NO_LO_ENCUENTRO, esNoLoEncuentro, etiqueta, fuentesDeLaRespuesta, sinFuente } from '../../utils/portero'
 import fotoPortero from './portero.png'
 import './Portero.css'
 
@@ -12,14 +12,14 @@ import './Portero.css'
 // Centro de ayuda (backend/rag/corpus): el backend busca las partes que más se parecen a
 // la pregunta y el modelo redacta la respuesta con ellas.
 //
-// La respuesta se muestra como en un chat, solo el texto: la fuente y los fragmentos llegan
-// del backend, pero no se muestran (ver "Ajustes de diseño" en backend/rag/DECISIONES.md).
+// La respuesta se muestra como en un chat, con la fuente al pie (archivo y sección). Los
+// fragmentos y su similitud llegan del backend, pero no se muestran (ver DECISIONES.md).
 //
 // Si el backend lo tiene apagado (AYUDA_MODO=off) o no contesta, no se muestra nada: la
 // app queda igual que sin el asistente.
 
-// Para arrancar, según quién pregunta. Cada una trae primero su parte del Centro de
-// ayuda, con una similitud de entre 0.70 y 0.79 (ver backend/rag/DECISIONES.md).
+// Según quién pregunta, y siempre al final de la charla. Cada una trae primero su parte
+// del Centro de ayuda, con similitud de 0.70 a 0.79 (ver backend/rag/DECISIONES.md).
 const SUGERIDAS = {
   anonimo: ['¿Cómo hago un pedido?', '¿Cómo pago mi pedido?', '¿Cómo registro mi comercio?', '¿Cómo me registro como repartidor?'],
   cliente: ['¿Cómo pago mi pedido?', '¿Puedo cancelar un pedido?', '¿Qué es el código de entrega?'],
@@ -35,21 +35,42 @@ const ROLES_CON_RECLAMOS = ['cliente', 'comercio', 'repartidor']
 // sessionStorage
 const MAXIMO_HISTORIAL = 20
 
+// Una sola charla por pestaña, guardada junto con quién la hizo: una sesión o SIN_SESION
+const CLAVE_HISTORIAL = 'atupuerta:portero'
+const SIN_SESION = 'anonimo'
+
+// Sin sesión no hay un "cerrar sesión" que la borre: vence a los 30 minutos de la
+// última pregunta
+const VENCE_SIN_SESION_MS = 30 * 60 * 1000
+
+const faltaParaVencer = (mensajes) => (mensajes.at(-1)?.cuando ?? 0) + VENCE_SIN_SESION_MS - Date.now()
+
 // El historial vive en sessionStorage, que es de la pestaña y se borra al cerrarla.
 // Nunca se le manda al backend: cada pregunta viaja sola.
-function leerHistorial(clave) {
+function leerHistorial(quien) {
   try {
-    const guardado = JSON.parse(sessionStorage.getItem(clave))
+    const guardado = JSON.parse(sessionStorage.getItem(CLAVE_HISTORIAL))
+
+    // Es de otra sesión (se cerró, venció o entró otra cuenta) o ya venció: se arranca de
+    // cero, y guardarHistorial la borra
+    if (guardado?.quien !== quien || (quien === SIN_SESION && faltaParaVencer(guardado.mensajes) <= 0)) {
+      return []
+    }
+
     // Una pregunta que esperaba cuando se recargó la página ya no va a tener respuesta
-    return Array.isArray(guardado) ? guardado.filter((mensaje) => mensaje.estado !== 'esperando') : []
+    return guardado.mensajes.filter((mensaje) => mensaje.estado !== 'esperando')
   } catch {
     return []
   }
 }
 
-function guardarHistorial(clave, mensajes) {
+function guardarHistorial(quien, mensajes) {
   try {
-    sessionStorage.setItem(clave, JSON.stringify(mensajes))
+    if (mensajes.length === 0) {
+      sessionStorage.removeItem(CLAVE_HISTORIAL)
+    } else {
+      sessionStorage.setItem(CLAVE_HISTORIAL, JSON.stringify({ quien, mensajes }))
+    }
   } catch {
     // Sin sessionStorage (navegación privada, cuota llena) el historial queda solo en memoria
   }
@@ -57,22 +78,25 @@ function guardarHistorial(clave, mensajes) {
 
 export default function Portero() {
   const { datos: estado } = useCarga(estadoAyuda)
-  const { usuario } = useSesion()
+  const { sesion, usuario } = useSesion()
 
   if (!estado?.activo) {
     return null
   }
 
-  // Cada cuenta tiene su propia charla: al entrar o al salir arranca otra, con las
-  // sugerencias del rol nuevo
-  const quien = usuario?.id ?? 'anonimo'
-  return <Porteria key={quien} rol={usuario?.rol} clave={`atupuerta:portero:${quien}`} />
+  // La charla es de la sesión que la hizo. El token cambia cada vez que alguien inicia
+  // sesión, así que su final alcanza para reconocerla. Si cambia (se cerró la sesión,
+  // venció o entró otra cuenta), el panel se vuelve a montar, con las sugeridas del rol
+  // nuevo, y la charla de antes se borra: aunque se haya salido desde el login, donde el
+  // Portero no está, al volver no la reconoce
+  const quien = sesion ? `sesion:${sesion.token.slice(-12)}` : SIN_SESION
+  return <Porteria key={quien} quien={quien} rol={usuario?.rol} />
 }
 
 // La portería: el botón flotante y el panel de la charla
-function Porteria({ rol, clave }) {
+function Porteria({ quien, rol }) {
   const [abierto, setAbierto] = useState(false)
-  const [mensajes, setMensajes] = useState(() => leerHistorial(clave))
+  const [mensajes, setMensajes] = useState(() => leerHistorial(quien))
   const [texto, setTexto] = useState('')
   const botonRef = useRef(null)
   const campoRef = useRef(null)
@@ -84,8 +108,18 @@ function Porteria({ rol, clave }) {
   const puedeReclamar = ROLES_CON_RECLAMOS.includes(rol)
 
   useEffect(() => {
-    guardarHistorial(clave, mensajes)
-  }, [clave, mensajes])
+    guardarHistorial(quien, mensajes)
+  }, [quien, mensajes])
+
+  // Sin sesión, la charla también vence si la página queda abierta
+  useEffect(() => {
+    if (quien !== SIN_SESION || mensajes.length === 0) {
+      return
+    }
+
+    const temporizador = setTimeout(() => setMensajes([]), faltaParaVencer(mensajes))
+    return () => clearTimeout(temporizador)
+  }, [quien, mensajes])
 
   // Al abrir, el foco va al campo de la pregunta; al cerrar, vuelve al botón flotante
   useEffect(() => {
@@ -117,7 +151,10 @@ function Porteria({ rol, clave }) {
     setMensajes((previos) => previos.map((mensaje) => (mensaje.id === id ? { ...mensaje, ...cambios } : mensaje)))
   }
 
-  async function preguntar(textoPregunta) {
+  // cuando: la hora de la pregunta, para saber cuándo vence una charla sin sesión. La
+  // toman el clic y el envío del formulario: acá adentro, oxlint avisa react/purity
+  // porque no puede asegurar que preguntar() no corra mientras se dibuja
+  async function preguntar(textoPregunta, cuando) {
     const pregunta = textoPregunta.trim()
 
     if (esperando || pregunta.length < LARGO_MINIMO_PREGUNTA) {
@@ -126,7 +163,7 @@ function Porteria({ rol, clave }) {
 
     // Cada pregunta nueva va al final, así que la última tiene el número más alto
     const id = (mensajes.at(-1)?.id ?? 0) + 1
-    setMensajes((previos) => [...previos, { id, pregunta, estado: 'esperando' }].slice(-MAXIMO_HISTORIAL))
+    setMensajes((previos) => [...previos, { id, pregunta, estado: 'esperando', cuando }].slice(-MAXIMO_HISTORIAL))
     setTexto('')
 
     try {
@@ -139,7 +176,7 @@ function Porteria({ rol, clave }) {
 
   function alEnviar(evento) {
     evento.preventDefault()
-    preguntar(texto)
+    preguntar(texto, Date.now())
   }
 
   return (
@@ -196,19 +233,25 @@ function Porteria({ rol, clave }) {
         <div ref={listaRef} className="portero-mensajes" role="log" aria-live="polite">
           <p className="portero-burbuja portero-burbuja-portero">¡Buenas! Soy el Portero. ¿En qué te doy una mano?</p>
 
-          {mensajes.length === 0 && (
-            <div className="portero-sugeridas">
-              {sugeridas.map((sugerida) => (
-                <button key={sugerida} type="button" className="chip" onClick={() => preguntar(sugerida)}>
-                  {sugerida}
-                </button>
-              ))}
-            </div>
-          )}
-
           {mensajes.map((mensaje) => (
             <Intercambio key={mensaje.id} mensaje={mensaje} puedeReclamar={puedeReclamar} alIrAReclamos={cerrar} />
           ))}
+
+          {/* Siempre debajo de lo último, y siempre montadas: si se sacaran y volvieran con
+              cada pregunta, el lector de pantalla las leería otra vez después de cada respuesta */}
+          <div className="portero-sugeridas">
+            {sugeridas.map((sugerida) => (
+              <button
+                key={sugerida}
+                type="button"
+                className="chip"
+                disabled={esperando}
+                onClick={() => preguntar(sugerida, Date.now())}
+              >
+                {sugerida}
+              </button>
+            ))}
+          </div>
         </div>
 
         <form className="portero-formulario" onSubmit={alEnviar}>
@@ -254,13 +297,15 @@ function Intercambio({ mensaje, puedeReclamar, alIrAReclamos }) {
       {mensaje.estado === 'error' && <p className="portero-burbuja portero-burbuja-error">{mensaje.error}</p>}
 
       {mensaje.estado === 'respondida' && (
-        <Respuesta respuesta={mensaje.datos.respuesta} puedeReclamar={puedeReclamar} alIrAReclamos={alIrAReclamos} />
+        <Respuesta datos={mensaje.datos} puedeReclamar={puedeReclamar} alIrAReclamos={alIrAReclamos} />
       )}
     </>
   )
 }
 
-function Respuesta({ respuesta, puedeReclamar, alIrAReclamos }) {
+function Respuesta({ datos, puedeReclamar, alIrAReclamos }) {
+  const { respuesta, fuentes = [] } = datos
+
   // Distinta a una respuesta, para que no se lea como una
   if (esNoLoEncuentro(respuesta)) {
     return (
@@ -281,6 +326,22 @@ function Respuesta({ respuesta, puedeReclamar, alIrAReclamos }) {
     )
   }
 
-  // Como en un chat: solo el texto, sin el renglón "Fuente:" que agrega el modelo
-  return <p className="portero-burbuja portero-burbuja-portero portero-texto">{sinFuente(respuesta)}</p>
+  // Como en un chat: el texto, sin el renglón "Fuente:" que agrega el modelo. La fuente va
+  // al pie, con archivo y sección, como pide la consigna de la expo
+  const deDonde = fuentesDeLaRespuesta(respuesta, fuentes)
+
+  return (
+    <div className="portero-burbuja portero-burbuja-portero">
+      <p className="portero-texto">{sinFuente(respuesta)}</p>
+
+      {deDonde.length > 0 && (
+        <p className="portero-fuente">
+          <FileText size={14} aria-hidden="true" />
+          <span>
+            {deDonde.length > 1 ? 'Fuentes' : 'Fuente'}: {deDonde.map(etiqueta).join('; ')}
+          </span>
+        </p>
+      )}
+    </div>
+  )
 }

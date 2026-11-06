@@ -218,6 +218,24 @@
   white-space: pre-line;
 }
 
+/* De dónde sale la respuesta, al pie de la burbuja: archivo y sección */
+.portero-fuente {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.portero-fuente svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 .portero-sugeridas {
   display: flex;
   flex-wrap: wrap;
@@ -226,6 +244,14 @@
 
 .portero-sugeridas .chip {
   text-align: left;
+}
+
+/* Mientras el Portero busca no se pueden tocar. El borde queda fijo porque .chip:hover
+   (Comunes.css) lo pinta de verde */
+.portero-sugeridas .chip:disabled {
+  border-color: var(--border);
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /* =========================================

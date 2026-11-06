@@ -19,7 +19,10 @@ por fase, a medida que se tomaba cada decisión.
     `faq` contra `rag`
 11. [Ajustes de diseño](#ajustes-de-diseño-después-de-la-fase-9): la foto del Portero y
     la respuesta como un chat
-12. [Qué probé y descarté](#qué-probé-y-descarté)
+12. [Ajustes de la charla](#ajustes-de-la-charla): las sugeridas siempre a la vista, el
+    Portero sin "Hola, vecino", cuándo se borra la charla y la fuente de vuelta en el front
+13. [Corpus ampliado](#corpus-ampliado-511): qué se puede comprar y qué rubros hay
+14. [Qué probé y descarté](#qué-probé-y-descarté)
 
 ## Entorno y base (Fase 1)
 
@@ -336,6 +339,7 @@ Lo eligió Santiago, entre las tres opciones.
 | 2 | Un párrafo nuevo de tono: español rioplatense, de "vos", amable y directo, "como el portero de un edificio que conoce a todos los vecinos". Aclara que el tono nunca cambia la frase exacta. | Le da la personalidad del Portero. La aclaración protege la frase exacta, porque el backend y el front la reconocen para mostrar la respuesta distinta. |
 | 3 | Un párrafo nuevo de roles: cada fragmento está escrito para un rol, y si el que usa es para otro rol que el de quien pregunta, lo tiene que aclarar. | Hay temas que se repiten entre roles, por ejemplo la comisión del repartidor y lo que paga el cliente. El modelo no tiene que pasar la información de un rol como si fuera de otro. |
 | 4 | Una viñeta nueva en el formato: si no encuentra la respuesta, escribe solo la frase exacta, sin el renglón "Fuente:". | Una fuente al lado de "No lo encuentro" confunde, porque cita algo que no se usó. |
+| 5 | Agregado después, el 5/11: una oración en el párrafo de tono. Cada pregunta llega en medio de una charla que ya empezó, así que no saluda, no se presenta ni le dice "vecino". | Cada respuesta arrancaba con "¡Hola, vecino!": cada pregunta viaja sola, y para el modelo era la primera. Ver [Ajustes de la charla](#ajustes-de-la-charla). |
 
 **Observación:** el modelo copia parte de los guiones en la fuente, por ejemplo
 `Fuente: -- ayuda-clientes.md · ## ¿Cómo pago mi pedido? ---`. No se cambió la regla de
@@ -820,6 +824,245 @@ exactamente igual que la primera.
     como texto, "No lo encuentro" sale sin desplegable, y anda a 320 px y en `off`. La
     consola quedó sin errores, y la prueba gastó una llamada a Gemini.
 
+## Ajustes de la charla
+
+El 5/11, Santiago usó el Portero en la app y vio dos cosas: las sugeridas desaparecían con
+la primera pregunta, y cada respuesta arrancaba con "¡Hola, vecino!", como si la charla
+empezara de nuevo. Después pidió que la charla se borre al cerrar sesión, y que sin sesión
+venza sola. Y en el chequeo contra la consigna de la expo, lo único que faltaba era la
+fuente en el front.
+
+### Las sugeridas siguen a la vista
+
+- **Antes:** se mostraban solo con la charla vacía (`mensajes.length === 0`). Con la
+  primera pregunta, desaparecían.
+- **Ahora:** van siempre al final de la charla, debajo de la última respuesta, como las
+  respuestas rápidas de un chat (`Portero.jsx:242`). Con la charla vacía se ven igual que
+  antes, debajo del saludo.
+- **Siempre todas, aunque ya se hayan preguntado.** Lo decidió Santiago: comercio y
+  repartidor tienen solo 2, y si se ocultaran las preguntadas, después de dos preguntas no
+  quedaría ninguna.
+- **Siempre montadas.** Mientras el Portero busca no se esconden: se desactivan
+  (`disabled={esperando}`, `Portero.jsx:248`), con su estilo en `Portero.css:251`.
+  - La charla es un `log` con `aria-live`. Si las sugeridas se sacaran y volvieran con
+    cada pregunta, el lector de pantalla las leería otra vez después de cada respuesta.
+  - Así tampoco hay saltos en el diseño.
+  - `preguntar()` ya ignoraba los clics mientras esperaba (`Portero.jsx:160`): el
+    `disabled` es para que se vea.
+- **La otra opción que se mostró:** una tira fija arriba del campo. Se ve siempre, pero en
+  una sola fila que se desliza de costado, porque no entran todas.
+
+### El Portero ya no saluda en cada respuesta
+
+- **Por qué saludaba:**
+  - Cada pregunta viaja sola, sin el historial (`frontend/src/api/ayuda.js:16`). Para el
+    modelo, cada pregunta era la primera de la charla.
+  - El prompt le da la personalidad de "el portero de un edificio que conoce a todos los
+    vecinos". Entonces saludaba como un portero: "¡Hola, vecino!".
+  - Ya estaba medido: en la Fase 8, 3 de 3 corridas de "¿Cómo pago mi pedido?" arrancaron
+    con "Hola, vecino".
+  - Y el saludo ya lo hace el panel al abrirse (`Portero.jsx:234`).
+- **El cambio:** una oración en el párrafo de tono de `prompt.txt`, en el mismo renglón 5,
+  así no se corren los demás: "Cada pregunta te llega en medio de una charla que ya empezó:
+  no saludes, no te presentes ni le digas "vecino"; arrancá directo con la respuesta."
+  - La personalidad sigue: rioplatense, de "vos", amable y directo.
+  - Además, cuida "No lo encuentro". El front la reconoce por cómo empieza
+    (`esNoLoEncuentro`, `utils/portero.js:9`): con un saludo adelante, se mostraría como
+    una respuesta común.
+- **El prompt crece 145 caracteres.** Con los 3 fragmentos de "¿Cómo pago mi pedido?" pasa
+  de 3205 a 3350, y con todo el corpus, de 20743 a 20888. Están contados con los renglones
+  como en Git. En Windows, Git deja `prompt.txt` con CRLF, y sus 18 renglones suman 18
+  caracteres más (3368).
+- **Hay que reiniciar el backend** después de cambiar `prompt.txt`: `rag.mjs` lo lee una
+  sola vez, al cargarse (`rag.mjs:9`). Quedó anotado en el `README.md`.
+
+**Pruebas, con las 3 llamadas a Gemini que aprobó Santiago:**
+
+| Pregunta | Mejor fragmento | Cómo arranca la respuesta | Fuente citada |
+|---|---|---|---|
+| ¿Cómo pago mi pedido? | 0.752 | "Por ahora, el único medio de pago de la app es MercadoPago…" | ayuda-clientes.md · ¿Cómo pago mi pedido? |
+| ¿Cómo pago mi pedido?, otra vez | 0.752 | "Por ahora, el único medio de pago de la app es MercadoPago…" | La misma |
+| ¿Cómo pago?, la de la demo | 0.699 | "Por ahora, el único medio de pago de la app es MercadoPago…" | La misma |
+
+- Ninguna saluda ni dice "vecino": antes eran 3 de 3, y ahora 0 de 3. Las tres siguen
+  citando la fuente.
+- Las otras preguntas de la demo no llegan al modelo, así que el cambio no las toca.
+- **Lo que deja de valer:** los ejemplos con "Hola, vecino" de las Fases 5 y 8 son de antes
+  de este cambio.
+
+**Pruebas del front:**
+- `npm run lint`: 0 avisos y 0 errores, en 73 archivos.
+- `npm run build`: sin errores.
+- **En el navegador:** Edge sin ventana, contra el front del 5173 y el backend del 4000 en
+  modo `rag`. Se preguntó "¿Tienen descuentos para estudiantes?", que no llega al umbral y
+  no gasta Gemini.
+
+| Cuándo | Sugeridas | Dónde quedan |
+|---|---|---|
+| Al abrir, sin sesión | 4, activas | Debajo del saludo, como antes |
+| Mientras busca | 4, desactivadas | Debajo de "El Portero está buscando en sus papeles…" |
+| Con la respuesta | 4, activas | Debajo de "No lo encuentro", a la vista sin scrollear |
+| Celular, 320 × 640 | 4, adentro del panel | Sin scroll horizontal, con el panel en [8, 8, 312, 632] |
+
+La consola quedó sin errores ni avisos.
+
+### Cuándo se borra la charla
+
+- **Antes:** había una charla por cuenta en `sessionStorage`, bajo `atupuerta:portero:<id>`.
+  Duraba hasta cerrar la pestaña, aunque se cerrara la sesión: si la misma cuenta volvía a
+  entrar, la charla seguía ahí. Y la charla sin sesión no vencía nunca.
+- **Ahora hay una sola charla por pestaña**, bajo `atupuerta:portero`, guardada junto con
+  quién la hizo (`Portero.jsx:39`).
+  - **Con sesión, el dueño es la sesión, no la cuenta.** La reconoce por el final del
+    token, que cambia cada vez que alguien inicia sesión (`Portero.jsx:92`).
+  - **Si el dueño cambia,** porque se cerró la sesión, venció o entró otra cuenta, el panel
+    se vuelve a montar. `leerHistorial` no reconoce la charla guardada y arranca de cero
+    (`Portero.jsx:56`), y `guardarHistorial` la borra (`Portero.jsx:70`).
+  - **Por qué la sesión y no el id de la cuenta:** si la sesión vence en una pantalla
+    protegida, la app manda al login, donde no está el Portero. Si la misma cuenta vuelve
+    a entrar desde ahí, con el id aparecería la charla vieja, porque el Portero nunca vio
+    salir a nadie. Con el token, es otra sesión.
+  - **Sin sesión no hay un "cerrar sesión",** así que la charla vence a los 30 minutos de
+    la última pregunta (`Portero.jsx:44`). Se revisa al cargar la página
+    (`Portero.jsx:56`), y si la página queda abierta, la borra un temporizador
+    (`Portero.jsx:114`). Cada pregunta guarda su hora en `cuando`.
+  - **La hora la toman el clic y el envío del formulario** (`Portero.jsx:179` y `:249`),
+    no `preguntar()`. Ver "Qué probé y descarté".
+  - **Lo que sigue igual:** nunca viaja al backend, guarda las últimas 20 preguntas y la
+    escoba la borra a mano.
+- **Lo que deja de valer:** lo que dice la Fase 7 sobre "Una charla por cuenta" y sobre la
+  clave `atupuerta:portero:<id>`.
+
+**Pruebas, sin gastar Gemini:**
+- `npm run lint`: 0 avisos y 0 errores, en 73 archivos.
+- `npm run build`: sin errores.
+- **En Edge sin ventana,** contra el front del 5173 y el backend del 4000:
+  - Sin sesión se preguntó "¿Tienen descuentos para estudiantes?", que no llega al umbral.
+    Para que pasara el tiempo, se cambió la hora guardada de la pregunta.
+  - Con sesión se usó una de prueba, armada en `localStorage`. Sus pedidos al backend
+    (`/api/perfil`, `/api/notificaciones` y `/api/carrito/listar`) quedaron frenados, así
+    el token de prueba no recibía el 401 que cierra la sesión sola.
+
+| Caso | Qué se ve | Qué queda guardado |
+|---|---|---|
+| Sin sesión, al recargar enseguida | La charla sigue | La charla, con `quien: "anonimo"` |
+| Sin sesión, con la pregunta 31 minutos atrás | La charla vacía | Nada |
+| Sin sesión, con 3 segundos para vencer y la página abierta | La charla, y 4,5 segundos después, vacía | Nada |
+| Con la sesión A y su charla | La charla, con las 3 sugeridas del cliente | La charla, con `quien: "sesion:…"` |
+| "Cerrar sesión", desde el header | La charla vacía, con las 4 sugeridas sin sesión | Nada |
+| La misma cuenta con otra sesión (B), con la charla de A guardada | La charla vacía | Nada |
+
+La consola quedó sin errores ni avisos.
+
+### La fuente vuelve al front
+
+- **Por qué:** es la regla 3 de la consigna de la expo: "La fuente (archivo y sección)
+  visible para el que pregunta, como quieras mostrarla". En los Ajustes de diseño se había
+  sacado, para que la respuesta se leyera como un chat, y en el chequeo del 5/11 contra la
+  consigna fue lo único que no cumplía. Santiago pidió volver a ponerla.
+- **Qué se ve:** al pie de cada respuesta, separado por una raya fina, va un renglón chico y
+  gris, con un ícono: "Fuente: ayuda-clientes.md · ¿Cómo pago mi pedido?"
+  (`Portero.jsx:338`, con su estilo en `Portero.css:222`). La respuesta se sigue leyendo
+  como un chat.
+- **Cuál fuente:** la que cita el modelo en su renglón "Fuente:", que pide `prompt.txt`,
+  buscada entre las `fuentes` que mandó el backend (`fuentesDeLaRespuesta`,
+  `utils/portero.js:37`).
+  - Así sale limpia, con el formato de `etiqueta` (`utils/portero.js:29`), sin los guiones
+    ni el "##" que a veces copia el modelo (la observación de la Fase 5).
+  - Y solo se muestra si es un fragmento que el modelo de verdad recibió.
+  - Si no reconoce ninguna, o si no hay renglón "Fuente:" (en modo `faq` no lo hay),
+    muestra todas las que recibió el modelo: no tuvo otra cosa para responder. En `faq` es
+    una sola, la del fragmento que se muestra.
+  - "No lo encuentro" no lleva fuente, porque no se usó ningún fragmento.
+- **Lo que sigue sin verse:** las etiquetas de todos los fragmentos y "¿De dónde lo
+  saqué?", con la similitud de cada uno, que es uno de los extras de la consigna. Están en
+  el commit `7fff315`. Hoy se ven en la terminal, con `preguntar.mjs`, y con F12.
+- **Una limitación que vuelve:** la del hallazgo de la Fase 9. Cuando el modelo junta dos
+  fragmentos, cita uno solo, y el pie muestra ese.
+- **Lo que deja de valer:** lo que dice "Ajustes de diseño" sobre que el front muestra solo
+  el texto y que se sacó el pie "Fuente:".
+
+**Pruebas, sin gastar Gemini:**
+- `fuentesDeLaRespuesta` y `etiqueta` con Node: 11 casos. Entre ellos están las 3
+  respuestas reales de Gemini del 5/11, una que cita dos fragmentos, una con
+  `**Fuente:**`, una sin renglón (como en `faq`) y una que cita algo que no recibió.
+- `npm run lint`: 0 avisos y 0 errores, en 73 archivos.
+- `npm run build`: sin errores.
+- **En Edge sin ventana,** contra el front del 5173 y el backend del 4000. Se cargó una
+  charla guardada, con una respuesta real de Gemini y una como las del modo `faq`, y en vivo
+  se preguntó "¿Tienen descuentos para estudiantes?".
+
+| Respuesta | Pie |
+|---|---|
+| La real de Gemini, con "Fuente: --- ayuda-clientes.md · ## ¿Cómo pago mi pedido? ---" | "Fuente: ayuda-clientes.md · ¿Cómo pago mi pedido?" |
+| Como en modo `faq`, sin renglón "Fuente:" | "Fuente: ayuda-clientes.md · ¿Cómo pago mi pedido?" |
+| "No lo encuentro" | Sin pie |
+
+A 320 × 640, los pies entran en el panel y no hay scroll horizontal. La consola quedó sin
+errores ni avisos.
+
+## Corpus ampliado (5/11)
+
+Santiago le preguntó al Portero "¿Qué puedo comprar?" y "¿Qué tiendas hay?", en el sentido
+de los rubros (ferretería, súper…), y le contestó "No lo encuentro".
+
+- **No era el umbral: la información no estaba.** Ninguna de las 35 preguntas hablaba de
+  qué se puede comprar ni de los rubros. Lo mejor que traía la búsqueda era "¿Cómo hago un
+  pedido?" (0.562) y "¿Dónde veo mis ventas?" (0.498), que no contestan eso. Bajar el
+  umbral solo dejaría pasar fragmentos que no tienen nada que ver.
+- **Se sumaron dos preguntas al final de `ayuda-clientes.md`:** "¿Qué puedo comprar en
+  ATuPuerta?" (renglón 68) y "¿Qué comercios y rubros hay?" (renglón 74). Van al final
+  para que "¿Cómo pago mi pedido?" siga en el renglón 25, el que se abre en la demo.
+- **Todo lo que dicen sale del código:**
+  - El rubro de un comercio es texto libre, de hasta 50 caracteres, y el alta solo sugiere
+    algunos (`CATEGORIAS_COMERCIO`, en `frontend/src/utils/categorias.js`). Por eso la
+    respuesta no da una lista cerrada: da ejemplos y dice que los rubros dependen de los
+    comercios registrados.
+  - En "Comercios" hay un buscador de comercios y productos, y un botón por cada rubro que
+    existe, más "Todos". Cada comercio muestra su rubro y su horario (`Comercios.jsx`).
+  - Cada producto muestra su precio y su stock: "N disponibles", "¡Quedan N unidades!" o
+    "Sin stock". Si el comercio tiene productos de más de una categoría, se pueden filtrar
+    (`Comercio.jsx`).
+  - "Comercios" se ve sin sesión, y para comprar hace falta la de cliente (`App.jsx`).
+- **No se tocaron los temas que el grupo no definió,** como envíos, zona, monto mínimo o
+  promociones. Son las preguntas "que no están" de la demo y de `evaluar.mjs`.
+- **Se volvió a indexar:** 37 fragmentos (antes 35), en 16 segundos.
+
+**Antes y después, sin gastar Gemini:**
+
+| Pregunta | Antes | Después |
+|---|---|---|
+| ¿Qué puedo comprar? | ✗ 0.562, "¿Cómo hago un pedido?" | 0.654, "¿Qué puedo comprar en ATuPuerta?" |
+| ¿Qué tiendas hay? | ✗ 0.498, "¿Dónde veo mis ventas?" | 0.588 y 0.575, las dos nuevas |
+| ¿Qué rubros hay? | ✗ 0.411, "¿Cómo entro como comercio?" | 0.590, "¿Qué comercios y rubros hay?" |
+| ¿Qué comercios hay en la app? | ✗ 0.554, "¿Dónde veo mis ventas?" | 0.605 y 0.580, las dos nuevas |
+| ¿Se puede comprar algo que no sea comida? | ✗ 0.454, "¿Cómo doy de baja un producto?" | 0.587, "¿Qué puedo comprar en ATuPuerta?" |
+| ¿Qué venden en ATuPuerta? | 0.629, "¿Cómo registro mi comercio…?", que no contesta | 0.716, "¿Qué puedo comprar en ATuPuerta?" |
+| ¿Hay ferreterías? | ✗ 0.372 | ✗ 0.497, "¿Qué comercios y rubros hay?" |
+
+- "Tiendas" no aparece en el corpus, y la búsqueda igual la acerca a "comercios": es la
+  búsqueda por significado.
+- **"¿Hay ferreterías?" sigue sin llegar al umbral.** Además, la respuesta depende de los
+  comercios registrados hoy, y el Centro de ayuda no ve el catálogo en vivo: es algo más
+  que le falta al Portero.
+
+**Lo que no cambió:**
+- **La demo:** "¿Cómo pago?" (0.699, 0.581 y 0.572), la que falla (0.547) y la de reserva
+  (0.616) dan igual. "¿Tienen descuentos para estudiantes?" ahora trae primero "¿Qué puedo
+  comprar en ATuPuerta?", con 0.492 en vez de 0.457, y el umbral la sigue rechazando.
+- **`evaluar.mjs`:** exactamente igual. La correcta sale primera en 9 de 15, está entre
+  las 3 en 14 de 15 y le llega al modelo en 13 de 15, y rechaza 5 de 5 de las que no
+  están.
+- **La recta (`distribucion.mjs`):** el mismo orden. Solo cambia "descuentos", de 0.457 a
+  0.492.
+- **Las sugeridas del front** siguen trayendo primero su propia sección, con la misma
+  similitud.
+- **El prompt con 3 fragmentos** sigue en 3350 caracteres. Con todo el corpus pasa de
+  20888 a 22110: 6,6 veces más.
+
+**Lo que deja de valer:** los 35 fragmentos de las Fases 2 y 3 ahora son 37, y el 0.457 de
+"descuentos" de las Fases 4, 5 y 8 ahora es 0.492.
+
 ## Qué probé y descarté
 
 ### Probado y descartado, con evidencia
@@ -835,7 +1078,8 @@ exactamente igual que la primera.
 | "¿puedo pagar en efectivo?" como la pregunta que falla en la demo (Fase 5) | Falla siempre igual (tres corridas), pero depende del modelo, que puede cambiar | Una falla de la búsqueda, que no llega al modelo y sale siempre igual. La del efectivo queda de reserva |
 | Cargar el RAG con `require()` (Fase 6) | `ERR_REQUIRE_ASYNC_MODULE`: `rag.mjs` es ESM y tiene un `await` afuera de toda función | `import()` dinámico (`ayuda.service.js:69`) |
 | El pool de `pg` sin `db.on("error")` (Fase 6) | Al cortar la conexión ociosa, el proceso se cae: `Unhandled 'error' event`, código 1 | El listener (`ayuda.service.js:77`) |
-| `Date.now()` para el id de cada pregunta (Fase 7) | Aviso de oxlint: es una función impura y el compilador de React no optimiza el componente | El id sale del historial (`Portero.jsx:127`) |
+| `Date.now()` para el id de cada pregunta (Fase 7) | Aviso de oxlint: es una función impura y el compilador de React no optimiza el componente | El id sale del historial (`Portero.jsx:165`) |
+| `Date.now()` adentro de `preguntar()`, para la hora de cada pregunta (5/11) | Aviso de oxlint `react/purity`: no puede asegurar que `preguntar()` no corra mientras se dibuja. Llevarlo a una función afuera del componente también lo calla, pero solo porque oxlint no la ve: es la misma llamada impura, escondida | La hora la toman el clic y el envío del formulario (`Portero.jsx:179` y `:249`), como el ejemplo correcto de la regla en la documentación de oxlint |
 | El encabezado y el campo del Portero a 320 px (Fase 7) | El título se partía en varios renglones y el texto gris del campo se cortaba | Subtítulo más corto, ícono más chico y "Escribí tu duda…" |
 
 ### Pensado y descartado, sin probar
@@ -852,3 +1096,9 @@ exactamente igual que la primera.
 - **Poner en el corpus los temas que el grupo no definió**: costo de envío, horarios,
   contacto, promociones y efectivo. No se inventan reglas. Sirven como preguntas cuya
   respuesta no está.
+- **Sacar el saludo en el front** con una expresión regular, en `sinFuente`. Esconde el
+  síntoma en vez de arreglar la causa, y una regla que corte desde "Hola" hasta el primer
+  signo puede borrar parte de una respuesta. Se arregló en el prompt, que es donde nace
+  (ver "Ajustes de la charla").
+- **Avisarle al backend cuál es la primera pregunta**, para que el modelo salude solo en
+  esa. No hace falta: el panel ya saluda al abrirse.

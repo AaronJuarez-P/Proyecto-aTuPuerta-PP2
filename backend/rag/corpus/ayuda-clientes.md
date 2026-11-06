@@ -64,3 +64,15 @@ Dáselo al repartidor recién cuando te entregue el pedido: él lo escribe en la
 Como cliente, abrí un pedido entregado o cancelado en "Mis pedidos" y tocá "↻ Volver a pedir lo mismo". Los productos de ese pedido se suman a tu carrito, sin borrar lo que ya tenías, y con los precios de hoy: si alguno cambió, la app te muestra el precio anterior y el actual.
 
 Si un producto ya no está a la venta o no tiene stock suficiente, te avisa cuáles quedaron afuera o cuáles se agregaron en menor cantidad. Repetir no crea el pedido solo: revisás el carrito, confirmás y pagás como siempre.
+
+## ¿Qué puedo comprar en ATuPuerta?
+
+Como cliente, podés comprar los productos que publican los comercios de ATuPuerta, y no solo comida: hay comercios de distintos rubros, como supermercados, almacenes, ferreterías, librerías o farmacias. Cada comercio carga sus productos con su categoría, su precio y su stock.
+
+Para ver qué hay, entrá a "Comercios": podés filtrar por rubro o usar el buscador de comercios y productos. Adentro de cada comercio ves sus productos, con el precio y cuántas unidades quedan. Para mirar no hace falta iniciar sesión; para comprar, sí: tenés que entrar como cliente.
+
+## ¿Qué comercios y rubros hay?
+
+Como cliente, en "Comercios" ves la lista de los comercios de ATuPuerta, cada uno con su rubro y su horario de atención. El rubro lo elige cada comercio al registrarse, así que los que hay dependen de los comercios registrados: por ejemplo supermercado, almacén, ferretería, librería, indumentaria, farmacia, verdulería, panadería, kiosco, mascotas o electrónica.
+
+Arriba de la lista hay un botón por cada rubro que existe, para ver solo esos comercios, y "Todos" para volver a verlos a todos. Al entrar a un comercio ves sus productos, y si tiene de varias categorías, los podés filtrar.
