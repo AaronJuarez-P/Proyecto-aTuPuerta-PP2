@@ -34,7 +34,7 @@ El backend necesita `backend/.env` (copiar `.env.example`). Sin `JWT_SECRET` o `
 
 No hay framework de tests (ni Jest ni Vitest), así que no se puede correr un test suelto.
 
-- **Prueba de punta a punta:** `node scripts/prueba-flujos.js` desde `backend/`, con el servidor levantado. Termina con código distinto de 0 si algo falla. Necesita la base **recién importada** (espera los ids de la semilla), `MP_MODO=mock` y `MAPS_MODO=mock`. El último bloque agota a propósito el límite de logins fallidos: después los logins dan `429` hasta reiniciar el backend. Para otra URL: `BASE_URL=http://localhost:4100/api`.
+- **Prueba de punta a punta:** `node scripts/prueba-flujos.js` desde `backend/`, con el servidor levantado. Termina con código distinto de 0 si algo falla. Necesita la base **recién importada** (espera los ids de la semilla), `MP_MODO=mock`, `MAPS_MODO=mock` y `EMAIL_MODO=mock` u `off` (con `smtp` no puede leer el código de verificación). El último bloque agota a propósito el límite de logins fallidos: después los logins dan `429` hasta reiniciar el backend. Para otra URL: `BASE_URL=http://localhost:4100/api`.
 - **Postman:** `backend/postman/ATuPuerta.postman_collection.json` tiene todos los endpoints (correr primero "00 · Sesiones", que guarda los tokens). Las guías `backend/postman/backend-<módulo>.js` explican caso por caso y asumen la base recién importada.
 - **Tiempo real:** `node scripts/cliente-seguimiento.js <token> <pedidoId>`. Postman no habla Socket.IO.
 
@@ -72,11 +72,18 @@ Cuentas de la semilla, todas con contraseña `Test1234!`: `maria.gomez@test.com`
 |---|---|---|
 | `services/pago.service.js` (MercadoPago) | `MP_MODO=mock\|sandbox` | `POST /api/pagos/simular` aprueba o rechaza |
 | `services/maps.service.js` (Mapbox) | `MAPS_MODO=mock\|real` | Geocodifica de forma determinística y mide con Haversine |
+| `services/email.service.js` (Nodemailer) | `EMAIL_MODO=off\|mock\|smtp` | `mock` por defecto: no manda correos, el código de verificación viaja en la respuesta (`codigo_mock`) y sale por consola. `off` saltea la verificación |
 | `config/webPush.js` | `VAPID_*` | Sin claves el push se apaga; las notificaciones se ven igual en la campanita |
 | `services/ayuda.service.js` (El Portero) | `AYUDA_MODO=off\|faq\|rag` | `off` por defecto: no carga nada de `backend/rag` |
 
 - `maps.service.js` es el único archivo que sabe que el proveedor es Mapbox. Mapbox pide `{longitud},{latitud}`, y el orden se da vuelta solo adentro del adaptador. Si Mapbox falla, degrada a un cálculo local y lo indica en `origen_datos`.
 - En los pagos, el webhook es la fuente de verdad: se autentica por firma (no por JWT) y es idempotente.
+
+**Registro de clientes en dos pasos (verificación del correo).**
+- `POST /api/registro` no crea la cuenta: guarda los datos en `registros_pendientes` y manda un código de 6 dígitos (`202`). La cuenta (`usuarios` + `clientes`) se crea en `POST /api/registro/verificar`. Con `EMAIL_MODO=off` el registro la crea directo (`201`).
+- `usuarios` solo tiene cuentas verificadas: los logins, `validarSesion` y el panel no saben nada de la verificación. Es la única puerta de entrada de un correo nuevo, porque los registros de comercio y repartidor agregan un perfil a una cuenta que ya existe.
+- Verificar y reenviar piden email **y contraseña** además del código, y contestan el mismo `401` genérico de los logins. El código se guarda como HMAC (`services/verificacion.service.js`), nunca en texto plano.
+- Lo que registre un cliente por la API (una prueba, una guía) tiene que hacer los dos pasos o correr con `EMAIL_MODO=off`.
 
 **Tiempo real.** `services/tiemporeal.service.js` es el transporte (handshake, salas `pedido:<id>`, emisión) y `services/seguimiento.service.js` es el negocio (autorización, ETA y su caché), compartido con el endpoint REST. Funciona con una sola instancia, porque las salas viven en memoria.
 
@@ -94,6 +101,7 @@ Cuentas de la semilla, todas con contraseña `Test1234!`: `maria.gomez@test.com`
 
 - Todas las llamadas pasan por `pedir()` de `src/api/cliente.js`, que devuelve `datos` o tira `ErrorApi`. En `src/api/<módulo>.js` hay una función por endpoint. Con `token: undefined` usa la sesión guardada; con `token: null` no manda ninguno (logins y registros, donde un 401 no significa sesión vencida).
 - La sesión se guarda en `localStorage` como `sesion = { token, usuario }` y se confirma con `GET /perfil` al abrir la app. `SesionProvider` escucha `EVENTO_SESION_VENCIDA` y manda al login. Orden de los proveedores en `App.jsx`: Sesión > Avisos > Carrito > Notificaciones.
+- El paso del código al registrarse (`components/VerificarCorreo`) no tiene ruta propia: lo muestran `Registro` y `Login`, que ya tienen la contraseña en memoria. Así no viaja por la URL.
 - `<RutaProtegida roles={[...]} />` protege por rol. Las pantallas con mapa o socket y las de administración se cargan con `lazy`, y el `Suspense` está en `Layout`.
 - Las notificaciones del backend traen URLs propias (`/cliente/pedidos/:id`, ...) que `App.jsx` redirige con `Redirigir`. Si cambian en el backend, hay que cambiarlas también acá.
 - Cada página tiene su CSS, acotado a su clase raíz (`.pedido-page ...`). Lo compartido está en `components/Comunes/Comunes.css`. Colores y tipografías son variables de `index.css` (`--brand`, `--ink`, ...), no valores escritos a mano.

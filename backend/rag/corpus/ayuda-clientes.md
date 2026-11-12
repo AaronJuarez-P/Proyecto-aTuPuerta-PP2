@@ -2,7 +2,7 @@
 
 Para crear tu cuenta de cliente en ATuPuerta, tocá "Registrarse" en la barra de arriba. El formulario pide nombre completo, correo electrónico, teléfono, dirección de entrega y una contraseña de entre 8 y 72 caracteres, que se escribe dos veces para confirmarla. Todos los campos son obligatorios.
 
-La dirección de entrega es donde te llevan los pedidos, y la podés cambiar después desde tu perfil o solo para una compra. Al tocar "Crear cuenta" quedás con la sesión iniciada como cliente y la app te lleva a la lista de comercios para que empieces a comprar.
+Al tocar "Crear cuenta", la app te manda un código de 6 dígitos al correo que pusiste y te muestra el paso "Verificá tu correo". Ingresá el código y tocá "Verificar correo": recién ahí se crea tu cuenta, quedás con la sesión iniciada como cliente y la app te lleva a la lista de comercios para que empieces a comprar. La dirección de entrega es donde te llevan los pedidos, y la podés cambiar después desde tu perfil o solo para una compra.
 
 ## ¿Cómo hago un pedido?
 
@@ -76,3 +76,9 @@ Para ver qué hay, entrá a "Comercios": podés filtrar por rubro o usar el busc
 Como cliente, en "Comercios" ves la lista de los comercios de ATuPuerta, cada uno con su rubro y su horario de atención. El rubro lo elige cada comercio al registrarse, así que los que hay dependen de los comercios registrados: por ejemplo supermercado, almacén, ferretería, librería, indumentaria, farmacia, verdulería, panadería, kiosco, mascotas o electrónica.
 
 Arriba de la lista hay un botón por cada rubro que existe, para ver solo esos comercios, y "Todos" para volver a verlos a todos. Al entrar a un comercio ves sus productos, y si tiene de varias categorías, los podés filtrar.
+
+## ¿Qué hago si no me llega el código de verificación?
+
+Como cliente, al registrarte la app te manda un código de 6 dígitos al correo que pusiste, para confirmar que es tuyo, y te muestra el paso "Verificá tu correo". Si no te llega, revisá el correo no deseado. Con "Reenviar código" pedís uno nuevo (se puede una vez por minuto, y el anterior deja de servir), y con "Usar otro correo" volvés al formulario para corregir la dirección.
+
+El código vale 15 minutos y admite 5 intentos: si vence o los agotás, pedí otro. La cuenta se crea recién cuando lo ingresás. Si cerraste la página antes, iniciá sesión como cliente con tu correo y tu contraseña, y la app te vuelve a mostrar ese paso. Si la pantalla dice "Modo de prueba", no se manda ningún correo: el código es el que aparece en ese recuadro.

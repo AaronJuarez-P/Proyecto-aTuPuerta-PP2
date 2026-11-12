@@ -49,9 +49,10 @@ src/
                 usa el CSS como máscara) y el logo original en PNG (solo de referencia, la
                 app no lo usa). ilustraciones/: la de la página 404
   components/   Header, Footer, Layout, Marca (isotipo y nombre), RutaProtegida,
-                MapaSeguimiento, FormularioReclamo y Comunes (Cargando, MensajeError,
-                EstadoVacio, IlustracionVacia, MiniaturaRubro, IconoRubro, EstadoBadge,
-                Paginacion, Modal, Confirmacion)
+                MapaSeguimiento, FormularioReclamo, VerificarCorreo (el paso del código
+                al registrarse) y Comunes (Cargando, MensajeError, EstadoVacio,
+                IlustracionVacia, MiniaturaRubro, IconoRubro, EstadoBadge, Paginacion,
+                Modal, Confirmacion)
   utils/        formato (precios y fechas), estados, roles, categorías, notificaciones,
                 push y polilínea
   pages/        una carpeta por pantalla, con su .jsx y su .css
@@ -95,6 +96,25 @@ Las URLs que mandan las notificaciones del backend (`/cliente/pedidos/:id`,
 `/comercio/pedidos/:id`, `/repartidor/pedidos`) redirigen a la pantalla que corresponde.
 Una ruta protegida sin sesión manda al login y, después de entrar, vuelve a donde estaba.
 
+## Verificación del correo
+
+Registrarse como cliente tiene dos pasos: el formulario y el código de 6 dígitos que llega
+al correo. La cuenta se crea recién con el código.
+
+- El paso "Verificá tu correo" **no tiene ruta propia**: es el componente
+  `VerificarCorreo`, que `/registro` muestra en lugar del formulario. El backend pide la
+  contraseña junto con el código, y así sale de la memoria de la pantalla en vez de
+  viajar por la URL o quedar en el historial.
+- Quien se registró y cerró la pestaña antes de ingresar el código lo retoma desde
+  `/login`: al entrar como cliente con su correo y su contraseña, el backend avisa que
+  falta verificar y el login muestra el mismo componente.
+- "Reenviar código" se habilita cuando pasa la espera que indica el backend (60 segundos).
+  "Usar otro correo" vuelve al formulario con los datos cargados.
+- Si el código es correcto pero falla el inicio de sesión que viene después, la cuenta ya
+  quedó creada: el botón pasa a reintentar solo el ingreso.
+- El front no se configura: si la respuesta del registro no trae `verificacion_pendiente`
+  (backend con `EMAIL_MODO=off`), entra directo como antes.
+
 ## Sesión
 
 - Se guarda en `localStorage` como `sesion = { token, usuario }` y se confirma contra
@@ -115,5 +135,9 @@ Una ruta protegida sin sesión manda al login y, después de entrar, vuelve a do
   punteada. El panel del repartidor muestra "Simular avance" para la demo sin GPS (también
   aparece siempre en desarrollo). Con `MAPS_MODO=real` el mapa dibuja la ruta de Mapbox y
   "Simular avance" avanza por esas mismas calles.
+- **Correo (`EMAIL_MODO=mock`)**: el backend no manda correos y devuelve el código en la
+  respuesta, así que el paso "Verificá tu correo" lo muestra en un recuadro de modo de
+  prueba. Con `off` ese paso no aparece: el registro entra directo. Con `smtp` el código
+  llega por correo y no se muestra.
 - **Push**: el botón para activar las notificaciones del navegador aparece solo si el backend
   tiene `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY`. Las ventanas de incógnito no las permiten.

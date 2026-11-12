@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "bac953a4-b2a2-42c7-9fc2-7915c7bfc6c4",
     "name": "ATuPuerta — Backend",
-    "description": "Todos los endpoints del backend de ATuPuerta (Práctica Profesionalizante 2), agrupados por módulo y semana.\n\n**Antes de empezar:** importar `scripts/aTuPuerta.sql` recién (los ids de los ejemplos son los de la semilla), `.env` con `MP_MODO=mock` y `MAPS_MODO=mock`, y `npm run dev`.\n\n**Tokens:** correr la carpeta `00 · Sesiones`. Cada login guarda su token en las variables de la colección (`{{token_maria}}`, `{{token_admin}}`, ...) y el resto de los requests ya los usa. El header `Authorization` va con el token pelado; desde la semana 14 también se acepta con `Bearer `.\n\n**Contraseña de todos los usuarios de prueba:** `Test1234!`.\n\nLa colección tiene un test a nivel colección que verifica que toda respuesta tenga el formato de la API: `{ codigo, estado, datos }`, con `estado` = `exito` o `error` según el código.\n\nEl detalle caso por caso de cada semana está en las guías `postman/*.js`.",
+    "description": "Todos los endpoints del backend de ATuPuerta (Práctica Profesionalizante 2), agrupados por módulo y semana.\n\n**Antes de empezar:** importar `scripts/aTuPuerta.sql` recién (los ids de los ejemplos son los de la semilla), `.env` con `MP_MODO=mock`, `MAPS_MODO=mock` y `EMAIL_MODO=mock` (o sin esa variable: es el valor por defecto), y `npm run dev`.\n\n**Tokens:** correr la carpeta `00 · Sesiones`. Cada login guarda su token en las variables de la colección (`{{token_maria}}`, `{{token_admin}}`, ...) y el resto de los requests ya los usa. El header `Authorization` va con el token pelado; desde la semana 14 también se acepta con `Bearer `.\n\n**Contraseña de todos los usuarios de prueba:** `Test1234!`.\n\nLa colección tiene un test a nivel colección que verifica que toda respuesta tenga el formato de la API: `{ codigo, estado, datos }`, con `estado` = `exito` o `error` según el código.\n\nEl detalle caso por caso de cada semana está en las guías `postman/*.js`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -57,6 +57,10 @@
     },
     {
       "key": "token_admin",
+      "value": ""
+    },
+    {
+      "key": "codigo_verificacion",
       "value": ""
     }
   ],
@@ -351,7 +355,7 @@
     },
     {
       "name": "01 · Registro y cierre de sesión (CU01, CU02, CU12, CU18)",
-      "description": "Registro de cliente y alta de los perfiles de comercio y repartidor sobre una cuenta que ya existe. Los tres tienen límite de intentos fallidos.",
+      "description": "Registro de cliente en dos pasos (el segundo es el código de verificación del correo) y alta de los perfiles de comercio y repartidor sobre una cuenta que ya existe. Todos tienen límite de intentos fallidos.\n\nEn orden: `Registro de cliente` guarda el código en `{{codigo_verificacion}}` y `Verificar correo` lo usa para crear la cuenta. Recién ahí funcionan `Registro de comercio` y `Registro de repartidor`.",
       "item": [
         {
           "name": "Registro de cliente",
@@ -374,8 +378,101 @@
                 }
               }
             },
-            "description": "Crea la cuenta con perfil de cliente. Contraseña de 8 a 72 caracteres."
-          }
+            "description": "Primer paso del alta de un cliente. Contraseña de 8 a 72 caracteres.\n\nCon `EMAIL_MODO=mock` (por defecto) o `smtp` contesta `202`: guarda el registro pendiente y manda un código de 6 dígitos. La cuenta todavía no existe: la crea `Verificar correo`. En `mock` no sale ningún correo y el código vuelve en `codigo_mock`, que este request guarda en `{{codigo_verificacion}}`.\n\nCon `EMAIL_MODO=off` contesta `201` y la cuenta queda creada, sin código.\n\n`429` con `segundos_restantes` si a ese correo ya se le mandó un código hace menos de un minuto."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Con EMAIL_MODO=mock el registro devuelve el código en codigo_mock: se guarda",
+                  "// para \"Verificar correo\". Con EMAIL_MODO=off contesta 201 y no hay código.",
+                  "const datos = pm.response.json().datos;",
+                  "if (pm.response.code === 202 && datos && datos.codigo_mock) {",
+                  "    pm.collectionVariables.set(\"codigo_verificacion\", datos.codigo_mock);",
+                  "}",
+                  "pm.test(\"registro aceptado (202), o cuenta creada (201) con EMAIL_MODO=off\", () => {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 202]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reenviar código",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/registro/reenviar",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ana.lopez@test.com\",\n  \"contrasena\": \"Test1234!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Manda un código nuevo para un registro que todavía no se verificó: el anterior deja de servir y los intentos vuelven a 0. Con `200` guarda el código nuevo en `{{codigo_verificacion}}`.\n\n`429` con `segundos_restantes` si no pasó un minuto desde el último código (es lo que contesta si se corre justo después de `Registro de cliente`; el código de antes sigue valiendo). `401` · \"Email o contraseña incorrectos\" si no hay un registro pendiente con ese email y esa contraseña."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Si salió un código nuevo, reemplaza al que había guardado el registro",
+                  "const datos = pm.response.json().datos;",
+                  "if (pm.response.code === 200 && datos && datos.codigo_mock) {",
+                  "    pm.collectionVariables.set(\"codigo_verificacion\", datos.codigo_mock);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar correo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/registro/verificar",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ana.lopez@test.com\",\n  \"contrasena\": \"Test1234!\",\n  \"codigo\": \"{{codigo_verificacion}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Segundo paso del registro: con el código correcto crea la cuenta con su perfil de cliente (`201`). No devuelve token: después se inicia sesión con `POST /inicioSesion`.\n\n`codigo` va como texto, y usa el que guardó `Registro de cliente` (con `EMAIL_MODO=smtp` hay que copiarlo del correo). Pide también la contraseña: el código prueba que el correo es tuyo; la contraseña, que el registro es el tuyo.\n\n`400` código incorrecto (con `intentos_restantes`) o vencido. `401` si no hay un registro pendiente con ese email y esa contraseña. `429` con los 5 intentos agotados: hay que pedir otro código."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"cuenta creada\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Registro de comercio",

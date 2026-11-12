@@ -6,7 +6,9 @@
 //
 // Uso:
 //   1. Importar scripts/aTuPuerta.sql RECIEN (los ids esperados son los de la semilla).
-//   2. .env con MP_MODO=mock y MAPS_MODO=mock.
+//   2. .env con MP_MODO=mock y MAPS_MODO=mock. EMAIL_MODO en mock (el valor por defecto)
+//      o en off: con smtp el codigo de verificacion sale por correo y esta prueba no
+//      tiene como leerlo.
 //   3. npm run dev (en otra terminal).
 //   4. node scripts/prueba-flujos.js
 //
@@ -94,6 +96,28 @@ const login = async (ruta, body) => {
     verificar(`login ${body.email}`, respuesta.status === 200 && respuesta.json?.datos?.token,
         `obtuvo ${respuesta.status}: ${JSON.stringify(respuesta.json)}`);
     return respuesta.json?.datos?.token;
+};
+
+// Registra un cliente por el camino que tenga prendido el backend. Devuelve el codigo de
+// verificacion que hay que mandar a /registro/verificar, o null si no hace falta porque
+// la cuenta ya quedo creada (EMAIL_MODO=off).
+//
+// Con EMAIL_MODO=mock el codigo viaja en la respuesta (codigo_mock). Con smtp sale por
+// correo: no hay forma de leerlo desde aca, asi que la prueba se corta y dice por que.
+const registrar = async (descripcion, body) => {
+    const respuesta = await llamar("POST", "/registro", { body });
+    const datos = respuesta.json?.datos ?? {};
+
+    if (respuesta.status === 202 && datos.verificacion_pendiente && !datos.codigo_mock) {
+        throw new Error("el backend está en EMAIL_MODO=smtp y esta prueba necesita EMAIL_MODO=mock u off");
+    }
+
+    const esperaCodigo = respuesta.status === 202 && /^\d{6}$/.test(datos.codigo_mock);
+
+    verificar(`POST /registro -> ${respuesta.status} ${descripcion}`, respuesta.status === 201 || esperaCodigo,
+        `obtuvo ${respuesta.status}: ${JSON.stringify(respuesta.json)?.slice(0, 400)}`);
+
+    return esperaCodigo ? datos.codigo_mock : null;
 };
 
 const CONTRASENA = "Test1234!";
@@ -321,9 +345,33 @@ const main = async () => {
     await esperar("editar usuario", "PATCH", "/admin/usuarios/1", { token: admin, body: { nombre: "Juan Pérez" } }, 200);
     await esperar("email de otro usuario", "PATCH", "/admin/usuarios/1", { token: admin, body: { email: "maria.gomez@test.com" } }, 409);
 
-    await esperar("registro de Pedro", "POST", "/registro",
-        { body: { nombre: "Pedro Prueba", email: "pedro@test.com", contrasena: "Clave12345", telefono: "3421000009", direccion_entrega: "Rivadavia 100, Santo Tomé" } }, 201);
-    let pedro = await login("/inicioSesion", { email: "pedro@test.com", contrasena: "Clave12345" });
+    const datosPedro = { nombre: "Pedro Prueba", email: "pedro@test.com", contrasena: "Clave12345", telefono: "3421000009", direccion_entrega: "Rivadavia 100, Santo Tomé" };
+    const credencialesPedro = { email: datosPedro.email, contrasena: datosPedro.contrasena };
+
+    // Verificacion del correo. Con EMAIL_MODO=mock el registro no crea la cuenta: manda un
+    // codigo y la crea /registro/verificar. Con EMAIL_MODO=off la crea directo y este
+    // bloque se saltea. Por los dos caminos Pedro termina siendo el usuario 9.
+    const codigoPedro = await registrar("registro de Pedro", datosPedro);
+
+    if (codigoPedro === null) {
+        console.log("  [--]    EMAIL_MODO=off: el registro creó la cuenta directo, se saltea la verificación del correo");
+    } else {
+        const codigoIncorrecto = String((Number(codigoPedro) + 1) % 1000000).padStart(6, "0");
+
+        await esperar("sin verificar el correo todavia no entra", "POST", "/inicioSesion", { body: credencialesPedro }, 403,
+            (datos) => datos.verificacion_pendiente === true);
+        await esperar("codigo incorrecto", "POST", "/registro/verificar",
+            { body: { ...credencialesPedro, codigo: codigoIncorrecto } }, 400,
+            (datos) => datos.intentos_restantes === 4);
+        await esperar("pedir otro codigo antes de tiempo", "POST", "/registro/reenviar", { body: credencialesPedro }, 429,
+            (datos) => datos.segundos_restantes > 0);
+        await esperar("el codigo correcto crea la cuenta", "POST", "/registro/verificar",
+            { body: { ...credencialesPedro, codigo: codigoPedro } }, 201);
+        await esperar("el mismo codigo no sirve dos veces", "POST", "/registro/verificar",
+            { body: { ...credencialesPedro, codigo: codigoPedro } }, 401);
+    }
+
+    let pedro = await login("/inicioSesion", credencialesPedro);
     await esperar("Pedro arma un pedido", "POST", "/carrito/agregar", { token: pedro, body: { id_producto: 3, cantidad: 2 } }, 201);
     await esperar("y lo confirma sin pagar", "POST", "/carrito/confirmar", { token: pedro }, 201,
         (datos) => datos.pedidos[0].pedidoId === 6);
@@ -340,9 +388,14 @@ const main = async () => {
                    datos.pedidos_eliminados === 1);
     await esperar("y el stock vuelve", "GET", "/productos/3", {}, 200, (datos) => datos.producto.stock === 60);
     await esperar("el token de la cuenta eliminada deja de servir", "GET", "/perfil", { token: pedro }, 401);
-    await esperar("Pedro puede registrarse otra vez con los mismos datos", "POST", "/registro",
-        { body: { nombre: "Pedro Prueba", email: "pedro@test.com", contrasena: "Clave12345", telefono: "3421000009", direccion_entrega: "Rivadavia 100, Santo Tomé" } }, 201);
-    await login("/inicioSesion", { email: "pedro@test.com", contrasena: "Clave12345" });
+    const codigoPedroDeNuevo = await registrar("Pedro puede registrarse otra vez con los mismos datos", datosPedro);
+
+    if (codigoPedroDeNuevo !== null) {
+        await esperar("y verificar su correo de nuevo", "POST", "/registro/verificar",
+            { body: { ...credencialesPedro, codigo: codigoPedroDeNuevo } }, 201);
+    }
+
+    await login("/inicioSesion", credencialesPedro);
     await esperar("Carlos tiene un pedido en camino", "PATCH", "/admin/usuarios/5/estado", { token: admin, body: { activo: false } }, 409);
     await esperar("un admin no se suspende a si mismo", "PATCH", "/admin/usuarios/7/estado", { token: admin, body: { activo: false } }, 409);
     await esperar("activo como string", "PATCH", "/admin/usuarios/5/estado", { token: admin, body: { activo: "false" } }, 400);

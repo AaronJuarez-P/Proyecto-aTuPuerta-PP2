@@ -1,0 +1,88 @@
+/* Paso del código de verificación. Lo muestran Registro y Login, que no comparten
+   estilos: los campos, los avisos y el botón salen de Comunes.css, y acá va solo lo
+   propio, acotado a .verificar-correo. */
+
+.verificar-correo .verificar-texto {
+  color: var(--ink-soft);
+}
+
+/* Un correo largo no tiene que desbordar la tarjeta */
+.verificar-correo .verificar-texto strong {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* El código es lo único que hay que mirar y tipear en este paso: va grande, con la
+   letra de los títulos y los dígitos separados. */
+.verificar-correo .verificar-codigo input {
+  padding: 12px 8px;
+  font-family: var(--display);
+  font-size: clamp(1.5rem, 7vw, 2rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.4em;
+  /* letter-spacing también deja espacio después del último dígito: sin esto el código
+     queda corrido a la izquierda del centro */
+  text-indent: 0.4em;
+  text-align: center;
+}
+
+/* Mismo aspecto que el simulador de pago de Pedido.css: es el otro lugar donde el front
+   muestra algo que solo existe porque el backend está en modo de prueba */
+.verificar-correo .verificar-prueba {
+  padding: 14px 16px;
+  border: 1px dashed var(--accent);
+  border-radius: 12px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.9rem;
+}
+
+.verificar-correo .verificar-prueba-codigo {
+  margin-top: 4px;
+  font-family: var(--display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3em;
+  line-height: 1.3;
+  /* Un clic lo selecciona entero, para copiarlo */
+  user-select: all;
+}
+
+/* Reenviar y volver: acciones de segundo plano, con forma de enlace */
+.verificar-correo .verificar-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 16px;
+}
+
+.verificar-correo .verificar-enlace {
+  padding: 8px 0;
+  border: none;
+  background: none;
+  color: var(--brand);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  /* Para que la cuenta regresiva no mueva el texto al cambiar de número */
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.verificar-correo .verificar-enlace-suave {
+  color: var(--ink-soft);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.verificar-correo .verificar-enlace:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.verificar-correo .verificar-enlace:disabled {
+  color: var(--muted);
+  text-decoration: none;
+  cursor: not-allowed;
+}

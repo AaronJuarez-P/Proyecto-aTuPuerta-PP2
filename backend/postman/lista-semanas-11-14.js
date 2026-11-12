@@ -159,7 +159,7 @@
 //| 13.6 | El mismo body otra vez | Admin | `409` · "Ya existe un usuario con ese email" |
 //| 13.7 | Con `"rol": "comercio"` | Admin | `400` · comercios y repartidores se registran solos |
 //| 13.8 | `PATCH /admin/usuarios/1` → `{ "email": "maria.gomez@test.com" }` | Admin | `409` |
-//| 13.9 | `POST /registro` de Pedro (`pedro@test.com`, `Clave12345`), login, y un pedido sin pagar del producto 3 × 2 | Pedro | usuario 9, pedido 6 en `pago_espera` |
+//| 13.9 | `POST /registro` de Pedro (`pedro@test.com`, `Clave12345`), `POST /registro/verificar` con el `codigo_mock` que devolvió (con `EMAIL_MODO=off` no hace falta), login, y un pedido sin pagar del producto 3 × 2 | Pedro | usuario 9, pedido 6 en `pago_espera` |
 //| 13.10 ⭐ | `PATCH /admin/usuarios/9/estado` → `{ "activo": false }` | Admin | `200` · "Usuario suspendido" |
 //| 13.11 ⭐ | `GET /perfil` con el token que Pedro **ya tenía** | Pedro | `403` · "Tu cuenta está suspendida o dada de baja" |
 //| 13.12 | `PATCH /admin/usuarios/9/estado` → `{ "activo": true }` | Admin | `200` · y Pedro recibe el aviso `cuenta_reactivada` |

@@ -27,7 +27,7 @@ backend/
 │   ├── config/
 │   │   └── webPush.js              <- claves VAPID; sin ellas el push queda apagado
 │   ├── controllers/
-│   │   ├── registro.controller.js
+│   │   ├── registro.controller.js      <- registro de cliente con verificación del correo, y su login
 │   │   ├── registroComercio.controller.js
 │   │   ├── registroRepartidor.controller.js
 │   │   ├── perfil.controller.js        <- perfil propio, contraseña y baja (semana 3)
@@ -75,9 +75,11 @@ backend/
 │   │   ├── pedido.service.js       <- máquina de estados, stock, cancelación, asignación, entrega y comisión
 │   │   ├── pago.service.js         <- adaptador de MercadoPago
 │   │   ├── maps.service.js         <- adaptador de Mapbox (Directions + Geocoding)
+│   │   ├── email.service.js        <- adaptador del correo (Nodemailer): EMAIL_MODO off, mock o smtp
+│   │   ├── verificacion.service.js <- código de verificación del registro: generarlo, hashearlo y compararlo
 │   │   ├── ubicacion.service.js    <- posiciones del repartidor y coordenadas guardadas
 │   │   ├── repartidor.service.js   <- disponibilidad del repartidor
-│   │   ├── usuario.service.js      <- cuentas: perfiles, pedidos en curso y eliminación definitiva
+│   │   ├── usuario.service.js      <- cuentas: alta del cliente, perfiles, pedidos en curso y eliminación definitiva
 │   │   ├── notificacion.service.js <- filas de notificaciones y envío push
 │   │   ├── seguimiento.service.js  <- negocio del seguimiento: autorización, ETA y su caché
 │   │   └── tiemporeal.service.js   <- adaptador de Socket.IO (handshake, salas, emisión)
@@ -119,7 +121,11 @@ backend/
 > `ramaSanti` se llamaba `pendiente_pago`, y XAMPP guardaba el estado vacío cuando no
 > coincidía con el ENUM). La del 01/10 (`20261001_pedidos_retirado_en.sql`) agrega la
 > columna del retiro en el comercio: sin ella, el seguimiento, la ruta y las entregas del
-> repartidor responden `500`.
+> repartidor responden `500`. La del 11/11 (`20261111_registros_pendientes.sql`) crea la
+> tabla donde espera un registro hasta que se verifica el correo: sin ella,
+> `POST /api/registro` responde `500` y el backend avisa por consola qué falta (salvo con
+> `EMAIL_MODO=off`, que no la usa). No toca ninguna tabla existente y se puede correr más
+> de una vez.
 
 La semilla trae un usuario de cada rol, todos con la contraseña `Test1234!`:
 
@@ -172,7 +178,18 @@ CORS_ORIGEN=http://localhost:5173
 RATE_LIMIT_VENTANA_MINUTOS=15
 RATE_LIMIT_MAX=1000
 RATE_LIMIT_LOGIN_MAX=10
+RATE_LIMIT_CODIGOS_MAX=20
 TRUST_PROXY=
+
+EMAIL_MODO=mock
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USER=
+SMTP_PASS=
+EMAIL_REMITENTE=
+EMAIL_CODIGO_MINUTOS=15
+EMAIL_CODIGO_INTENTOS=5
+EMAIL_REENVIO_SEGUNDOS=60
 ```
 
 > `DB_PASSWORD` es la contraseña del usuario de MySQL. En XAMPP recién instalado `root` va
@@ -255,8 +272,52 @@ demás funciona igual: las notificaciones se guardan en la base y se leen con
 | `CORS_ORIGEN` | Orígenes que pueden llamar a la API desde un navegador, separados por coma. Vacío = cualquiera (se avisa al arrancar). El socket usa este mismo valor si no hay `SOCKET_ORIGEN` |
 | `RATE_LIMIT_VENTANA_MINUTOS` | Ventana de los dos límites de abajo |
 | `RATE_LIMIT_MAX` | Pedidos totales a `/api` por IP en la ventana. Generoso: alcanza para correr las guías enteras |
-| `RATE_LIMIT_LOGIN_MAX` | Intentos **fallidos** de login, registro y contraseña por IP en la ventana |
+| `RATE_LIMIT_LOGIN_MAX` | Intentos **fallidos** de login, registro, código de verificación y contraseña por IP en la ventana |
+| `RATE_LIMIT_CODIGOS_MAX` | Códigos de verificación que **salen bien** por IP en la ventana (registros y reenvíos). Solo cuenta con `EMAIL_MODO=smtp`, que es cuando se mandan correos de verdad |
 | `TRUST_PROXY` | Solo detrás de un proxy (ngrok, un despliegue): cuántos saltos creerle para sacar la IP real |
+
+#### Variables de la verificación del correo
+
+| Variable | Para qué sirve |
+|---|---|
+| `EMAIL_MODO` | `off` no verifica nada: `POST /api/registro` crea la cuenta directo. `mock` (el valor por defecto) pide el código pero no manda ningún correo: el código sale por la consola del backend y en la respuesta del registro (`codigo_mock`). `smtp` lo manda de verdad |
+| `SMTP_HOST` / `SMTP_PORT` | Servidor de correo saliente. Solo con `EMAIL_MODO=smtp`. Con el puerto `465` la conexión va cifrada desde el arranque; con `587` se usa STARTTLS |
+| `SMTP_USER` / `SMTP_PASS` | La cuenta que manda los correos. Con Gmail, `SMTP_PASS` es una contraseña de aplicación, no la de la cuenta |
+| `EMAIL_REMITENTE` | Remitente que ve la persona. Vacío = `ATuPuerta <SMTP_USER>` |
+| `EMAIL_CODIGO_MINUTOS` | Minutos que vale un código. Por defecto 15 |
+| `EMAIL_CODIGO_INTENTOS` | Códigos incorrectos que se le perdonan a un mismo código. Por defecto 5 |
+| `EMAIL_REENVIO_SEGUNDOS` | Espera para pedirle otro código al mismo correo. Por defecto 60 |
+
+Igual que con los pagos y los mapas, para desarrollo y para la defensa alcanza con
+`EMAIL_MODO=mock`: se ve el paso del código completo con correos inventados
+(`pedro@test.com`), sin crear ninguna cuenta. Ninguna es obligatoria: sin tocar el `.env`
+el backend queda en `mock`, y las `SMTP_*` recién se leen con `EMAIL_MODO=smtp` (si falta
+el servidor, el usuario o la contraseña, el registro contesta `503` y la consola lo avisa).
+
+| Modo | Qué hace `POST /api/registro` | Para qué |
+|---|---|---|
+| `off` | Crea la cuenta directo (`201`), como antes de que existiera la verificación | Cargar muchos usuarios de prueba rápido |
+| `mock` | Pide el código (`202`) y lo devuelve en `codigo_mock`. No sale ningún correo | Desarrollo, demo y pruebas |
+| `smtp` | Pide el código (`202`) y lo manda por correo. `codigo_mock` no viaja nunca | Uso real |
+
+Cambiar de modo es cambiar la variable y reiniciar el backend. El front no se configura:
+se adapta a lo que contesta el registro. Con `off` el servidor avisa al arrancar que el
+registro no está verificando el correo, para que no quede así en un despliegue. Un valor
+mal escrito se avisa una vez y queda en `mock`.
+
+**Para mandar correos de verdad con Gmail** (`EMAIL_MODO=smtp`):
+
+1. En la cuenta de Google que va a mandar los correos, activar la verificación en dos pasos.
+2. Generar una **contraseña de aplicación** en <https://myaccount.google.com/apppasswords>:
+   son 16 caracteres. La contraseña común de la cuenta no sirve para SMTP.
+3. En el `.env`: `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, la dirección en `SMTP_USER` y
+   la contraseña de aplicación en `SMTP_PASS`.
+
+Sirve cualquier otro proveedor de SMTP cambiando esos cuatro valores. Una cuenta común de
+Gmail tiene un cupo diario de envíos: alcanza para una demo, no para un sitio con tráfico.
+Como la contraseña de aplicación da acceso a mandar correos desde esa cuenta, conviene usar
+una cuenta del equipo creada para esto y no una personal. Y, como todo el `.env`, no se
+versiona.
 
 ### 3 — Instalar y correr
 
@@ -278,9 +339,13 @@ node scripts/prueba-flujos.js
 Recorre todos los flujos de punta a punta —registro, perfiles, carrito, pago, preparación,
 reparto, entrega, historial, repetición, notificaciones, administración, reclamos,
 auditoría, sesiones, socket y límites— y verifica los códigos y los datos clave de cada
-respuesta (159 verificaciones). Termina con código distinto de 0 si algo falla, así que
+respuesta (189 verificaciones). Termina con código distinto de 0 si algo falla, así que
 sirve como prueba de regresión antes de entregar o de mergear. Otra URL:
 `BASE_URL=http://localhost:4100/api node scripts/prueba-flujos.js`.
+
+> Funciona con `EMAIL_MODO=mock` (lee el código de la respuesta del registro) y con `off`
+> (saltea los pasos del código: quedan 183 verificaciones). Con `smtp` no tiene forma de
+> leer el código, así que corta en el primer registro y pide cambiar de modo.
 
 > El último bloque agota a propósito el límite de logins fallidos, así que por
 > `RATE_LIMIT_VENTANA_MINUTOS` los logins desde esa máquina dan `429`. Reiniciar el servidor
@@ -328,9 +393,11 @@ rama tomar y saca el texto de `datos.mensaje`. Vale también para los errores de
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `POST` | `/api/registro` | Alta de usuario con perfil de cliente. Contraseña de 8 a 72 caracteres |
-| `POST` | `/api/inicioSesion` | Login de cliente. Devuelve JWT |
-| `POST` | `/api/registroComercio` | Alta de usuario + comercio en una transacción |
+| `POST` | `/api/registro` | Primer paso del alta de un cliente: guarda el registro pendiente y manda un código de 6 dígitos al correo (`202`). Con `EMAIL_MODO=off` crea la cuenta directo (`201`). Contraseña de 8 a 72 caracteres |
+| `POST` | `/api/registro/verificar` | Segundo paso: con el código correcto crea el usuario y su perfil de cliente (`201`). Body: `{ email, contrasena, codigo }` |
+| `POST` | `/api/registro/reenviar` | Manda un código nuevo para un registro pendiente. Body: `{ email, contrasena }` |
+| `POST` | `/api/inicioSesion` | Login de cliente. Devuelve JWT. Con un registro sin verificar, `403` con `verificacion_pendiente: true` |
+| `POST` | `/api/registroComercio` | Alta del perfil de comercio para un usuario ya registrado (pide su contraseña) |
 | `POST` | `/api/inicioSesionComercio` | Login de comercio (email + contraseña + CUIL) |
 | `POST` | `/api/cerrarSesionComercio` | Cierra la sesión de comercio |
 | `POST` | `/api/registroRepartidor` | Alta del perfil de repartidor para un usuario ya registrado (pide su contraseña) |
@@ -347,9 +414,85 @@ No hay registro público de administradores: si lo hubiera, cualquiera podría d
 permisos. El primero viene en la semilla y los demás los da de alta otro administrador
 (`POST /api/admin/usuarios` con `rol: 'administrador'`).
 
-Los siete endpoints que verifican una contraseña (los cuatro logins y los tres registros,
-porque los de comercio y repartidor comparan la contraseña de una cuenta que ya existe)
-tienen límite de intentos fallidos: ver [Seguridad](#seguridad--semana-14).
+Los nueve endpoints que verifican una contraseña (los cuatro logins, los tres registros
+—los de comercio y repartidor comparan la contraseña de una cuenta que ya existe— y los
+dos del código de verificación, que comparan la del registro pendiente) tienen límite de
+intentos fallidos: ver [Seguridad](#seguridad--semana-14).
+
+#### Verificación del correo al registrarse
+
+Flujo: `POST /api/registro` guarda los datos del formulario en `registros_pendientes` y
+manda un código de 6 dígitos → la persona lo ingresa → `POST /api/registro/verificar` crea
+la cuenta (`usuarios` + `clientes`) y borra el pendiente → inicia sesión con
+`POST /api/inicioSesion`, como siempre.
+
+| Endpoint | Respuestas |
+|---|---|
+| `POST /api/registro` | `202` `{ mensaje, verificacion_pendiente: true, email, minutos_vigencia, segundos_reenvio }`, más `codigo_mock` si el backend no manda correos. `400` validaciones y "Usuario ya registrado". `429` con `segundos_restantes` si a ese correo ya se le mandó un código hace menos de un minuto. `503` si el correo no salió. Con `EMAIL_MODO=off`, `201` y la cuenta creada |
+| `POST /api/registro/verificar` | `201` cuenta creada. `400` código incorrecto (con `intentos_restantes`) o vencido. `401` "Email o contraseña incorrectos" si no hay un registro pendiente o la contraseña no es la de ese registro. `429` intentos agotados: hay que pedir otro código |
+| `POST /api/registro/reenviar` | `200` con los mismos datos del `202` del registro. `401` genérico. `429` con `segundos_restantes` si no pasó el minuto. `503` si el correo no salió |
+| `POST /api/inicioSesion` | Sin cuenta pero con un registro pendiente y esa contraseña: `403` con `verificacion_pendiente: true`, para que el front muestre el paso del código. Todo lo demás, igual que antes |
+
+- **La cuenta se crea recién cuando el código es correcto.** Mientras tanto el registro
+  espera en una tabla aparte, en vez de crear el usuario con una columna
+  `email_verificado` en falso. Así `usuarios` solo tiene cuentas verificadas, y los cuatro
+  logins, `validarSesion`, el panel de administración y la semilla no tuvieron que
+  cambiar. Tampoco los registros de comercio y de repartidor: agregan un perfil a una
+  cuenta que ya existe, así que la única puerta por la que entra un correo nuevo es esta.
+- **`202` en el registro y `201` al verificar**: el pedido se aceptó, pero la cuenta
+  todavía no existe. El `201` lo contesta quien la crea.
+- **Un correo mal escrito no queda tomado.** Un registro que nadie verifica no ocupa la
+  dirección: registrarse de nuevo con el mismo correo reemplaza al pendiente entero,
+  contraseña incluida. Los que nadie terminó se borran solos un día después de vencer, en
+  el siguiente registro (el backend no tiene tareas programadas).
+- **El código**: 6 dígitos de `crypto.randomInt` (no `Math.random`, que es predecible).
+  En la base se guarda su HMAC-SHA256 con `JWT_SECRET`, nunca el código: con solo un
+  millón de valores posibles, un hash sin clave se revierte probándolos todos. Se compara
+  con `crypto.timingSafeEqual`. Vale 15 minutos, admite 5 intentos fallidos, y a un mismo
+  correo se le manda uno nuevo cada 60 segundos como mucho; al emitirlo, el anterior deja
+  de servir y los intentos vuelven a 0. Con los intentos agotados no sirve ni el código
+  correcto.
+- **Verificar y reenviar piden también la contraseña.** El código prueba que la persona
+  lee ese correo; la contraseña, que el registro que confirma es el suyo. Sin eso habría
+  una forma de quedarse con la cuenta de otro: registrarse con el correo de la víctima y
+  una contraseña propia justo cuando ella se está registrando. A ella le llega un código
+  más, lo ingresa creyendo que es el suyo y deja verificada una cuenta que abre la
+  contraseña del atacante. Con la contraseña en el medio, ese código no confirma nada.
+- **No delata qué correos están a medio registrar**: verificar y reenviar contestan el
+  mismo `401` genérico de los logins si no hay registro pendiente que si la contraseña no
+  coincide, y el `403` del login se da recién después de comprobar la contraseña (igual
+  que "Usuario inactivo").
+- **El correo no repite nada de lo que la persona escribió** en el formulario, ni el
+  nombre. Todavía no se sabe si esa casilla es suya: si lo repitiera, registrarse con la
+  dirección de otro serviría para mandarle un texto propio desde la cuenta de ATuPuerta.
+  Por lo mismo, el destinatario se le pasa a Nodemailer como objeto (`{ address }`) y no
+  como texto: a un texto lo parsea como una lista de `Nombre <dirección>`, y un "correo"
+  como `GANASTE<otra@direccion.com>` —que la validación deja pasar— le llegaría a esa
+  otra dirección con `GANASTE` de nombre.
+- **Concurrencia**, con las mismas convenciones del resto del backend. Guardar el
+  pendiente y pedir otro código son `UPDATE` condicionales que "reservan el turno": de
+  dos pedidos simultáneos solo uno afecta la fila y manda el correo, y el otro recibe el
+  `429`. Verificar es una transacción con `SELECT ... FOR UPDATE` sobre el pendiente: dos
+  pedidos con el mismo código no crean dos cuentas ni cuelan intentos de más. Un código
+  incorrecto hace `commit`, no `rollback`: el intento tiene que quedar contado.
+- **Las llamadas de red van fuera de toda transacción**: la geocodificación de la
+  dirección se hace al registrarse (las coordenadas esperan en el pendiente) y el envío
+  del correo, después de guardar. A diferencia del push, el correo no es "si sale, sale":
+  sin él la persona no puede seguir, así que se espera la respuesta. Si falla, contesta
+  `503` y libera la espera entre códigos para poder reintentar enseguida.
+- **Las fechas del código son `DATETIME`, no `TIMESTAMP`**, y todas las cuentas de tiempo
+  se hacen en SQL con `NOW()`: en MariaDB la primera columna `TIMESTAMP NOT NULL` de una
+  tabla se actualiza sola en cada `UPDATE`, y el vencimiento se pisaría al contar un
+  intento fallido.
+- `services/email.service.js` es el único archivo que sabe que los correos salen con
+  Nodemailer por SMTP, igual que `maps.service.js` con Mapbox.
+- **Lo que no se verifica**: las cuentas que da de alta un administrador
+  (`POST /api/admin/usuarios`) y los cambios de correo que hace desde el panel: ahí
+  responde el administrador. Las cuentas que ya existían tampoco tienen que verificar
+  nada. Recuperar la contraseña por correo y pedir un código en cada inicio de sesión
+  quedaron afuera; lo primero reusaría este mismo adaptador.
+
+Los casos de prueba están en `postman/backend-registro.js`.
 
 `usuarios.rol` funciona como "qué sesión tenés abierta", una sola a la vez: cada login
 la escribe y cerrar sesión de comercio o de repartidor vuelve a dejarla en `cliente`.
@@ -888,9 +1031,19 @@ pendiente -> en_revision -> resuelto
 - **Límites por IP** (`express-rate-limit`, `middlewares/limites.middleware.js`):
   - general para toda la API (`RATE_LIMIT_MAX`), generoso a propósito;
   - de intentos **fallidos** (`RATE_LIMIT_LOGIN_MAX`) en todo lo que verifica una
-    contraseña: los cuatro logins, los tres registros, cambiar la contraseña y dar de baja
-    la cuenta. Quien entra bien nunca se lo cruza.
-  - Los dos contestan `429` con el formato de siempre.
+    contraseña: los cuatro logins, los tres registros, verificar el código del registro y
+    pedir otro, cambiar la contraseña y dar de baja la cuenta. Quien entra bien nunca se
+    lo cruza. Cada código de verificación incorrecto cuenta como un intento fallido;
+  - de códigos de verificación **enviados** (`RATE_LIMIT_CODIGOS_MAX`) en el registro y en
+    el reenvío. Al revés que el anterior, cuenta los pedidos que salen bien, que son los
+    que mandan un correo. Cubre lo que la espera de 60 segundos no cubre, porque esa es
+    por dirección: un script que cambia de correo en cada pedido, que gastaría el cupo de
+    envíos de la cuenta y le llenaría la casilla a gente que nunca se registró. Solo
+    corre con `EMAIL_MODO=smtp`: en `mock` y en `off` no sale ningún correo.
+  - Los tres contestan `429` con el formato de siempre.
+- **Código de verificación del registro**: guardado como HMAC, con vencimiento, tope de
+  intentos y comparación en tiempo constante. Ver
+  [Verificación del correo al registrarse](#verificación-del-correo-al-registrarse).
 - **Sesión viva contra la base** en cada request (`verificarToken`) y en el handshake del
   socket: cuenta activa y sesión abierta. Ver la nota de
   [Autenticación y registro](#autenticación-y-registro).

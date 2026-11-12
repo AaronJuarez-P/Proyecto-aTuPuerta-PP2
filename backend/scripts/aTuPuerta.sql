@@ -476,6 +476,50 @@ ALTER TABLE pedidos
   ADD COLUMN retirado_en TIMESTAMP NULL AFTER repartidor_id;
 
 -- =====================================================================
+-- VERIFICACIÓN DEL CORREO AL REGISTRARSE
+-- Para una base que ya tiene datos está
+-- scripts/migraciones/20261111_registros_pendientes.sql, que crea esta misma
+-- tabla sin borrar nada.
+--
+-- POST /api/registro ya no crea la cuenta: guarda acá los datos del formulario
+-- y manda un código de 6 dígitos al correo. La fila de usuarios (y la de
+-- clientes) se crea recién cuando la persona ingresa el código, y esta se
+-- borra. Por eso usuarios solo tiene cuentas con el correo verificado, y esta
+-- tabla no tiene claves foráneas: un registro pendiente todavía no es un usuario.
+--
+--   * Un pendiente por correo (UNIQUE). Registrarse otra vez lo reemplaza: un
+--     correo mal escrito o un registro abandonado no dejan el correo tomado.
+--   * contrasena es el hash bcrypt, igual que usuarios.contrasena.
+--   * codigo_hash es un HMAC-SHA256 del código (64 caracteres en hexadecimal).
+--     El código en texto plano no se guarda nunca.
+--   * intentos_fallidos cuenta los códigos incorrectos contra el código vigente
+--     y vuelve a 0 con cada código nuevo.
+--   * ultimo_envio_en sirve para no mandar más de un código por minuto al mismo
+--     correo. NULL = el envío falló y se puede reintentar enseguida.
+--   * codigo_expira_en y ultimo_envio_en son DATETIME y no TIMESTAMP a
+--     propósito: en MariaDB (XAMPP) la primera columna TIMESTAMP NOT NULL de una
+--     tabla se actualiza sola con cada UPDATE, y contar un intento fallido
+--     pisaría el vencimiento. Las cuentas de tiempo se hacen siempre con NOW()
+--     en el SQL, así que no dependen del reloj ni de la zona horaria del backend.
+-- =====================================================================
+CREATE TABLE registros_pendientes (
+  id                 INT AUTO_INCREMENT PRIMARY KEY,
+  email              VARCHAR(150) NOT NULL,
+  nombre             VARCHAR(100) NOT NULL,
+  contrasena         VARCHAR(255) NOT NULL,
+  telefono           VARCHAR(20)  NOT NULL,
+  direccion_entrega  VARCHAR(200) NOT NULL,
+  latitud            DECIMAL(10,7) NULL,
+  longitud           DECIMAL(10,7) NULL,
+  codigo_hash        CHAR(64)     NOT NULL,
+  codigo_expira_en   DATETIME     NOT NULL,
+  intentos_fallidos  TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  ultimo_envio_en    DATETIME     NULL,
+  created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_registros_pendientes_email (email)
+) ENGINE=InnoDB;
+
+-- =====================================================================
 -- DATOS DE PRUEBA
 -- Contraseña en texto plano para TODOS los usuarios de prueba: Test1234!
 -- El valor almacenado es el hash bcrypt (costo 10) de esa contraseña, para que

@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useSesion } from '../../context/sesion'
 import { esRutaInterna, inicioDelRol } from '../../utils/roles'
 import Marca from '../../components/Marca/Marca'
+import VerificarCorreo from '../../components/VerificarCorreo/VerificarCorreo'
 import './Login.css'
 
 // El backend tiene un login por rol: cada uno abre esa sesión en la cuenta. El de
@@ -48,6 +49,9 @@ export default function Login() {
   const [cuil, setCuil] = useState('')
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
+  // { email, contrasena } de alguien que se registró y nunca ingresó el código. Mientras
+  // tenga algo, en lugar del formulario se muestra el paso "Verificá tu correo".
+  const [verificacion, setVerificacion] = useState(null)
 
   const { entrar, avisoSesion, limpiarAvisoSesion } = useSesion()
   const navigate = useNavigate()
@@ -84,9 +88,46 @@ export default function Login() {
       const usuario = await entrar(rol, { email, contrasena, cuil })
       navigate(esRutaInterna(volver) ? volver : inicioDelRol(usuario.rol), { replace: true })
     } catch (errorLogin) {
-      setError(errorLogin.message)
+      // Se registró pero nunca ingresó el código: la cuenta todavía no existe, y el
+      // backend lo avisa en el login de cliente (403 con verificacion_pendiente). En vez
+      // de un error se le muestra el paso que le falta.
+      if (errorLogin.datos?.verificacion_pendiente) {
+        setVerificacion({ email: email.trim(), contrasena })
+      } else {
+        setError(errorLogin.message)
+      }
+
       setCargando(false)
     }
+  }
+
+  async function entrarTrasVerificar() {
+    const usuario = await entrar('cliente', verificacion)
+    navigate(esRutaInterna(volver) ? volver : inicioDelRol(usuario.rol), { replace: true })
+  }
+
+  if (verificacion) {
+    return (
+      <main className="login-page">
+        <section className="login-card">
+          <Link to="/" className="login-brand">
+            <Marca variante="clara" />
+          </Link>
+
+          <h1>Verificá tu correo</h1>
+
+          <p className="login-description">Falta un paso para terminar de crear tu cuenta.</p>
+
+          <VerificarCorreo
+            email={verificacion.email}
+            contrasena={verificacion.contrasena}
+            textoVolver="Volver al inicio de sesión"
+            alVerificar={entrarTrasVerificar}
+            alVolver={() => setVerificacion(null)}
+          />
+        </section>
+      </main>
+    )
   }
 
   return (

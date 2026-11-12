@@ -470,13 +470,20 @@
 //{ "nombre": "Prueba", "email": "prueba.geo@test.com", "contrasena": "Test1234!",
 //  "telefono": "3421999999", "direccion_entrega": "Sarmiento 100, Santo Tomé" }
 //```
-//**Respuesta esperada:** `201 Created`. El alta funciona igual.
+//**Respuesta esperada:** `202 Accepted`, con el `codigo_mock`. El registro se acepta igual.
+//
+//**Request 2:** `POST /api/registro/verificar` → `{ "email": "prueba.geo@test.com",
+//"contrasena": "Test1234!", "codigo": "<el codigo_mock>" }` → `201 Created`. La cuenta se
+//crea con las coordenadas que tenía el registro pendiente:
 //```sql
 //SELECT direccion_entrega, latitud, longitud FROM clientes ORDER BY id DESC LIMIT 1;
 //-- Sarmiento 100, Santo Tomé | NULL | NULL
 //```
 //> Nadie se queda sin poder registrarse porque Mapbox no contestó. Las coordenadas quedan en
 //> `NULL` y se completan solas más adelante.
+//
+//> Los dos pasos son por la verificación del correo (`EMAIL_MODO=mock`, el valor por
+//> defecto). Con `EMAIL_MODO=off` el registro contesta `201` directo y no hay segundo paso.
 //
 //### Caso 22 — El relleno perezoso repara la fila sola
 //**Precondición:** volver a poner `MAPS_MODO=mock` y reiniciar el servidor. Token del
@@ -564,6 +571,10 @@
 //{ "nombre": "Prueba Real", "email": "prueba.real@test.com", "contrasena": "Test1234!",
 //  "telefono": "3421888888", "direccion_entrega": "Boulevard Gálvez 1150, Santa Fe" }
 //```
+//Contesta `202` con el `codigo_mock`: mandarlo a `POST /api/registro/verificar` junto con el
+//email y la contraseña para que la cuenta se cree (`201`). La dirección se geocodifica en
+//el primer paso, y verificar copia esas coordenadas a `clientes`.
+//
 //**Verificación en base:**
 //```sql
 //SELECT direccion_entrega, latitud, longitud FROM clientes ORDER BY id DESC LIMIT 1;

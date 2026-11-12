@@ -1,4 +1,5 @@
 const { rateLimit } = require('express-rate-limit');
+const { enviaCorreos } = require('../services/email.service');
 
 // Limites de pedidos por IP (semana 14).
 //
@@ -37,7 +38,9 @@ const limitadorGeneral = rateLimit({
 
 // Para todo lo que verifica una contraseña: los cuatro logins, los tres registros (los
 // de comercio y repartidor comparan la contraseña de una cuenta que ya existe),
-// cambiar la contraseña y dar de baja la cuenta.
+// verificar el codigo del registro y pedir otro (comparan la del registro pendiente, y
+// verificar ademas es donde se prueban los codigos), cambiar la contraseña y dar de
+// baja la cuenta.
 //
 // Cuenta solo los intentos FALLIDOS (skipSuccessfulRequests): alcanza para que
 // adivinar una contraseña probando de a una sea impracticable, y quien entra bien
@@ -62,4 +65,26 @@ const limitadorAyuda = rateLimit({
     handler: responderLimite("Demasiadas preguntas al Portero. Esperá unos minutos y volvé a intentar")
 });
 
-module.exports = { limitadorGeneral, limitadorAutenticacion, limitadorAyuda };
+// Para lo que manda un correo: el registro con verificacion y el reenvio del codigo.
+//
+// Al reves que limitadorAutenticacion, cuenta solo los pedidos que SALEN BIEN
+// (skipFailedRequests), que son los que mandaron un correo: una validacion que falla o
+// un "esperá para pedir otro" no gastan nada.
+//
+// Cubre lo que la espera entre codigos no cubre, porque esa es por direccion: un script
+// que cambia de correo en cada pedido. Eso gasta el cupo diario de envios de la cuenta
+// y le llena la casilla de codigos a gente que nunca se registro.
+//
+// Solo corre con EMAIL_MODO=smtp. En mock y en off no sale ningun correo: no hay nada
+// que cuidar, y frenaria justamente la carga de usuarios de prueba.
+const limitadorEnvioCodigos = rateLimit({
+    windowMs: ventanaMs(),
+    limit: numeroDelEntorno('RATE_LIMIT_CODIGOS_MAX', 20),
+    skipFailedRequests: true,
+    skip: () => !enviaCorreos(),
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    handler: responderLimite("Pediste demasiados códigos. Esperá unos minutos y volvé a intentar")
+});
+
+module.exports = { limitadorGeneral, limitadorAutenticacion, limitadorAyuda, limitadorEnvioCodigos };

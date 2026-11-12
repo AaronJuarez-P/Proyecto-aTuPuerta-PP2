@@ -48,6 +48,6 @@ En la página "Notificaciones" las ves todas, las filtrás por "Sin leer" y las 
 
 ## ¿Por qué me dice "Demasiados intentos fallidos"?
 
-Para proteger las cuentas, la app limita los intentos fallidos en todo lo que pide una contraseña: iniciar sesión, registrarse, registrar un comercio o un perfil de repartidor, cambiar la contraseña y eliminar la cuenta. Con la configuración actual, después de 10 intentos fallidos en 15 minutos desde la misma conexión aparece "Demasiados intentos fallidos. Esperá unos minutos y volvé a intentar".
+Para proteger las cuentas, la app limita los intentos fallidos en todo lo que pide una contraseña: iniciar sesión, registrarse, ingresar el código de verificación del correo, registrar un comercio o un perfil de repartidor, cambiar la contraseña y eliminar la cuenta. Con la configuración actual, después de 10 intentos fallidos en 15 minutos desde la misma conexión aparece "Demasiados intentos fallidos. Esperá unos minutos y volvé a intentar".
 
 Solo cuentan los intentos que fallan: si entrás bien, nunca te pasa. Esperá a que pasen esos minutos y revisá el correo, la contraseña y, si entrás como comercio, el CUIL o CUIT.

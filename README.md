@@ -28,6 +28,7 @@ frontend: React con Vite, conectado a la API del backend.
 - bcryptjs — hash de contraseñas
 - Socket.IO — seguimiento en tiempo real
 - Web Push — notificaciones al navegador
+- Nodemailer — correo con el código de verificación del registro
 - helmet + express-rate-limit — cabeceras de seguridad y límite de intentos
 
 **Frontend**
@@ -91,6 +92,12 @@ Con el `.env.example` tal cual, nada depende de cuentas externas:
 - `MAPS_MODO=mock`: las direcciones se ubican alrededor de `MAPS_CENTRO_LAT/LNG` y el mapa
   dibuja la ruta como una línea recta. El panel del repartidor tiene "Simular avance" para
   la demo sin GPS.
+- `EMAIL_MODO=mock`: al registrarse se pide el código de verificación del correo, pero no
+  se manda ningún correo: el código aparece en la misma pantalla y en la consola del
+  backend, así que sirve cualquier correo inventado. Con `EMAIL_MODO=off` el registro entra
+  directo, sin código, para cargar usuarios de prueba rápido. Con `smtp` lo manda de verdad
+  (cómo configurarlo con Gmail está en [`backend/readme.md`](backend/readme.md),
+  "Variables de la verificación del correo").
 - Las notificaciones push del navegador necesitan `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY`
   (`npx web-push generate-vapid-keys`). Sin ellas, las notificaciones se ven igual en la
   campanita del front.
@@ -174,8 +181,8 @@ corpus no, va a contestar con la regla vieja.
 ## Changelog
 
 > **Esto es el registro histórico de las primeras semanas.** Varias cosas cambiaron después
-> (el registro ya crea el perfil de cliente, hay login y alta de administradores, perfiles,
-> historial, reclamos, etc.). La documentación al día de toda la API —endpoints, variables de
+> (el registro ya crea el perfil de cliente y verifica el correo con un código, hay login y
+> alta de administradores, perfiles, historial, reclamos, etc.). La documentación al día de toda la API —endpoints, variables de
 > entorno, cómo probar— está en [`backend/readme.md`](backend/readme.md).
 
 ## Registro usuarios

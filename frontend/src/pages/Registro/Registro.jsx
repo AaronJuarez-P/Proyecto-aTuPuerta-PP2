@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router'
 import { registrarCliente } from '../../api/auth'
 import { useSesion } from '../../context/sesion'
 import { esRutaInterna } from '../../utils/roles'
+import VerificarCorreo from '../../components/VerificarCorreo/VerificarCorreo'
 import './Registro.css'
 
 // Mismas reglas que valida el backend (POST /api/registro), para avisar antes de mandar
@@ -20,6 +21,9 @@ export default function Registro() {
   })
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
+  // Lo que contestó el backend al mandar el código. Mientras tenga algo, en lugar del
+  // formulario se muestra el paso "Verificá tu correo".
+  const [envio, setEnvio] = useState(null)
 
   const { entrar } = useSesion()
   const navigate = useNavigate()
@@ -28,6 +32,12 @@ export default function Registro() {
 
   const cambiar = (campo) => (evento) =>
     setFormulario((actual) => ({ ...actual, [campo]: evento.target.value }))
+
+  // El registro no devuelve token: se inicia sesión con lo que se acaba de cargar
+  async function entrarYSeguir() {
+    await entrar('cliente', { email: formulario.email, contrasena: formulario.contrasena })
+    navigate(esRutaInterna(volver) ? volver : '/comercios', { replace: true })
+  }
 
   async function manejarRegistro(evento) {
     evento.preventDefault()
@@ -53,7 +63,7 @@ export default function Registro() {
     setCargando(true)
 
     try {
-      await registrarCliente({
+      const respuesta = await registrarCliente({
         ...datos,
         nombre: datos.nombre.trim(),
         email: datos.email.trim(),
@@ -61,13 +71,48 @@ export default function Registro() {
         direccion_entrega: datos.direccion_entrega.trim(),
       })
 
-      // El registro no devuelve token: se inicia sesión con lo que se acaba de cargar
-      await entrar('cliente', { email: datos.email, contrasena: datos.contrasena })
-      navigate(esRutaInterna(volver) ? volver : '/comercios', { replace: true })
+      // Con la verificación del correo prendida en el backend la cuenta todavía no
+      // existe: falta el código. Sin ella (EMAIL_MODO=off) ya está creada y se entra
+      // directo, como siempre.
+      if (respuesta.verificacion_pendiente) {
+        setEnvio(respuesta)
+        setCargando(false)
+        return
+      }
+
+      await entrarYSeguir()
     } catch (errorRegistro) {
       setError(errorRegistro.message)
       setCargando(false)
     }
+  }
+
+  // Segundo paso: el código que llegó por correo. No es otra ruta: el formulario se deja
+  // de mostrar, pero sus datos siguen en el estado, así que "Usar otro correo" vuelve con
+  // todo cargado y la contraseña que pide el backend sale de ahí, de la memoria.
+  if (envio) {
+    return (
+      <main className="registro-page">
+        <section className="registro-container">
+          <div className="registro-intro">
+            <p className="eyebrow">ATUPUERTA</p>
+            <h1>Verificá tu correo</h1>
+            <p>Falta un paso para terminar de crear tu cuenta.</p>
+          </div>
+
+          <div className="registro-form">
+            <VerificarCorreo
+              email={envio.email}
+              contrasena={formulario.contrasena}
+              envio={envio}
+              textoVolver="Usar otro correo"
+              alVerificar={entrarYSeguir}
+              alVolver={() => setEnvio(null)}
+            />
+          </div>
+        </section>
+      </main>
+    )
   }
 
   return (

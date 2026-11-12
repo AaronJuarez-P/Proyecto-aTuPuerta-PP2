@@ -32,7 +32,8 @@ const obtenerLongitudValida = (valor) => obtenerCoordenadaValida(valor, 180);
 // Validacion de formato de email, deliberadamente laxa: no intenta cumplir el RFC 5322
 // (que acepta direcciones que ningun proveedor real emite) sino descartar lo obviamente
 // mal escrito antes de que llegue a la base. Lo unico que prueba de verdad que un email
-// existe es mandarle un mail de verificacion, que el proyecto todavia no hace.
+// existe es mandarle un mail de verificacion: eso lo hace el registro, con el codigo de
+// POST /api/registro/verificar (ver registro.controller.js).
 // El limite de 150 es el largo de usuarios.email en el esquema.
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 

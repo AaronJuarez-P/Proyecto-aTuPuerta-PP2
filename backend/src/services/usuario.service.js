@@ -175,7 +175,31 @@ const eliminarCuentaDefinitivamente = async (conexion, { usuarioId, actorUsuario
     };
 };
 
+// Alta de una cuenta con su perfil de cliente (CU01). Los dos INSERT van juntos: sin la
+// fila de clientes el usuario nunca podria usar el carrito ni crear pedidos.
+//
+// La comparten los dos caminos del registro publico: el directo (EMAIL_MODO=off) y el que
+// crea la cuenta cuando la persona ingresa el codigo de verificacion. Asi la cuenta queda
+// igual venga por donde venga.
+//
+// contrasenaHash ya es el hash bcrypt. Devuelve el id del usuario. Si el email ya existe
+// tira ER_DUP_ENTRY (UNIQUE uq_usuarios_email), que traduce quien llama.
+const crearCuentaCliente = async (conexion, { nombre, email, contrasenaHash, telefono, direccionEntrega, latitud = null, longitud = null }) => {
+    const [resultado] = await conexion.query(
+        `INSERT INTO usuarios (nombre, email, contrasena, telefono, rol) VALUES (?, ?, ?, ?, ?)`,
+        [nombre, email, contrasenaHash, telefono, 'cliente']
+    );
+
+    await conexion.query(
+        `INSERT INTO clientes (usuario_id, direccion_entrega, latitud, longitud) VALUES (?, ?, ?, ?)`,
+        [resultado.insertId, direccionEntrega, latitud, longitud]
+    );
+
+    return resultado.insertId;
+};
+
 module.exports = {
+    crearCuentaCliente,
     buscarCuenta,
     buscarPedidosEnCurso,
     describirPedidosEnCurso,

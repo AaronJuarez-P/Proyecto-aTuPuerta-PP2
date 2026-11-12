@@ -22,7 +22,9 @@ por fase, a medida que se tomaba cada decisión.
 12. [Ajustes de la charla](#ajustes-de-la-charla): las sugeridas siempre a la vista, el
     Portero sin "Hola, vecino", cuándo se borra la charla y la fuente de vuelta en el front
 13. [Corpus ampliado](#corpus-ampliado-511): qué se puede comprar y qué rubros hay
-14. [Qué probé y descarté](#qué-probé-y-descarté)
+14. [Corpus: verificación del correo](#corpus-verificación-del-correo-1111): el registro
+    ahora pide un código. **Falta volver a indexar**
+15. [Qué probé y descarté](#qué-probé-y-descarté)
 
 ## Entorno y base (Fase 1)
 
@@ -1062,6 +1064,47 @@ de los rubros (ferretería, súper…), y le contestó "No lo encuentro".
 
 **Lo que deja de valer:** los 35 fragmentos de las Fases 2 y 3 ahora son 37, y el 0.457 de
 "descuentos" de las Fases 4, 5 y 8 ahora es 0.492.
+
+## Corpus: verificación del correo (11/11)
+
+La app cambió una regla: registrarse como cliente ahora pide un código de 6 dígitos que
+llega al correo, y la cuenta se crea recién al ingresarlo. Por la regla del grupo, el
+corpus se actualizó en el mismo cambio.
+
+- **"¿Cómo me registro como cliente?"** (`ayuda-clientes.md`, renglón 1) decía que al tocar
+  "Crear cuenta" quedabas con la sesión iniciada. Ahora cuenta el paso "Verificá tu
+  correo". Se reescribió el segundo párrafo, sin agregar renglones.
+- **Pregunta nueva al final de `ayuda-clientes.md`:** "¿Qué hago si no me llega el código
+  de verificación?" (renglón 80). Va al final por el mismo motivo que las del 5/11: "¿Cómo
+  pago mi pedido?" sigue en el renglón 25, el que se abre en la demo.
+- **"¿Por qué me dice 'Demasiados intentos fallidos'?"** (`politicas-y-cuenta.md`) suma el
+  código de verificación a la lista de lo que cuenta como intento fallido.
+- **Todo lo que dicen sale del código:**
+  - El nombre del paso y los de los botones ("Verificá tu correo", "Verificar correo",
+    "Reenviar código", "Usar otro correo") y el recuadro "Modo de prueba" son los de
+    `frontend/src/components/VerificarCorreo/VerificarCorreo.jsx` y `Registro.jsx`.
+  - 6 dígitos, 15 minutos, 5 intentos y un código nuevo por minuto son los valores por
+    defecto de `backend/src/services/verificacion.service.js`.
+  - Quien cerró la página lo retoma desde el login de cliente: `inicioSesion` contesta
+    `403` con `verificacion_pendiente` (`registro.controller.js`) y `Login.jsx` muestra el
+    mismo paso.
+  - Verificar el código y pedir otro llevan `limitadorAutenticacion`
+    (`registro.routes.js`).
+- **Las dos respuestas miden 741 y 744 caracteres,** dentro del rango de 300 a 1200. Son 38
+  preguntas (antes 37).
+- **"Código" ahora nombra dos cosas** en el corpus: el de verificación del correo, de 6
+  dígitos, y el de entrega, de 8 ("¿Qué es el código de entrega y dónde lo veo?"). Los
+  títulos los distinguen, y la respuesta nueva no nombra el de entrega para no acercarse a
+  esas preguntas.
+- El renglón de `backend/readme.md` que la Fase 2 marcaba como desactualizado ("alta de
+  usuario + comercio en una transacción") se corrigió en este mismo cambio.
+
+**Falta volver a indexar.** Cuando se escribió esto, Docker y Ollama no estaban
+levantados: la tabla sigue con los 37 fragmentos del 5/11 y el Portero sigue contestando
+el registro con la regla vieja. Después de `node --env-file=.env indexar.mjs` tienen que
+quedar 38 fragmentos, y hay que volver a correr `distribucion.mjs` y `evaluar.mjs` y
+repasar las preguntas de la demo: los números de las secciones anteriores pueden moverse,
+sobre todo en las preguntas que dicen "código". Hasta entonces, nada de esto está medido.
 
 ## Qué probé y descarté
 
