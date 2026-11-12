@@ -2,7 +2,8 @@ const database = require('../database/database');
 const {
     bloquearRepartidor,
     actualizarDisponibilidad,
-    buscarPedidoEnCurso
+    buscarPedidoEnCurso,
+    validarLicencia
 } = require('../services/repartidor.service');
 const { registrarUbicacion } = require('../services/ubicacion.service');
 const { emitirUbicacionDePedido } = require('../services/tiemporeal.service');
@@ -321,6 +322,33 @@ const actualizarPerfilRepartidor = async (req, res) => {
                 estado: "error",
                 datos: { mensaje: `Tenés el pedido #${pedidoEnCurso} en camino. Podés cambiar los datos del vehículo cuando lo entregues` }
             });
+        }
+
+        // La licencia se revisa solo si el pedido toca el vehiculo o la licencia, y contra
+        // como va a quedar la fila: lo que ya estaba guardado mas lo que cambia. Asi quien
+        // pasa de bicicleta a moto tiene que mandar tambien la licencia, y un repartidor
+        // anterior a esta regla puede seguir cambiando la patente sin que se le exija
+        // corregir una licencia que no esta tocando.
+        //
+        // Va despues del chequeo del pedido en camino: ese 409 tiene prioridad. La fila ya
+        // esta lockeada por bloquearRepartidor, asi que lo que se lee no cambia hasta el
+        // commit.
+        if (cambios.tipo_vehiculo !== undefined || cambios.numero_licencia !== undefined) {
+            const [repartidores] = await connection.query(
+                `SELECT dni, tipo_vehiculo, numero_licencia FROM repartidores WHERE id = ?`,
+                [req.repartidorId]
+            );
+
+            const errorLicencia = validarLicencia({ ...repartidores[0], ...cambios });
+
+            if (errorLicencia) {
+                await connection.rollback();
+                return res.status(400).json({
+                    codigo: 400,
+                    estado: "error",
+                    datos: { mensaje: errorLicencia }
+                });
+            }
         }
 
         // Los nombres de columna salen de las listas de arriba, nunca del body

@@ -91,6 +91,7 @@ Cuentas de la semilla, todas con contraseña `Test1234!`: `maria.gomez@test.com`
 - Las rutas del actor autenticado van en singular (`/comercio/...`, `/repartidor/...`). En plural chocarían con las públicas `/comercios/:id`.
 - `mysql2` devuelve los `DECIMAL` como string.
 - Los contadores de rate limit (`middlewares/limites.middleware.js`) viven en memoria: reiniciar el backend los resetea.
+- CUIT (dígito verificador), DNI (7 u 8 dígitos) y licencia (igual al DNI salvo con bicicleta) se validan al registrar y al editar el vehículo, nunca al iniciar sesión. Los CUIL y las licencias de la semilla son inventados y no pasan esas reglas. Las reglas del CUIT y el DNI están repetidas en `frontend/src/utils/documentos.js`.
 - En el SQL, los valores van siempre con placeholders. Los fragmentos dinámicos (filtros, columnas de un `UPDATE` parcial) salen de listas fijas del código, nunca del request.
 
 **Base de datos.** `backend/scripts/aTuPuerta.sql` tiene el esquema completo y la semilla. Un cambio de esquema va ahí y además como migración en `backend/scripts/migraciones/AAAAMMDD_descripcion.sql`, para las bases que ya tienen datos. Cada migración lleva un encabezado que explica qué hace.

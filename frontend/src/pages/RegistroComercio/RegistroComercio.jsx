@@ -4,6 +4,7 @@ import { registrarComercio } from '../../api/auth'
 import { useAvisos } from '../../context/avisos'
 import { useSesion } from '../../context/sesion'
 import { CATEGORIAS_COMERCIO } from '../../utils/categorias'
+import { esCuitValido } from '../../utils/documentos'
 import '../Registro/Registro.css'
 
 // El comercio se crea sobre una cuenta que ya existe (POST /api/registroComercio compara
@@ -42,6 +43,11 @@ export default function RegistroComercio() {
 
     if (!/^\d{11}$/.test(formulario.cuit_cuil)) {
       setError('El CUIL/CUIT tiene 11 dígitos, sin guiones.')
+      return
+    }
+
+    if (!esCuitValido(formulario.cuit_cuil)) {
+      setError('Ese CUIL/CUIT no es válido: revisá que esté bien escrito.')
       return
     }
 

@@ -123,6 +123,56 @@ const esTelefonoValido = (valor) =>
 const esContrasenaValida = (valor) =>
     typeof valor === 'string' && valor.length >= 8 && Buffer.byteLength(valor, 'utf8') <= 72;
 
+// ---------------------------------------------------------------------------
+// Documentos: lo que se puede comprobar sin consultarle a nadie
+// ---------------------------------------------------------------------------
+//
+// Ninguna de estas validaciones prueba que el documento exista ni que sea de quien lo
+// carga: eso lo sabe ARCA (el padron) o el RENAPER, y los dos piden convenio. Lo que
+// descartan son los errores de tipeo y los numeros inventados.
+//
+// Igual que esContrasenaValida, se exigen al registrar y nunca al iniciar sesion: un
+// comercio que ya estaba (los de la semilla tienen CUIL inventados) tiene que poder
+// seguir entrando.
+
+// Los dos primeros digitos dicen de que tipo es: 20, 23, 24, 25, 26 y 27 son personas;
+// 30, 33 y 34, empresas. Cualquier otro no existe.
+const PREFIJOS_CUIT = ['20', '23', '24', '25', '26', '27', '30', '33', '34'];
+
+// Un peso por cada uno de los 10 primeros digitos
+const PESOS_CUIT = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+
+// CUIT o CUIL: 11 digitos sin guiones, con un prefijo que exista y el digito verificador
+// correcto. El ultimo digito no se elige: sale de los 10 anteriores (modulo 11), y por
+// eso equivocarse en uno solo ya lo delata.
+const esCuitValido = (valor) => {
+    if (typeof valor !== 'string' || !/^\d{11}$/.test(valor)) {
+        return false;
+    }
+
+    if (!PREFIJOS_CUIT.includes(valor.slice(0, 2))) {
+        return false;
+    }
+
+    const suma = PESOS_CUIT.reduce((total, peso, posicion) => total + peso * Number(valor[posicion]), 0);
+    const resto = suma % 11;
+
+    // Con resto 1 el verificador seria 10, que no entra en un digito: ese numero no
+    // existe (a esa persona le dan otro prefijo, 23 o 24, y se recalcula).
+    if (resto === 1) {
+        return false;
+    }
+
+    const verificador = resto === 0 ? 0 : 11 - resto;
+    return verificador === Number(valor[10]);
+};
+
+// DNI: 7 u 8 digitos. Los de 7 son los menores a 10 millones, que siguen existiendo. No
+// tiene digito verificador, asi que lo unico que se puede mirar es el rango. Sin ceros
+// adelante para que cada DNI se escriba de una sola forma: "05123456" y "5123456" serian
+// la misma persona con dos filas distintas en repartidores.
+const esDniValido = (valor) => typeof valor === 'string' && /^[1-9]\d{6,7}$/.test(valor);
+
 module.exports = {
     obtenerIdValido,
     obtenerCoordenadaValida,
@@ -134,5 +184,7 @@ module.exports = {
     obtenerFechaQuery,
     obtenerBooleanoQuery,
     esTelefonoValido,
-    esContrasenaValida
+    esContrasenaValida,
+    esCuitValido,
+    esDniValido
 };

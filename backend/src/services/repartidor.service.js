@@ -52,4 +52,36 @@ const buscarPedidoEnCurso = async (conexion, repartidorId) => {
     return pedidos.length > 0 ? pedidos[0].id : null;
 };
 
-module.exports = { bloquearRepartidor, actualizarDisponibilidad, buscarPedidoEnCurso };
+// ---------------------------------------------------------------------------
+// Licencia de conducir
+// ---------------------------------------------------------------------------
+
+// El unico vehiculo que se maneja sin licencia. Es la misma excepcion que ya hacian el
+// formulario de registro (patente y licencia opcionales) y maps.service.js (todo lo demas
+// se rutea como vehiculo a motor). Por eso "otro" tambien lleva licencia: si no, alcanzaria
+// con elegirlo para saltearse la regla.
+const VEHICULO_SIN_LICENCIA = 'bicicleta';
+
+const MENSAJE_LICENCIA = "El número de licencia tiene que ser el de tu DNI: en la Licencia Nacional de Conducir es el mismo número. Solo la bicicleta no lleva licencia";
+
+// Devuelve el mensaje de error, o null si la licencia sirve para ese vehiculo.
+//
+// La ley de transito (24.449, art. 15 inc. a) dice que el numero de la licencia coincide
+// con el del documento del titular. Entonces, salvo con bicicleta, la licencia tiene que
+// ser igual al DNI. No prueba que la licencia exista ni que este vigente, pero descarta la
+// de otra persona y cualquier texto inventado.
+//
+// Con bicicleta el campo queda como texto libre: la columna es NOT NULL y el front manda
+// "No aplica".
+//
+// A diferencia de las de arriba, es una funcion pura y no recibe la conexion: el registro
+// le pasa los datos del body, y el perfil, la fila de la base combinada con los cambios.
+const validarLicencia = ({ tipo_vehiculo, numero_licencia, dni }) => {
+    if (tipo_vehiculo === VEHICULO_SIN_LICENCIA) {
+        return null;
+    }
+
+    return numero_licencia === dni ? null : MENSAJE_LICENCIA;
+};
+
+module.exports = { bloquearRepartidor, actualizarDisponibilidad, buscarPedidoEnCurso, validarLicencia };

@@ -488,14 +488,14 @@
             "url": "{{baseUrl}}/registroComercio",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Kiosco de Ana\",\n  \"email\": \"ana.lopez@test.com\",\n  \"contrasena\": \"Test1234!\",\n  \"telefono\": \"3421000099\",\n  \"cuit_cuil\": \"27111222333\",\n  \"categoria\": \"Kiosco\",\n  \"direccion\": \"Rivadavia 2100, Santo Tomé\",\n  \"horario_atencion\": \"Lun a Sáb 08:00-21:00\"\n}",
+              "raw": "{\n  \"nombre\": \"Kiosco de Ana\",\n  \"email\": \"ana.lopez@test.com\",\n  \"contrasena\": \"Test1234!\",\n  \"telefono\": \"3421000099\",\n  \"cuit_cuil\": \"27111222334\",\n  \"categoria\": \"Kiosco\",\n  \"direccion\": \"Rivadavia 2100, Santo Tomé\",\n  \"horario_atencion\": \"Lun a Sáb 08:00-21:00\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "La cuenta tiene que existir (registrarse antes como cliente). Pide la contraseña de esa cuenta."
+            "description": "La cuenta tiene que existir (registrarse antes como cliente). Pide la contraseña de esa cuenta. El CUIT tiene que tener un prefijo que exista y el dígito verificador correcto: si no, `400`."
           }
         },
         {
@@ -512,13 +512,14 @@
             "url": "{{baseUrl}}/registroRepartidor",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Ana López\",\n  \"email\": \"ana.lopez@test.com\",\n  \"contrasena\": \"Test1234!\",\n  \"telefono\": \"3421000099\",\n  \"dni\": \"40111222\",\n  \"tipo_vehiculo\": \"moto\",\n  \"patente\": \"AB123CD\",\n  \"numero_licencia\": \"LIC-000333\"\n}",
+              "raw": "{\n  \"nombre\": \"Ana López\",\n  \"email\": \"ana.lopez@test.com\",\n  \"contrasena\": \"Test1234!\",\n  \"telefono\": \"3421000099\",\n  \"dni\": \"40111222\",\n  \"tipo_vehiculo\": \"moto\",\n  \"patente\": \"AB123CD\",\n  \"numero_licencia\": \"40111222\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            }
+            },
+            "description": "La cuenta tiene que existir (registrarse antes como cliente). DNI de 7 u 8 dígitos, sin ceros adelante. Salvo con bicicleta, la licencia tiene que ser el número del DNI: si no, `400`."
           }
         },
         {
@@ -739,7 +740,7 @@
                 }
               }
             },
-            "description": "tipo_vehiculo, patente (única) y numero_licencia. `409` con un pedido en camino."
+            "description": "tipo_vehiculo, patente (única) y numero_licencia. `409` con un pedido en camino. Salvo con bicicleta, la licencia tiene que ser el DNI: pasar de bicicleta a moto pide mandar también `numero_licencia`, si no `400`. Lucía es bicicleta, así que este ejemplo da `200`."
           }
         }
       ]

@@ -1,7 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const database = require('../database/database');
-const { esEmailValido } = require('../utils/validacion');
+const { esEmailValido, esDniValido } = require('../utils/validacion');
+const { validarLicencia } = require('../services/repartidor.service');
 
 // Registra el perfil de repartidor para un usuario que YA existe como cliente.
 const registroRepartidor = async (req, res) => {
@@ -49,12 +50,13 @@ const registroRepartidor = async (req, res) => {
             });
         }
 
-        const dniRegex = /^\d{8}$/;
-        if (!dniRegex.test(dni)) {
+        // Antes exigia 8 digitos justos y dejaba afuera los DNI menores a 10 millones,
+        // que tienen 7 (ver esDniValido).
+        if (!esDniValido(dni)) {
             return res.status(400).json({
                 codigo: 400,
                 estado: "error",
-                datos: { mensaje: "El DNI debe tener 8 dígitos" }
+                datos: { mensaje: "El DNI debe tener 7 u 8 dígitos, sin ceros adelante" }
             });
         }
 
@@ -73,6 +75,22 @@ const registroRepartidor = async (req, res) => {
                 codigo: 400,
                 estado: "error",
                 datos: { mensaje: "La patente no puede superar los 10 caracteres ni la licencia los 30" }
+            });
+        }
+
+        // Salvo con bicicleta, la licencia tiene que ser el DNI (ver validarLicencia). Se
+        // compara recortada, que es como se guarda.
+        const errorLicencia = validarLicencia({
+            tipo_vehiculo,
+            numero_licencia: numero_licencia.trim(),
+            dni
+        });
+
+        if (errorLicencia) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: errorLicencia }
             });
         }
 

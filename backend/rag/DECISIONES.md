@@ -1106,6 +1106,30 @@ quedar 38 fragmentos, y hay que volver a correr `distribucion.mjs` y `evaluar.mj
 repasar las preguntas de la demo: los números de las secciones anteriores pueden moverse,
 sobre todo en las preguntas que dicen "código". Hasta entonces, nada de esto está medido.
 
+## Corpus: CUIT, DNI y licencia (12/11)
+
+La app cambió tres reglas del registro: el CUIT del comercio se revisa con el dígito
+verificador, el DNI del repartidor admite 7 u 8 dígitos (antes, 8 justos) y, salvo con
+bicicleta, la licencia tiene que ser el número del DNI. Por la regla del grupo, el corpus
+se actualizó en el mismo cambio.
+
+- **"¿Cómo registro mi comercio en ATuPuerta?"** (`ayuda-comercios.md`) suma una oración:
+  la app revisa el CUIL o CUIT, y si dice que no es válido hay que compararlo con la
+  constancia. Pasa a 718 caracteres.
+- **"¿Cómo me registro como repartidor?"** (`ayuda-repartidores.md`) decía "DNI (8
+  dígitos)". Ahora dice 7 u 8, y que el número de la licencia es el del DNI. Pasa a 639.
+- **"¿Qué vehículos puedo usar para repartir?"** suma que, salvo con bicicleta, la licencia
+  es el DNI, y que al pasar de bicicleta a moto o auto hay que cargarla. Pasa a 585.
+- **Todo sale del código:** los mensajes de `registroComercio.controller.js` y
+  `registroRepartidor.controller.js`, `validarLicencia` en
+  `backend/src/services/repartidor.service.js` y el texto de ayuda de
+  `RegistroRepartidor.jsx`.
+- **Sin preguntas nuevas:** siguen siendo 38.
+
+**Falta volver a indexar**, igual que con el cambio del 11/11. Después de
+`node --env-file=.env indexar.mjs` tienen que quedar 38 fragmentos. Conviene repasar las
+preguntas de registro con `preguntar.mjs`.
+
 ## Qué probé y descarté
 
 ### Probado y descartado, con evidencia

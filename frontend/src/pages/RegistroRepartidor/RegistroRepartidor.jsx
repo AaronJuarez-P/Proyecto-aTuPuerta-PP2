@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { registrarRepartidor } from '../../api/auth'
 import { useAvisos } from '../../context/avisos'
 import { useSesion } from '../../context/sesion'
+import { esDniValido } from '../../utils/documentos'
 import { VEHICULOS } from '../../utils/estados'
 import '../Registro/Registro.css'
 
@@ -12,6 +13,9 @@ import '../Registro/Registro.css'
 // El backend exige patente (única) y licencia para cualquier vehículo. Una bicicleta no
 // tiene ninguna de las dos, así que para ese caso son opcionales acá y se completan con
 // un identificador derivado del DNI, que es único: B + DNI entra en los 10 caracteres.
+//
+// Para el resto de los vehículos, la licencia tiene que ser el número del DNI: en la
+// Licencia Nacional de Conducir es el mismo número (ley 24.449, art. 15).
 export default function RegistroRepartidor() {
   const { usuario, entrar, olvidarSesion } = useSesion()
   const avisar = useAvisos()
@@ -53,8 +57,13 @@ export default function RegistroRepartidor() {
       return
     }
 
-    if (!/^\d{8}$/.test(datos.dni)) {
-      setError('El DNI tiene 8 dígitos.')
+    if (!esDniValido(datos.dni)) {
+      setError('El DNI tiene 7 u 8 dígitos, sin ceros adelante.')
+      return
+    }
+
+    if (!esBicicleta && datos.numero_licencia !== datos.dni) {
+      setError('El número de licencia es el de tu DNI.')
       return
     }
 
@@ -153,7 +162,7 @@ export default function RegistroRepartidor() {
                     dni: evento.target.value.replace(/\D/g, '').slice(0, 8),
                   }))
                 }
-                placeholder="8 dígitos"
+                placeholder="7 u 8 dígitos"
               />
             </div>
 
@@ -187,9 +196,12 @@ export default function RegistroRepartidor() {
                 type="text"
                 value={formulario.numero_licencia}
                 onChange={cambiar('numero_licencia')}
-                placeholder={esBicicleta ? 'No aplica' : 'Número de licencia'}
+                placeholder={esBicicleta ? 'No aplica' : 'El número de tu DNI'}
                 maxLength={30}
               />
+              {!esBicicleta && (
+                <small className="campo-ayuda">En la Licencia Nacional de Conducir es el mismo número que tu DNI.</small>
+              )}
             </div>
           </div>
 

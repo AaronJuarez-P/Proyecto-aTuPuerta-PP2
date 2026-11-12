@@ -2,7 +2,7 @@
 
 Para vender en ATuPuerta, el comercio se crea sobre una cuenta que ya existe: si todavía no tenés cuenta, primero registrate como cliente. Después entrá a "Sumá tu comercio", con el enlace "¿Tenés un comercio? Registralo" del registro o "Registralo acá" del inicio de sesión.
 
-El formulario pide el correo y la contraseña de tu cuenta, y los datos del comercio: nombre, CUIL o CUIT (11 dígitos, sin guiones), rubro, dirección del local, horario de atención y teléfono de contacto. Al tocar "Registrar mi comercio" quedás con la sesión de comercio abierta, listo para cargar tus productos.
+El formulario pide el correo y la contraseña de tu cuenta, y los datos del comercio: nombre, CUIL o CUIT (11 dígitos, sin guiones), rubro, dirección del local, horario de atención y teléfono de contacto. La app revisa que el CUIL o CUIT esté bien escrito: si te dice que no es válido, comparalo dígito por dígito con tu constancia. Al tocar "Registrar mi comercio" quedás con la sesión de comercio abierta, listo para cargar tus productos.
 
 ## ¿Cómo entro como comercio?
 

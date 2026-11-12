@@ -54,7 +54,7 @@ src/
                 IlustracionVacia, MiniaturaRubro, IconoRubro, EstadoBadge, Paginacion,
                 Modal, Confirmacion)
   utils/        formato (precios y fechas), estados, roles, categorías, notificaciones,
-                push y polilínea
+                push, polilínea y documentos (CUIT y DNI, las mismas reglas del backend)
   pages/        una carpeta por pantalla, con su .jsx y su .css
 public/
   sw.js         service worker de las notificaciones push del navegador

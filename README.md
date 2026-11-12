@@ -83,6 +83,12 @@ un clic.
 El backend admite una sola sesión por cuenta y el navegador guarda una sola sesión: para
 probar varios roles a la vez, cada uno va en otro navegador o en una ventana de incógnito.
 
+Los CUIL de la semilla son inventados y no pasan el dígito verificador. Sirven para entrar,
+porque el login no lo revisa, pero el registro de un comercio nuevo sí: para probarlo, usá
+un CUIT válido como `20123456786` o `27111222334`. Al registrar un repartidor en moto, auto
+u otro, la licencia tiene que ser el mismo número del DNI (ver "Validación del CUIT, el DNI
+y la licencia" en `backend/readme.md`).
+
 ### Sin servicios externos
 
 Con el `.env.example` tal cual, nada depende de cuentas externas:

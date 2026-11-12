@@ -2,13 +2,13 @@
 
 Para repartir en ATuPuerta, el perfil de repartidor se crea sobre una cuenta que ya existe: si todavía no tenés cuenta, primero registrate como cliente. Después entrá a "Sumate a repartir", con el enlace "Sumate" del registro o del inicio de sesión.
 
-El formulario pide el correo y la contraseña de tu cuenta, tu nombre completo, teléfono, DNI (8 dígitos), el vehículo, la patente y la licencia de conducir. Con bicicleta, la patente y la licencia son opcionales. Al tocar "Quiero repartir" quedás con la sesión de repartidor abierta: ponete en servicio para empezar a ver pedidos.
+El formulario pide el correo y la contraseña de tu cuenta, tu nombre completo, teléfono, DNI (7 u 8 dígitos, sin puntos), el vehículo, la patente y el número de la licencia de conducir, que es el mismo de tu DNI. Con bicicleta, la patente y la licencia son opcionales. Al tocar "Quiero repartir" quedás con la sesión de repartidor abierta: ponete en servicio para empezar a ver pedidos.
 
 ## ¿Qué vehículos puedo usar para repartir?
 
 Como repartidor, podés registrarte con moto, bicicleta, auto u otro vehículo. La app usa tu vehículo para calcular la ruta y el tiempo estimado de llegada que ve el cliente.
 
-Para cambiar el vehículo, la patente o la licencia, entrá a tu perfil, sección "Mi vehículo", y tocá "Guardar cambios". Mientras tenés un pedido en camino no se puede cambiar: los datos del vehículo se pueden modificar cuando lo entregues. El DNI no se cambia desde el perfil.
+Para cambiar el vehículo, la patente o la licencia, entrá a tu perfil, sección "Mi vehículo", y tocá "Guardar cambios". Mientras tenés un pedido en camino no se puede cambiar: los datos del vehículo se pueden modificar cuando lo entregues. Salvo con bicicleta, la licencia tiene que ser el número de tu DNI: si pasás de bicicleta a moto o auto, cargá también la licencia. El DNI no se cambia desde el perfil.
 
 ## ¿Cómo me pongo en servicio para recibir pedidos?
 

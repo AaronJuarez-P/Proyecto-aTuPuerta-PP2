@@ -234,7 +234,7 @@ function MiVehiculo() {
       campos={[
         { clave: 'tipo_vehiculo', etiqueta: 'Vehículo', opciones: VEHICULOS },
         { clave: 'patente', etiqueta: 'Patente', maximo: 10 },
-        { clave: 'numero_licencia', etiqueta: 'Licencia', maximo: 30 },
+        { clave: 'numero_licencia', etiqueta: 'Licencia', maximo: 30, ayuda: 'Salvo con bicicleta, es el número de tu DNI.' },
       ]}
       nota={
         datos.pedido_en_curso

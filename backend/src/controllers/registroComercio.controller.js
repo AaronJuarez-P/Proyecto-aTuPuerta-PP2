@@ -2,7 +2,7 @@ const database = require('../database/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { geocodificarDireccion } = require('../services/maps.service');
-const { esEmailValido } = require('../utils/validacion');
+const { esEmailValido, esCuitValido } = require('../utils/validacion');
 
 // Registra el perfil de comercio para un usuario que YA existe como cliente.
 // Requiere email + contraseña real del usuario para autorizar la operación.
@@ -58,6 +58,18 @@ const registroComercio = async (req, res) => {
                 codigo: 400,
                 estado: "error",
                 datos: { mensaje: "El CUIL debe tener 11 dígitos" }
+            });
+        }
+
+        // No alcanza con que sean 11 digitos: el prefijo tiene que existir y el ultimo
+        // digito es un verificador que sale de los otros 10 (ver esCuitValido). No prueba
+        // que el CUIT este inscripto en ARCA, pero descarta los errores de tipeo y los
+        // numeros inventados.
+        if (!esCuitValido(cuit_cuil)) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El CUIL/CUIT no es válido: revisá que esté bien escrito" }
             });
         }
 
@@ -211,6 +223,9 @@ const iniciarSesionComercio = async (req, res) => {
             });
         }
 
+        // Aca se mira solo el formato, no el digito verificador (esCuitValido): el login
+        // busca el CUIL tal cual esta guardado, y un comercio anterior a esa validacion,
+        // como los de la semilla, tiene que poder seguir entrando.
         const cuilRegex = /^\d{11}$/;
         if (!cuilRegex.test(cuil)) {
             return res.status(400).json({

@@ -397,10 +397,10 @@ rama tomar y saca el texto de `datos.mensaje`. Vale también para los errores de
 | `POST` | `/api/registro/verificar` | Segundo paso: con el código correcto crea el usuario y su perfil de cliente (`201`). Body: `{ email, contrasena, codigo }` |
 | `POST` | `/api/registro/reenviar` | Manda un código nuevo para un registro pendiente. Body: `{ email, contrasena }` |
 | `POST` | `/api/inicioSesion` | Login de cliente. Devuelve JWT. Con un registro sin verificar, `403` con `verificacion_pendiente: true` |
-| `POST` | `/api/registroComercio` | Alta del perfil de comercio para un usuario ya registrado (pide su contraseña) |
+| `POST` | `/api/registroComercio` | Alta del perfil de comercio para un usuario ya registrado (pide su contraseña). El CUIT se valida con el dígito verificador: ver [Validación del CUIT, el DNI y la licencia](#validación-del-cuit-el-dni-y-la-licencia) |
 | `POST` | `/api/inicioSesionComercio` | Login de comercio (email + contraseña + CUIL) |
 | `POST` | `/api/cerrarSesionComercio` | Cierra la sesión de comercio |
-| `POST` | `/api/registroRepartidor` | Alta del perfil de repartidor para un usuario ya registrado (pide su contraseña) |
+| `POST` | `/api/registroRepartidor` | Alta del perfil de repartidor para un usuario ya registrado (pide su contraseña). DNI de 7 u 8 dígitos y, salvo con bicicleta, licencia igual al DNI |
 | `POST` | `/api/inicioSesionRepartidor` | Login de repartidor. Body: `{ email, contrasena }` |
 | `POST` | `/api/cerrarSesionRepartidor` | Cierra la sesión de repartidor |
 | `POST` | `/api/inicioSesionAdministrador` | Login de administrador. Body: `{ email, contrasena }` |
@@ -510,6 +510,47 @@ rol que viene adentro del token.
 > entra como cliente, su token de repartidor deja de servir. Y `registroComercio` /
 > `registroRepartidor` dejan la cuenta en la sesión nueva, así que el token de cliente que
 > tenía hasta ese momento también: hay que volver a iniciar sesión.
+
+#### Validación del CUIT, el DNI y la licencia
+
+Los registros de comercio y de repartidor revisan los documentos con lo que se puede
+comprobar sin consultarle a nadie. No prueban que el documento exista ni que sea de quien
+lo carga (eso lo saben ARCA y el RENAPER, y los dos piden convenio), pero descartan los
+errores de tipeo y los números inventados.
+
+| Dato | Regla | Dónde | Si no cumple |
+|---|---|---|---|
+| CUIT/CUIL | 11 dígitos, un prefijo que exista (20, 23, 24, 25, 26 y 27 son personas; 30, 33 y 34, empresas) y el dígito verificador correcto | `POST /api/registroComercio` | `400` · "El CUIL/CUIT no es válido: revisá que esté bien escrito" |
+| DNI | 7 u 8 dígitos, sin ceros adelante | `POST /api/registroRepartidor` | `400` · "El DNI debe tener 7 u 8 dígitos, sin ceros adelante" |
+| Licencia | Igual al DNI, salvo con bicicleta | `POST /api/registroRepartidor` y `PATCH /api/repartidor/perfil` | `400` · "El número de licencia tiene que ser el de tu DNI: en la Licencia Nacional de Conducir es el mismo número. Solo la bicicleta no lleva licencia" |
+
+- **El dígito verificador** (`esCuitValido`, en `utils/validacion.js`): los 10 primeros
+  dígitos se multiplican por 5, 4, 3, 2, 7, 6, 5, 4, 3, 2 y se suman. Si el resto de
+  dividir por 11 es 0, el verificador es 0; si es 1, daría 10, y ese número no existe (a
+  esa persona le dan otro prefijo); si no, es 11 menos el resto. Equivocarse en un solo
+  dígito ya lo delata.
+- **El DNI acepta 7 dígitos**: los menores a 10 millones los tienen. Antes se pedían 8
+  justos. Los ceros adelante no, para que cada DNI se escriba de una sola forma.
+- **La licencia es el DNI** porque lo dice la ley de tránsito: el número de la licencia
+  coincide con el del documento del titular (Ley 24.449, art. 15 inc. a). `otro` también
+  lleva licencia: la única excepción es la bicicleta, igual que en el formulario del front
+  y en `maps.service.js`, que rutea todo lo demás como vehículo a motor. Si `otro` quedara
+  libre, alcanzaría con elegirlo para saltearse la regla. `validarLicencia` está en
+  `services/repartidor.service.js` porque la usan el registro y el perfil.
+- **En el perfil se revisa cómo va a quedar la fila**: lo guardado más lo que cambia, y
+  solo si el pedido trae `tipo_vehiculo` o `numero_licencia`. Pasar de bicicleta a moto
+  pide mandar también la licencia. Un `PATCH` que cambia solo la patente no la revisa, así
+  un repartidor anterior a la regla no queda trabado. El `409` del pedido en camino tiene
+  prioridad.
+- **Nunca se valida al iniciar sesión.** El login de comercio busca el CUIL tal cual está
+  guardado. Igual que con la contraseña (`esContrasenaValida`), un dato que ya estaba
+  tiene que seguir sirviendo para entrar.
+- **Los datos de la semilla son inventados y no cumplen estas reglas**: los CUIL
+  `20405060708` y `20304050607`, y la licencia `LIC-000111` de Carlos, que va en moto.
+  Siguen entrando, porque las reglas se aplican solo al crear o al editar. Para registrar
+  un comercio nuevo hace falta un CUIT válido, por ejemplo `20123456786` o `27111222334`.
+- `frontend/src/utils/documentos.js` repite las reglas del CUIT y del DNI para avisar antes
+  de mandar el formulario. Si cambian acá, hay que cambiarlas allá.
 
 ### Catálogo — CU03, CU04 (públicos)
 
@@ -924,6 +965,9 @@ y desde cualquier estado no terminal -> cancelado
   que no puede pasar es que queden las de la dirección vieja.
 - El repartidor no puede cambiar el vehículo con un pedido en camino: el perfil de ruta de
   Mapbox y el ETA del seguimiento salen de `tipo_vehiculo`.
+- **Salvo con bicicleta, la licencia tiene que ser el DNI**, también al editarla o al
+  cambiar de vehículo: ver
+  [Validación del CUIT, el DNI y la licencia](#validación-del-cuit-el-dni-y-la-licencia).
 - **La eliminación pide la contraseña** y no se permite con pedidos pagados en curso, ni si
   es el último administrador activo. Cancela los pedidos que el cliente nunca pagó y devuelve
   su stock; luego elimina sus pedidos e historial, perfiles y cuenta para liberar el email
