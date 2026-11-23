@@ -32,6 +32,7 @@ const RepartidorAdmin = lazy(() => import('./pages/RepartidorAdmin/RepartidorAdm
 
 // La administración solo la abren los administradores: el resto no tiene por qué bajarla
 const Admin = lazy(() => import('./pages/Admin/Admin'))
+const AdminEstadisticas = lazy(() => import('./pages/Admin/AdminEstadisticas'))
 const AdminPedidos = lazy(() => import('./pages/Admin/AdminPedidos'))
 const AdminPedido = lazy(() => import('./pages/Admin/AdminPedido'))
 const AdminUsuarios = lazy(() => import('./pages/Admin/AdminUsuarios'))
@@ -112,6 +113,7 @@ export default function App() {
 
             <Route element={<RutaProtegida roles={['administrador']} />}>
               <Route path="admin" element={<Admin />} />
+              <Route path="admin/estadisticas" element={<AdminEstadisticas />} />
               <Route path="admin/pedidos" element={<AdminPedidos />} />
               <Route path="admin/pedidos/:id" element={<AdminPedido />} />
               <Route path="admin/usuarios" element={<AdminUsuarios />} />

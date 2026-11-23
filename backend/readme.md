@@ -1016,11 +1016,17 @@ que guardan las auditorías y los reclamos).
 | `PATCH` | `/api/admin/usuarios/:id/estado` | `{ activo: false }` suspende, `{ activo: true }` reactiva |
 | `DELETE` | `/api/admin/usuarios/:id` | Eliminación definitiva de la cuenta y datos propios |
 | `PATCH` | `/api/admin/comercios/:id/estado` | Suspende o reactiva solo el comercio |
+| `GET` | `/api/admin/estadisticas` | Pedidos del mes y promedio diario, porcentajes de entregados/cancelados y top 5 de comercios, clientes y repartidores |
 | `GET` | `/api/admin/pedidos` | Vista global. Filtros: `estado`, `activos`, `comercioId`, `clienteId`, `repartidorId`, `desde`, `hasta`. Incluye `resumen_por_estado` |
 | `GET` | `/api/admin/pedidos/:id` | Ítems, pago, los tres actores, última ubicación, auditoría y reclamos |
 | `PATCH` | `/api/admin/pedidos/:id/cancelar` | `{ motivo }`. Desde cualquier estado no terminal |
 | `GET` | `/api/admin/auditoria/productos` | Filtros: `productoId`, `comercioId`, `usuarioId`, `accion`, `desde`, `hasta` |
 | `GET` | `/api/admin/auditoria/pedidos` | Filtros: `pedidoId`, `usuarioId`, `accion`, `desde`, `hasta` |
+
+- El promedio diario del mes usa los pedidos creados desde el primer día del mes hasta hoy
+  dividido por los días transcurridos. Las ventas de comercios y los repartos cuentan solo
+  pedidos entregados; el ranking de clientes cuenta todos sus pedidos. Los porcentajes de
+  entregados y cancelados se calculan sobre el total histórico.
 
 - **Suspender corta el acceso al instante**, porque `verificarToken` consulta
   `usuarios.activo` en cada request: el token que la persona ya tenía deja de servir. Es

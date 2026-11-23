@@ -139,6 +139,10 @@
       width: 100%;
     }
 
+    .admin-page .admin-estadisticas-top {
+      grid-template-columns: 1fr;
+    }
+
   }
   
   @media (max-width: 500px) {
@@ -149,6 +153,10 @@
   
     .admin-page .admin-section-title {
       align-items: center;
+    }
+
+    .admin-page .admin-porcentajes {
+      grid-template-columns: 1fr;
     }
 
   }
@@ -305,6 +313,114 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+  }
+
+  .admin-page .admin-estadisticas-resumen {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 18px;
+    margin-bottom: 48px;
+  }
+
+  .admin-page .admin-estadisticas-resumen .admin-stat small {
+    display: block;
+    margin-top: 10px;
+    color: var(--muted);
+  }
+
+  .admin-page .admin-porcentajes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .admin-page .admin-porcentaje {
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+
+  .admin-page .admin-porcentaje-encabezado,
+  .admin-page .admin-ranking-encabezado {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .admin-page .admin-porcentaje-encabezado {
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+
+  .admin-page .admin-porcentaje-encabezado strong {
+    font-size: 1.4rem;
+  }
+
+  .admin-page .admin-porcentaje-barra,
+  .admin-page .admin-ranking-barra {
+    overflow: hidden;
+    height: 9px;
+    border-radius: 999px;
+    background: var(--border);
+  }
+
+  .admin-page .admin-porcentaje-barra span,
+  .admin-page .admin-ranking-barra span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--brand);
+  }
+
+  .admin-page .admin-porcentaje-barra .admin-barra-cancelados {
+    background: var(--danger);
+  }
+
+  .admin-page .admin-porcentaje small,
+  .admin-page .admin-estadisticas-nota,
+  .admin-page .admin-ranking-fila small {
+    display: block;
+    margin-top: 9px;
+    color: var(--muted);
+  }
+
+  .admin-page .admin-estadisticas-nota {
+    margin-top: 12px;
+  }
+
+  .admin-page .admin-estadisticas-top {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    align-items: start;
+  }
+
+  .admin-page .admin-ranking {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .admin-page .admin-ranking-encabezado {
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+
+  .admin-page .admin-ranking-encabezado strong {
+    overflow-wrap: anywhere;
+  }
+
+  .admin-page .admin-ranking-encabezado span {
+    flex-shrink: 0;
+    font-weight: 700;
+  }
+
+  .admin-page .admin-ranking-barra {
+    height: 6px;
   }
 
   .admin-page .boton-enlace {

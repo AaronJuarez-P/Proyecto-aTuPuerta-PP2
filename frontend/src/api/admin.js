@@ -30,6 +30,9 @@ export const cambiarEstadoComercio = (id, activo) =>
 
 // ---- Pedidos ----
 
+// -> { mes: { periodo, pedidos, dias_transcurridos, promedio_diario }, pedidos, comercios, clientes, repartidores }
+export const obtenerEstadisticasAdmin = () => pedir('/admin/estadisticas')
+
 // { estado, activos, comercioId, clienteId, repartidorId, desde, hasta, pagina, limite }
 // -> { pedidos, resumen_por_estado, paginacion }
 export const listarPedidosAdmin = (filtros = {}) => pedir('/admin/pedidos', { query: filtros })

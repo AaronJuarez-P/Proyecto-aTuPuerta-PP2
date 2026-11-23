@@ -60,6 +60,104 @@ const leerRangoFechas = (query) => {
 // CU24 - Supervisar pedidos
 // ---------------------------------------------------------------------------
 
+// GET /api/admin/estadisticas
+// El promedio mensual se expresa como pedidos por día transcurrido del mes actual.
+const obtenerEstadisticasAdmin = async (req, res) => {
+    try {
+        const [
+            [mesActual],
+            [resumenPedidos],
+            [comercios],
+            [clientes],
+            [repartidores]
+        ] = await Promise.all([
+            database.query(
+                `SELECT COUNT(*) AS pedidos, DAY(CURDATE()) AS dias_transcurridos,
+                        DATE_FORMAT(CURDATE(), '%Y-%m') AS mes
+                 FROM pedidos
+                 WHERE created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+                   AND created_at < DATE_ADD(CURDATE(), INTERVAL 1 DAY)`
+            ),
+            database.query(
+                `SELECT COUNT(*) AS total,
+                        SUM(estado = 'entregado') AS entregados,
+                        SUM(estado = 'cancelado') AS cancelados
+                 FROM pedidos`
+            ),
+            database.query(
+                `SELECT co.id, co.nombre, COUNT(*) AS pedidos, SUM(pe.total) AS ventas
+                 FROM pedidos pe
+                 INNER JOIN comercios co ON co.id = pe.comercio_id
+                 WHERE pe.estado = 'entregado'
+                 GROUP BY co.id, co.nombre
+                 ORDER BY ventas DESC, pedidos DESC, co.nombre ASC
+                 LIMIT 5`
+            ),
+            database.query(
+                `SELECT u.id, u.nombre, COUNT(*) AS pedidos
+                 FROM pedidos pe
+                 INNER JOIN clientes cl ON cl.id = pe.cliente_id
+                 INNER JOIN usuarios u ON u.id = cl.usuario_id
+                 GROUP BY u.id, u.nombre
+                 ORDER BY pedidos DESC, u.nombre ASC
+                 LIMIT 5`
+            ),
+            database.query(
+                `SELECT u.id, u.nombre, COUNT(*) AS repartos
+                 FROM pedidos pe
+                 INNER JOIN repartidores re ON re.id = pe.repartidor_id
+                 INNER JOIN usuarios u ON u.id = re.usuario_id
+                 WHERE pe.estado = 'entregado'
+                 GROUP BY u.id, u.nombre
+                 ORDER BY repartos DESC, u.nombre ASC
+                 LIMIT 5`
+            )
+        ]);
+
+        const total = Number(resumenPedidos.total);
+        const porcentaje = (cantidad) => total === 0
+            ? 0
+            : Number(((Number(cantidad) / total) * 100).toFixed(1));
+        const diasTranscurridos = Number(mesActual.dias_transcurridos);
+        const pedidosDelMes = Number(mesActual.pedidos);
+
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                mes: {
+                    periodo: mesActual.mes,
+                    pedidos: pedidosDelMes,
+                    dias_transcurridos: diasTranscurridos,
+                    promedio_diario: Number((pedidosDelMes / diasTranscurridos).toFixed(2))
+                },
+                pedidos: {
+                    total,
+                    entregados: Number(resumenPedidos.entregados),
+                    cancelados: Number(resumenPedidos.cancelados),
+                    porcentaje_entregados: porcentaje(resumenPedidos.entregados),
+                    porcentaje_cancelados: porcentaje(resumenPedidos.cancelados)
+                },
+                comercios: comercios.map((comercio) => ({
+                    ...comercio,
+                    pedidos: Number(comercio.pedidos),
+                    ventas: Number(comercio.ventas)
+                })),
+                clientes: clientes.map((cliente) => ({
+                    ...cliente,
+                    pedidos: Number(cliente.pedidos)
+                })),
+                repartidores: repartidores.map((repartidor) => ({
+                    ...repartidor,
+                    repartos: Number(repartidor.repartos)
+                }))
+            }
+        });
+    } catch (error) {
+        return responderError(res, 500, "Error interno del servidor");
+    }
+};
+
 // GET /api/admin/pedidos?estado=&activos=&comercioId=&clienteId=&repartidorId=&desde=&hasta=&pagina=&limite=
 //
 // Vista global, activos e historicos. activos=true son los que todavia no terminaron.
@@ -622,6 +720,7 @@ const listarAuditoriaPedidos = async (req, res) => {
 };
 
 module.exports = {
+    obtenerEstadisticasAdmin,
     listarPedidosAdmin,
     obtenerPedidoAdmin,
     cancelarPedidoAdmin,

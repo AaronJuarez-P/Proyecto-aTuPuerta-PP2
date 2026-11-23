@@ -131,6 +131,7 @@ export default function Admin() {
             </div>
 
             <div className="acciones">
+              <Link className="boton boton-secundario" to="/admin/estadisticas">Ver estadísticas</Link>
               <Link className="boton boton-secundario" to="/admin/usuarios"><Users size={18} /> Usuarios</Link>
               <Link className="boton boton-secundario" to="/admin/auditoria"><ReceiptText size={18} /> Auditoría</Link>
             </div>

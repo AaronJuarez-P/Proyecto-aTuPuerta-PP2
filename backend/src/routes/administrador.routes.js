@@ -11,6 +11,7 @@ const {
     cambiarEstadoComercio
 } = require('../controllers/administrador.controller');
 const {
+    obtenerEstadisticasAdmin,
     listarPedidosAdmin,
     obtenerPedidoAdmin,
     cancelarPedidoAdmin,
@@ -41,6 +42,7 @@ router.delete('/admin/usuarios/:id', soloAdministrador, darDeBajaUsuario);
 router.patch('/admin/comercios/:id/estado', soloAdministrador, cambiarEstadoComercio);
 
 // CU24 - Supervisar pedidos, activos e historicos
+router.get('/admin/estadisticas', soloAdministrador, obtenerEstadisticasAdmin);
 router.get('/admin/pedidos', soloAdministrador, listarPedidosAdmin);
 router.get('/admin/pedidos/:id', soloAdministrador, obtenerPedidoAdmin);
 router.patch('/admin/pedidos/:id/cancelar', soloAdministrador, cancelarPedidoAdmin);

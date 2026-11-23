@@ -31,6 +31,7 @@ const NAVEGACION = {
   ],
   administrador: [
     { a: '/admin', texto: 'Panel', exacto: true },
+    { a: '/admin/estadisticas', texto: 'Estadísticas' },
     { a: '/admin/pedidos', texto: 'Pedidos' },
     { a: '/admin/usuarios', texto: 'Usuarios' },
     { a: '/admin/reclamos', texto: 'Reclamos' },
