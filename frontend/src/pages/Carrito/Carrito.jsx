@@ -5,6 +5,7 @@ import { Cargando, IlustracionVacia, MensajeError, MiniaturaRubro } from '../../
 import { useAvisos } from '../../context/avisos'
 import { useCarrito } from '../../context/carrito'
 import { formatearPrecio, plural } from '../../utils/formato'
+import { urlImagen } from '../../utils/imagenes'
 import './Carrito.css'
 
 // Por qué un ítem no se puede comprar, según lo que marca GET /carrito/listar
@@ -97,7 +98,12 @@ export default function Carrito() {
                       className={`carrito-producto ${item.disponible ? '' : 'no-disponible'}`}
                       key={item.producto_id}
                     >
-                      <MiniaturaRubro categoria={item.categoria} porDefecto={Package} className="carrito-producto-icon" />
+                      <MiniaturaRubro
+                        categoria={item.categoria}
+                        porDefecto={Package}
+                        src={urlImagen(item.imagen)}
+                        className="carrito-producto-icon"
+                      />
 
                       <div className="carrito-producto-info">
                         <h3>{item.nombre}</h3>

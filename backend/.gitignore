@@ -1,2 +1,4 @@
 node_modules/
 .env
+# Logos y fotos que suben los comercios (IMAGENES_CARPETA): son datos de cada base local
+uploads/

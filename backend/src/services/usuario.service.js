@@ -126,6 +126,9 @@ const esUltimoAdministradorActivo = async (conexion, usuarioId) => {
 // - usuario y perfiles: se eliminan al final, liberando email, CUIT, DNI y patente.
 //   Los reclamos del usuario y otros datos con FK CASCADE tambien se eliminan; las
 //   referencias a pedidos eliminados desde reclamos ajenos quedan en NULL.
+// - el logo del comercio y las fotos de sus productos: el CASCADE borra las filas pero
+//   no los archivos. Se devuelven sus nombres en imagenes, y quien llama los borra con
+//   borrarImagenes despues del commit, como cualquier efecto que no es de la base.
 //
 // Quien llama ya verifico que no haya pedidos en curso (buscarPedidosEnCurso) ni que
 // sea el ultimo administrador.
@@ -155,6 +158,15 @@ const eliminarCuentaDefinitivamente = async (conexion, { usuarioId, actorUsuario
         });
     }
 
+    const [imagenes] = await conexion.query(
+        `SELECT logo AS nombre FROM comercios WHERE usuario_id = ? AND logo IS NOT NULL
+         UNION ALL
+         SELECT p.imagen FROM productos p
+         INNER JOIN comercios c ON c.id = p.comercio_id
+         WHERE c.usuario_id = ? AND p.imagen IS NOT NULL`,
+        [usuarioId, usuarioId]
+    );
+
     const [pedidosEliminados] = await conexion.query(
         `DELETE FROM pedidos WHERE cliente_id = ? OR comercio_id = ?`,
         [cliente_id, comercio_id]
@@ -171,7 +183,8 @@ const eliminarCuentaDefinitivamente = async (conexion, { usuarioId, actorUsuario
 
     return {
         pedidosCancelados: sinPagar.map((pedido) => pedido.id),
-        pedidosEliminados: pedidosEliminados.affectedRows
+        pedidosEliminados: pedidosEliminados.affectedRows,
+        imagenes: imagenes.map((fila) => fila.nombre)
     };
 };
 

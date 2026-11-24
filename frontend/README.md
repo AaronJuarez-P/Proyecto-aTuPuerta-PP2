@@ -40,7 +40,8 @@ Del lado del backend, `CORS_ORIGEN` tiene que incluir el origen del front
 ```text
 src/
   api/          una función por endpoint, agrupadas por módulo
-    cliente.js    fetch con el token, el sobre { codigo, estado, datos } y los errores
+    cliente.js    fetch con el token, el sobre { codigo, estado, datos } y los errores. El
+                  body puede ser un objeto (JSON) o un FormData (las imágenes)
     tiempoReal.js Socket.IO: seguir un pedido en vivo
   context/      sesión, carrito (contador del header), notificaciones (campanita) y avisos
   hooks/        useCarga (pedir datos con estado de carga y error) y useFiltrosUrl
@@ -50,11 +51,13 @@ src/
                 app no lo usa). ilustraciones/: la de la página 404
   components/   Header, Footer, Layout, Marca (isotipo y nombre), RutaProtegida,
                 MapaSeguimiento, FormularioReclamo, VerificarCorreo (el paso del código
-                al registrarse) y Comunes (Cargando, MensajeError, EstadoVacio,
+                al registrarse), SelectorImagen (elegir, cambiar o quitar el logo o una
+                foto) y Comunes (Cargando, MensajeError, EstadoVacio,
                 IlustracionVacia, MiniaturaRubro, IconoRubro, EstadoBadge, Paginacion,
                 Modal, Confirmacion)
   utils/        formato (precios y fechas), estados, roles, categorías, notificaciones,
-                push, polilínea y documentos (CUIT y DNI, las mismas reglas del backend)
+                push, polilínea, documentos (CUIT y DNI, las mismas reglas del backend) e
+                imagenes (la URL de una imagen, achicarla antes de subirla y el FormData)
   pages/        una carpeta por pantalla, con su .jsx y su .css
 public/
   sw.js         service worker de las notificaciones push del navegador
@@ -114,6 +117,25 @@ al correo. La cuenta se crea recién con el código.
   quedó creada: el botón pasa a reintentar solo el ingreso.
 - El front no se configura: si la respuesta del registro no trae `verificacion_pendiente`
   (backend con `EMAIL_MODO=off`), entra directo como antes.
+
+## Imágenes
+
+Cada comercio puede tener un logo y cada producto, una foto. El backend guarda solo el nombre
+del archivo (`logo`, `imagen`) y sirve los archivos fuera de `/api`, en el mismo servidor que
+el socket: `urlImagen(nombre)` (`utils/imagenes.js`) arma la URL, o devuelve `null`.
+
+- **Mostrarlas.** `MiniaturaRubro` recibe `src={urlImagen(...)}`. Con `logo`, la imagen se ve
+  entera sobre blanco; sin `logo` (las fotos) llena el recuadro y se recorta. Si no hay
+  imagen, o no carga, muestra el ícono del rubro de siempre. Una imagen que falta no llega
+  ni como 404: el backend contesta su 404 en JSON y Chrome lo bloquea antes de dárselo al
+  `<img>` (ORB). Igual dispara `onError`, que es lo que cambia al ícono.
+- **Elegirlas.** `SelectorImagen` muestra la vista previa, avisa los errores y entrega la
+  imagen ya achicada por `prepararImagen`: el lado mayor a 800 px y en WebP. Así una foto
+  del celular de varios MB viaja liviana, y volver a codificarla le borra el EXIF.
+- **Guardarlas.** El registro del comercio y el alta de un producto mandan la imagen en el
+  mismo pedido (multipart), así el comercio o el producto nacen con ella. El perfil sube el
+  logo apenas se elige. Al editar un producto, los datos y la foto van cada uno a su endpoint
+  y solo si cambiaron: cambiar solo la foto no deja una edición de más en el historial.
 
 ## Sesión
 

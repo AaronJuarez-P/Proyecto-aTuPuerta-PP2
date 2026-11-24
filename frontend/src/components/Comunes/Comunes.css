@@ -479,8 +479,9 @@
 .rubro-amarillo { --rubro-fondo: #fff6d6; --rubro-tinta: #a16207; }
 .rubro-violeta { --rubro-fondo: #ede9fe; --rubro-tinta: #6d28d9; }
 
-/* Miniatura de un comercio o un producto: el backend no guarda fotos. El tamaño lo pone
-   cada página; acá van el tono, el ícono y el pin del logo asomando por una esquina. */
+/* Miniatura de un comercio o un producto: el logo o la foto que subió el comercio y, si no
+   hay o no carga, el tono y el ícono del rubro. El tamaño lo pone cada página; acá van el
+   tono, el ícono y el pin del logo asomando por una esquina. */
 .miniatura-rubro {
   position: relative;
   display: grid;
@@ -514,6 +515,33 @@
 /* En las chicas (un renglón, una fila de tabla) el pin no se llega a leer */
 .miniatura-chica::after {
   display: none;
+}
+
+/* Con imagen, la imagen ocupa todo el recuadro y el pin no se dibuja encima. Una foto lo
+   llena y se recorta (cover); el recuadro mantiene el tamaño que le da cada página. */
+.miniatura-rubro.con-imagen::after {
+  display: none;
+}
+
+.miniatura-rubro > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* El logo va entero, sin recortar, y sobre blanco, que es el fondo de casi todos los
+   logos: en la franja ancha de una tarjeta, recortarlo lo deja ilegible */
+.miniatura-rubro.miniatura-logo {
+  background: white;
+}
+
+/* Padding fijo y no en %: un % de padding se mide sobre el ancho, y en la franja ancha de
+   una tarjeta se comía arriba y abajo la mitad del alto */
+.miniatura-rubro.miniatura-logo > img {
+  object-fit: contain;
+  padding: 12px;
 }
 
 /* =========================================

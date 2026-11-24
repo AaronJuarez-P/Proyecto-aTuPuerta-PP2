@@ -12,6 +12,7 @@ const {
     esContrasenaValida
 } = require('../utils/validacion');
 const { geocodificarDireccion } = require('../services/maps.service');
+const { borrarImagenes } = require('../services/imagen.service');
 const {
     buscarCuenta,
     buscarPedidosEnCurso,
@@ -615,7 +616,7 @@ const darDeBajaUsuario = async (req, res) => {
             return responderError(res, impedimento.codigo, impedimento.mensaje);
         }
 
-        const { pedidosCancelados, pedidosEliminados } = await eliminarCuentaDefinitivamente(connection, {
+        const { pedidosCancelados, pedidosEliminados, imagenes } = await eliminarCuentaDefinitivamente(connection, {
             usuarioId: id,
             actorUsuarioId: req.usuario.id,
             administradorId: req.administradorId,
@@ -623,6 +624,9 @@ const darDeBajaUsuario = async (req, res) => {
         });
 
         await connection.commit();
+
+        // El logo y las fotos de sus productos, que el CASCADE no borra del disco
+        await borrarImagenes(imagenes);
 
         return res.status(200).json({
             codigo: 200,

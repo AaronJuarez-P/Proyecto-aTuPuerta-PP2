@@ -24,7 +24,11 @@ por fase, a medida que se tomaba cada decisión.
 13. [Corpus ampliado](#corpus-ampliado-511): qué se puede comprar y qué rubros hay
 14. [Corpus: verificación del correo](#corpus-verificación-del-correo-1111): el registro
     ahora pide un código. **Falta volver a indexar**
-15. [Qué probé y descarté](#qué-probé-y-descarté)
+15. [Corpus: CUIT, DNI y licencia](#corpus-cuit-dni-y-licencia-1211): las reglas nuevas del
+    registro. **Falta volver a indexar**
+16. [Corpus: logo y fotos](#corpus-logo-y-fotos-2411): el logo del comercio y la foto de
+    los productos. **Falta volver a indexar**
+17. [Qué probé y descarté](#qué-probé-y-descarté)
 
 ## Entorno y base (Fase 1)
 
@@ -1129,6 +1133,38 @@ se actualizó en el mismo cambio.
 **Falta volver a indexar**, igual que con el cambio del 11/11. Después de
 `node --env-file=.env indexar.mjs` tienen que quedar 38 fragmentos. Conviene repasar las
 preguntas de registro con `preguntar.mjs`.
+
+## Corpus: logo y fotos (24/11)
+
+La app sumó el logo del comercio, que se sube al registrarlo o desde el perfil, y una foto
+para cada producto. Por la regla del grupo, el corpus se actualizó en el mismo cambio.
+
+- **"¿Cómo registro mi comercio en ATuPuerta?"** suma una oración: el logo es opcional, se
+  sube con "Elegir imagen" y se puede poner o cambiar después desde el perfil. Pasa de 718 a
+  842 caracteres, sin agregar renglones.
+- **"¿Cómo cargo un producto nuevo?"** dice que la descripción y la foto son opcionales, y
+  dónde está "Elegir imagen". Pasa de 440 a 511, sin agregar renglones.
+- **Pregunta nueva al final de `ayuda-comercios.md`:** "¿Cómo cambio el logo de mi comercio
+  o la foto de un producto?" (renglón 49), de 720 caracteres. Va al final por el mismo
+  motivo que las anteriores: así no se corre el renglón de ninguna pregunta de la demo. Las
+  ocho de arriba siguen en los mismos renglones.
+- **Todo sale del código:**
+  - "Elegir imagen", "Cambiar imagen", "Quitar imagen" y los formatos JPG, PNG o WebP son
+    los de `frontend/src/components/SelectorImagen/SelectorImagen.jsx`, y el backend acepta
+    esos tres (`detectarTipoImagen` en `backend/src/services/imagen.service.js`).
+  - La sección "Logo del comercio" del perfil guarda el logo apenas se elige
+    (`frontend/src/pages/Perfil/Perfil.jsx`). "Editar", "Guardar cambios" e "Historial" son
+    los de `ComercioProductos.jsx`.
+  - Que la foto nueva queda en el historial sale de `subirImagenProducto` y
+    `quitarImagenProducto` (`backend/src/controllers/producto.controller.js`), que auditan
+    un `UPDATE`.
+- **Son 39 preguntas** (antes 38).
+
+**Falta volver a indexar**, como con los cambios del 11/11 y del 12/11: cuando se escribió
+esto, Docker y Ollama no estaban levantados, así que el Portero todavía no sabe del logo ni
+de las fotos. Después de `node --env-file=.env indexar.mjs` tienen que quedar 39 fragmentos.
+Conviene probar con `preguntar.mjs "¿Cómo pongo el logo de mi comercio?"` y repasar "¿Cómo
+cargo un producto nuevo?", que ahora nombra la foto.
 
 ## Qué probé y descarté
 

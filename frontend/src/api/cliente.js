@@ -74,15 +74,20 @@ function armarUrl(ruta, query) {
 // token: undefined usa el de la sesión guardada; null no manda ninguno. Los logins y
 // los registros van con null: ahí un 401 significa "credenciales incorrectas", no
 // "sesión vencida".
+//
+// body: un objeto, que viaja como JSON, o un FormData (los formularios con imagen), que
+// viaja tal cual como multipart/form-data. Al FormData no se le pone Content-Type: lo arma
+// el navegador con el "boundary" que separa las partes, y ponerlo a mano lo rompe.
 export async function pedir(ruta, { metodo = 'GET', body, query, token } = {}) {
   const tokenUsado = token === undefined ? leerSesionGuardada()?.token : token
+  const esFormulario = body instanceof FormData
   const headers = {}
 
   if (tokenUsado) {
     headers.Authorization = tokenUsado
   }
 
-  if (body !== undefined) {
+  if (body !== undefined && !esFormulario) {
     headers['Content-Type'] = 'application/json'
   }
 
@@ -92,7 +97,7 @@ export async function pedir(ruta, { metodo = 'GET', body, query, token } = {}) {
     respuesta = await fetch(armarUrl(ruta, query), {
       method: metodo,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : esFormulario ? body : JSON.stringify(body),
     })
   } catch {
     throw new ErrorApi('No se pudo conectar con el servidor. Revisá que el backend esté levantado.', 0)

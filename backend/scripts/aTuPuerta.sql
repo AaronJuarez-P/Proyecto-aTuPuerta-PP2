@@ -475,6 +475,17 @@ ALTER TABLE pedidos
 ALTER TABLE pedidos
   ADD COLUMN retirado_en TIMESTAMP NULL AFTER repartidor_id;
 
+-- Logo del comercio y foto del producto. Guardan solo el nombre del archivo (por
+-- ejemplo producto-<uuid>.webp): el archivo vive en la carpeta IMAGENES_CARPETA del
+-- backend (backend/uploads, que no se sube al repo) y se sirve en /imagenes/<nombre>.
+-- NULL = sin imagen, y el front muestra el ícono del rubro. La semilla no trae
+-- imágenes: se suben desde la app.
+ALTER TABLE comercios
+  ADD COLUMN logo VARCHAR(100) NULL AFTER horario_atencion;
+
+ALTER TABLE productos
+  ADD COLUMN imagen VARCHAR(100) NULL AFTER descripcion;
+
 -- =====================================================================
 -- VERIFICACIÓN DEL CORREO AL REGISTRARSE
 -- Para una base que ya tiene datos está

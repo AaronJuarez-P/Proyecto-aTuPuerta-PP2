@@ -65,12 +65,30 @@ export function IconoRubro({ categoria, porDefecto, ...props }) {
   return createElement(iconoDeCategoria(categoria, porDefecto), props)
 }
 
-// Miniatura de un comercio o de un producto. El backend no guarda fotos: es un recuadro
-// con el tono y el ícono del rubro. El tamaño lo pone el CSS de cada página (className);
-// miniatura-chica saca el adorno en las que van en un renglón.
-export function MiniaturaRubro({ categoria, porDefecto, className = '' }) {
+// Miniatura de un comercio o de un producto. Con src muestra esa imagen: el logo o la foto
+// que subió el comercio (ver urlImagen en utils/imagenes.js). Sin src, o si la imagen no
+// carga, es un recuadro con el tono y el ícono del rubro. El tamaño lo pone el CSS de cada
+// página (className); miniatura-chica saca el adorno en las que van en un renglón.
+//
+// logo: el logo se ve entero, sobre blanco; una foto llena el recuadro y se recorta. La
+// imagen es decorativa (alt vacío): el nombre del comercio o del producto está al lado.
+export function MiniaturaRubro({ categoria, porDefecto, className = '', src, logo = false }) {
+  // Se guarda la URL que falló y no un sí o no: si cambia la imagen, la nueva se intenta
+  const [fallida, setFallida] = useState(null)
+  const tono = `rubro-${tonoDeCategoria(categoria)}`
+
+  if (src && src !== fallida) {
+    const clases = ['miniatura-rubro', tono, 'con-imagen', logo && 'miniatura-logo', className].filter(Boolean)
+
+    return (
+      <div className={clases.join(' ')}>
+        <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFallida(src)} />
+      </div>
+    )
+  }
+
   return (
-    <div className={`miniatura-rubro rubro-${tonoDeCategoria(categoria)} ${className}`.trim()}>
+    <div className={`miniatura-rubro ${tono} ${className}`.trim()}>
       <IconoRubro categoria={categoria} porDefecto={porDefecto} />
     </div>
   )

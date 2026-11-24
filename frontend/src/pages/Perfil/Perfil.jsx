@@ -2,15 +2,17 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Bell, Megaphone, Motorbike, Package, Store } from 'lucide-react'
 import { actualizarPerfil, cambiarContrasena, darDeBajaCuenta, obtenerPerfil } from '../../api/perfil'
-import { actualizarPerfilComercio, obtenerPerfilComercio } from '../../api/comercio'
+import { actualizarPerfilComercio, obtenerPerfilComercio, quitarLogo, subirLogo } from '../../api/comercio'
 import { actualizarPerfilRepartidor, obtenerPerfilRepartidor } from '../../api/repartidor'
 import { Cargando, MensajeError, Modal } from '../../components/Comunes/Comunes'
+import SelectorImagen from '../../components/SelectorImagen/SelectorImagen'
 import { useAvisos } from '../../context/avisos'
 import { useSesion } from '../../context/sesion'
 import { useCarga } from '../../hooks/useCarga'
 import { CATEGORIAS_COMERCIO } from '../../utils/categorias'
 import { VEHICULOS } from '../../utils/estados'
 import { formatearFecha } from '../../utils/formato'
+import { urlImagen } from '../../utils/imagenes'
 import { etiquetaDelRol } from '../../utils/roles'
 import './Perfil.css'
 
@@ -174,37 +176,61 @@ function MiComercio() {
   }
 
   return (
-    <FormularioPerfilRol
-      key={JSON.stringify([
-        comercio.id,
-        comercio.nombre,
-        comercio.categoria,
-        comercio.direccion,
-        comercio.horario_atencion,
-      ])}
-      titulo="Mi comercio"
-      inicial={{
-        nombre: comercio.nombre,
-        categoria: comercio.categoria,
-        direccion: comercio.direccion,
-        horario_atencion: comercio.horario_atencion,
-      }}
-      campos={[
-        { clave: 'nombre', etiqueta: 'Nombre del comercio', maximo: 100 },
-        { clave: 'categoria', etiqueta: 'Rubro', maximo: 50, sugerencias: CATEGORIAS_COMERCIO },
-        { clave: 'direccion', etiqueta: 'Dirección del local', maximo: 200, ayuda: 'Si la cambiás, se vuelve a ubicar en el mapa.' },
-        { clave: 'horario_atencion', etiqueta: 'Horario de atención', maximo: 100 },
-      ]}
-      nota={`CUIL/CUIT ${comercio.cuit_cuil}: no se cambia, es con lo que entrás como comercio.`}
-      alGuardar={async (cambios) => {
-        await actualizarPerfilComercio(cambios)
-        if (cambios.nombre) {
-          actualizarUsuario({ nombre: cambios.nombre })
-        }
-        avisar('Guardaste los datos del comercio.')
-        recargar()
-      }}
-    />
+    <>
+      {/* El logo se guarda apenas se elige, sin el "Guardar cambios" de los datos: es
+          otro endpoint y una imagen elegida a medias no sirve de nada */}
+      <section className="perfil-card">
+        <h2>Logo del comercio</h2>
+        <SelectorImagen
+          titulo="Lo ven los clientes en el listado de comercios y en tu ficha"
+          src={urlImagen(comercio.logo)}
+          categoria={comercio.categoria}
+          logo
+          alElegir={async ({ blob }) => {
+            await subirLogo(blob)
+            avisar('Guardaste el logo del comercio.')
+            recargar()
+          }}
+          alQuitar={async () => {
+            await quitarLogo()
+            avisar('Quitaste el logo del comercio.')
+            recargar()
+          }}
+        />
+      </section>
+
+      <FormularioPerfilRol
+        key={JSON.stringify([
+          comercio.id,
+          comercio.nombre,
+          comercio.categoria,
+          comercio.direccion,
+          comercio.horario_atencion,
+        ])}
+        titulo="Mi comercio"
+        inicial={{
+          nombre: comercio.nombre,
+          categoria: comercio.categoria,
+          direccion: comercio.direccion,
+          horario_atencion: comercio.horario_atencion,
+        }}
+        campos={[
+          { clave: 'nombre', etiqueta: 'Nombre del comercio', maximo: 100 },
+          { clave: 'categoria', etiqueta: 'Rubro', maximo: 50, sugerencias: CATEGORIAS_COMERCIO },
+          { clave: 'direccion', etiqueta: 'Dirección del local', maximo: 200, ayuda: 'Si la cambiás, se vuelve a ubicar en el mapa.' },
+          { clave: 'horario_atencion', etiqueta: 'Horario de atención', maximo: 100 },
+        ]}
+        nota={`CUIL/CUIT ${comercio.cuit_cuil}: no se cambia, es con lo que entrás como comercio.`}
+        alGuardar={async (cambios) => {
+          await actualizarPerfilComercio(cambios)
+          if (cambios.nombre) {
+            actualizarUsuario({ nombre: cambios.nombre })
+          }
+          avisar('Guardaste los datos del comercio.')
+          recargar()
+        }}
+      />
+    </>
   )
 }
 

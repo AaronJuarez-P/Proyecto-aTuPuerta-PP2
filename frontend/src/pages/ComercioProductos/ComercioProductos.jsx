@@ -8,11 +8,15 @@ import {
   editarProducto,
   listarMisProductos,
   obtenerAuditoriaProducto,
+  quitarImagenProducto,
+  subirImagenProducto,
 } from '../../api/comercio'
 import { Cargando, EstadoBadge, EstadoVacio, MensajeError, MiniaturaRubro, Modal, Paginacion } from '../../components/Comunes/Comunes'
+import SelectorImagen from '../../components/SelectorImagen/SelectorImagen'
 import { useAvisos } from '../../context/avisos'
 import { useCarga } from '../../hooks/useCarga'
 import { formatearFecha, formatearPrecio } from '../../utils/formato'
+import { urlImagen } from '../../utils/imagenes'
 import './ComercioProductos.css'
 
 const FILTROS_ESTADO = [
@@ -172,7 +176,12 @@ export default function ComercioProductos() {
                   <tr key={producto.id} className={producto.activo ? '' : 'fila-baja'}>
                     <td>
                       <div className="producto-celda">
-                        <MiniaturaRubro categoria={producto.categoria} porDefecto={Package} className="producto-celda-miniatura miniatura-chica" />
+                        <MiniaturaRubro
+                          categoria={producto.categoria}
+                          porDefecto={Package}
+                          src={urlImagen(producto.imagen)}
+                          className="producto-celda-miniatura miniatura-chica"
+                        />
                         <div>
                           <strong>{producto.nombre}</strong>
                           <small>{producto.categoria}{producto.descripcion ? ` · ${producto.descripcion}` : ''}</small>
@@ -403,10 +412,15 @@ function FormularioProducto({ producto, categorias, alGuardar }) {
     precio: producto ? String(producto.precio) : '',
     stock: producto ? String(producto.stock) : '0',
   })
+  // La foto: null = sin cambios, { blob, previa } = una nueva, { quitar: true } = quitarla
+  const [cambioImagen, setCambioImagen] = useState(null)
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
 
   const cambiar = (campo) => (evento) => setFormulario((actual) => ({ ...actual, [campo]: evento.target.value }))
+
+  // Lo que se ve en el selector: la foto recién elegida, la que ya tiene, o el ícono
+  const imagenVisible = cambioImagen ? cambioImagen.previa ?? null : urlImagen(producto?.imagen)
 
   async function guardar(evento) {
     evento.preventDefault()
@@ -435,22 +449,63 @@ function FormularioProducto({ producto, categorias, alGuardar }) {
       return
     }
 
+    // Al editar, cada cosa va a su endpoint y solo si cambió: los datos con PUT, la foto
+    // con /imagen. Así cambiar solo la foto no deja también una edición en el historial.
+    const datosCambiaron = Boolean(producto) && (
+      datos.nombre !== producto.nombre ||
+      datos.descripcion !== (producto.descripcion ?? '') ||
+      datos.categoria !== producto.categoria ||
+      datos.precio !== Number(producto.precio) ||
+      datos.stock !== Number(producto.stock)
+    )
+
+    if (producto && !datosCambiaron && !cambioImagen) {
+      setError('No cambiaste nada.')
+      return
+    }
+
     setGuardando(true)
+    let datosGuardados = false
 
     try {
-      const respuesta = producto
-        ? await editarProducto(producto.id, { ...datos, activo: producto.activo })
-        : await crearProducto(datos)
+      if (!producto) {
+        // Con foto, el producto nace con ella en el mismo pedido
+        const respuesta = await crearProducto(datos, cambioImagen?.blob)
+        alGuardar(respuesta.producto ?? datos, true)
+        return
+      }
 
-      alGuardar(respuesta.producto ?? datos, !producto)
+      let guardado = producto
+
+      if (datosCambiaron) {
+        const respuesta = await editarProducto(producto.id, { ...datos, activo: producto.activo })
+        guardado = respuesta.producto ?? guardado
+        datosGuardados = true
+      }
+
+      if (cambioImagen?.blob) {
+        await subirImagenProducto(producto.id, cambioImagen.blob)
+      } else if (cambioImagen?.quitar) {
+        await quitarImagenProducto(producto.id)
+      }
+
+      alGuardar(guardado, false)
     } catch (errorGuardar) {
-      setError(errorGuardar.message)
+      setError(datosGuardados ? `Guardaste los datos, pero la imagen no: ${errorGuardar.message}` : errorGuardar.message)
       setGuardando(false)
     }
   }
 
   return (
     <form className="formulario" onSubmit={guardar}>
+      <SelectorImagen
+        titulo="Foto del producto (opcional)"
+        src={imagenVisible}
+        categoria={formulario.categoria}
+        alElegir={setCambioImagen}
+        alQuitar={() => setCambioImagen(producto?.imagen ? { quitar: true } : null)}
+      />
+
       <div className="campo-form">
         <label htmlFor="producto-nombre">Nombre</label>
         <input id="producto-nombre" value={formulario.nombre} onChange={cambiar('nombre')} maxLength={100} autoFocus />

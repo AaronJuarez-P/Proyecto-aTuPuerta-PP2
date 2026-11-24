@@ -8,6 +8,7 @@ import { useCarrito } from '../../context/carrito'
 import { useSesion } from '../../context/sesion'
 import { useCarga } from '../../hooks/useCarga'
 import { formatearPrecio, plural } from '../../utils/formato'
+import { urlImagen } from '../../utils/imagenes'
 import './Comercio.css'
 
 const PRODUCTOS_POR_PAGINA = 24
@@ -96,7 +97,12 @@ export default function Comercio() {
 
         {datosComercio ? (
           <div className="comercio-header-content">
-            <MiniaturaRubro categoria={datosComercio.categoria} className="comercio-large-icon" />
+            <MiniaturaRubro
+              categoria={datosComercio.categoria}
+              src={urlImagen(datosComercio.logo)}
+              logo
+              className="comercio-large-icon"
+            />
 
             <div>
               <span className="comercio-category">{datosComercio.categoria}</span>
@@ -161,7 +167,12 @@ export default function Comercio() {
 
               return (
                 <article className="producto-card" key={producto.id}>
-                  <MiniaturaRubro categoria={producto.categoria} porDefecto={Package} className="producto-icon" />
+                  <MiniaturaRubro
+                    categoria={producto.categoria}
+                    porDefecto={Package}
+                    src={urlImagen(producto.imagen)}
+                    className="producto-icon"
+                  />
 
                   <div className="producto-info">
                     <span className="producto-categoria">{producto.categoria}</span>

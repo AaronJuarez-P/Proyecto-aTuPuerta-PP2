@@ -21,6 +21,8 @@ backend/
 │   ├── backend-repartidores.js     <- guía de pruebas: repartidores (CU19, CU20)
 │   ├── backend-geolocalizacion.js  <- guía de pruebas: ubicación y rutas (CU21, CU22)
 │   ├── backend-seguimiento.js      <- guía de pruebas: tiempo real (CU08, CU26)
+│   ├── backend-imagenes.js         <- guía de pruebas: logo del comercio y fotos de productos
+│   ├── archivos/                   <- logo-prueba.png, la imagen que suben los pedidos de Postman
 │   ├── lista-semanas-8-10.js       <- las semanas 8, 9 y 10 en una sola lista, para ir tildando
 │   └── lista-semanas-11-14.js      <- perfiles, notificaciones, historial, administración y seguridad
 ├── src/
@@ -52,6 +54,7 @@ backend/
 │   │   ├── comercio.middleware.js
 │   │   ├── repartidor.middleware.js
 │   │   ├── administrador.middleware.js
+│   │   ├── imagen.middleware.js        <- recibe la imagen de un multipart (multer, en memoria)
 │   │   └── limites.middleware.js       <- rate limiting (semana 14)
 │   ├── routes/
 │   │   ├── registro.routes.js
@@ -72,6 +75,7 @@ backend/
 │   │   └── reclamo.routes.js
 │   ├── services/
 │   │   ├── auditoria.service.js
+│   │   ├── imagen.service.js       <- logo y fotos: tipo real, nombre al azar, dónde se guardan y se borran
 │   │   ├── pedido.service.js       <- máquina de estados, stock, cancelación, asignación, entrega y comisión
 │   │   ├── pago.service.js         <- adaptador de MercadoPago
 │   │   ├── maps.service.js         <- adaptador de Mapbox (Directions + Geocoding)
@@ -88,6 +92,7 @@ backend/
 │   │   └── validacion.js
 │   ├── app.js
 │   └── index.js
+├── uploads/                        <- logos y fotos que suben los comercios (no se sube al repo)
 ├── .env
 ├── .env.example
 ├── .gitignore
@@ -325,6 +330,15 @@ Como la contraseña de aplicación da acceso a mandar correos desde esa cuenta, 
 una cuenta del equipo creada para esto y no una personal. Y, como todo el `.env`, no se
 versiona.
 
+#### Variables de las imágenes
+
+| Variable | Para qué sirve |
+|---|---|
+| `IMAGENES_CARPETA` | Carpeta donde quedan los logos y las fotos que suben los comercios, relativa a `backend/` o absoluta. Por defecto `uploads`. No se sube al repo |
+| `IMAGENES_MAX_MB` | Peso máximo de cada imagen. Por defecto 2: el front ya las achica antes de subirlas, así que el tope es para lo que llega por Postman |
+
+Ninguna es obligatoria. Ver [Imágenes](#imágenes--logo-del-comercio-y-fotos-de-los-productos).
+
 ### 3 — Instalar y correr
 
 ```bash
@@ -344,13 +358,13 @@ node scripts/prueba-flujos.js
 
 Recorre todos los flujos de punta a punta —registro, perfiles, carrito, pago, preparación,
 reparto, entrega, historial, repetición, notificaciones, administración, reclamos,
-auditoría, sesiones, socket y límites— y verifica los códigos y los datos clave de cada
-respuesta (189 verificaciones). Termina con código distinto de 0 si algo falla, así que
+auditoría, sesiones, socket, imágenes y límites— y verifica los códigos y los datos clave de cada
+respuesta (231 verificaciones). Termina con código distinto de 0 si algo falla, así que
 sirve como prueba de regresión antes de entregar o de mergear. Otra URL:
 `BASE_URL=http://localhost:4100/api node scripts/prueba-flujos.js`.
 
 > Funciona con `EMAIL_MODO=mock` (lee el código de la respuesta del registro) y con `off`
-> (saltea los pasos del código: quedan 183 verificaciones). Con `smtp` o `consola` no tiene forma de
+> (saltea los pasos del código: quedan 224 verificaciones). Con `smtp` o `consola` no tiene forma de
 > leer el código, así que corta en el primer registro y pide cambiar de modo.
 
 > El último bloque agota a propósito el límite de logins fallidos, así que por
@@ -403,7 +417,7 @@ rama tomar y saca el texto de `datos.mensaje`. Vale también para los errores de
 | `POST` | `/api/registro/verificar` | Segundo paso: con el código correcto crea el usuario y su perfil de cliente (`201`). Body: `{ email, contrasena, codigo }` |
 | `POST` | `/api/registro/reenviar` | Manda un código nuevo para un registro pendiente. Body: `{ email, contrasena }` |
 | `POST` | `/api/inicioSesion` | Login de cliente. Devuelve JWT. Con un registro sin verificar, `403` con `verificacion_pendiente: true` |
-| `POST` | `/api/registroComercio` | Alta del perfil de comercio para un usuario ya registrado (pide su contraseña). El CUIT se valida con el dígito verificador: ver [Validación del CUIT, el DNI y la licencia](#validación-del-cuit-el-dni-y-la-licencia) |
+| `POST` | `/api/registroComercio` | Alta del perfil de comercio para un usuario ya registrado (pide su contraseña). El CUIT se valida con el dígito verificador: ver [Validación del CUIT, el DNI y la licencia](#validación-del-cuit-el-dni-y-la-licencia). Acepta JSON o `multipart/form-data` con el logo, opcional, en el campo `imagen`: ver [Imágenes](#imágenes--logo-del-comercio-y-fotos-de-los-productos) |
 | `POST` | `/api/inicioSesionComercio` | Login de comercio (email + contraseña + CUIL) |
 | `POST` | `/api/cerrarSesionComercio` | Cierra la sesión de comercio |
 | `POST` | `/api/registroRepartidor` | Alta del perfil de repartidor para un usuario ya registrado (pide su contraseña). DNI de 7 u 8 dígitos y, salvo con bicicleta, licencia igual al DNI |
@@ -568,15 +582,21 @@ errores de tipeo y los números inventados.
 | `GET` | `/api/productos` | Búsqueda global. Filtros: `buscar`, `categoria`, `comercioId`, `precioMin`, `precioMax` |
 | `GET` | `/api/productos/:id` | Detalle de un producto |
 
+Los comercios traen `logo` y los productos `imagen`: el nombre del archivo, que se sirve en
+`/imagenes/<nombre>`, o `null` si no tienen. Ver
+[Imágenes](#imágenes--logo-del-comercio-y-fotos-de-los-productos).
+
 ### Gestión del catálogo — CU13 a CU16 (solo rol `comercio`)
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `POST` | `/api/productos` | Alta de producto |
+| `POST` | `/api/productos` | Alta de producto. JSON, o `multipart/form-data` con la foto, opcional, en el campo `imagen` |
 | `PUT` | `/api/productos/:id` | Edición completa |
 | `PATCH` | `/api/productos/:id/stock` | Actualiza stock. Body: `{ stock }` o `{ ajuste }` |
 | `PATCH` | `/api/productos/:id/precio` | Actualiza precio. Body: `{ precio }` |
 | `DELETE` | `/api/productos/:id` | Baja lógica (`activo = FALSE`) |
+| `PUT` | `/api/productos/:id/imagen` | Cambia la foto. `multipart/form-data`, campo `imagen` |
+| `DELETE` | `/api/productos/:id/imagen` | Quita la foto |
 | `GET` | `/api/productos/:id/auditoria` | Historial de cambios del producto |
 | `GET` | `/api/comercio/productos` | Los productos propios, **incluidos los dados de baja**, para gestionarlos. Filtros: `buscar`, `categoria`, `activo`, `pagina`, `limite`. Trae también `categorias` |
 
@@ -591,10 +611,65 @@ Cadena de middlewares: `verificarToken` → `verificarRol('comercio')` → `reso
   tenía cómo mostrar un producto dado de baja ni reactivarlo (`PUT` con `activo: true`).
 - Cada escritura corre dentro de una transacción junto con su fila en
   `auditoria_productos` (`INSERT` / `UPDATE` / `DELETE`, con el `usuario_id` del actor).
+  Cambiar o quitar la foto también es un `UPDATE`; el alta con foto es un solo `INSERT`.
 - El borrado es lógico porque `items_pedido.producto_id` es `ON DELETE RESTRICT` y
   `auditoria_productos.producto_id` es `ON DELETE CASCADE`.
 
 Los casos de prueba de cada endpoint están en `postman/backend-productos.js`.
+
+### Imágenes — logo del comercio y fotos de los productos
+
+| Método | Ruta | Quién | Descripción |
+|---|---|---|---|
+| `POST` | `/api/registroComercio` | Público, con la contraseña de la cuenta | El logo es opcional: con `multipart/form-data`, en el campo `imagen` |
+| `PUT` / `DELETE` | `/api/comercio/logo` | Comercio | Cambia o quita el logo |
+| `POST` | `/api/productos` | Comercio | La foto es opcional: con `multipart/form-data`, en el campo `imagen` |
+| `PUT` / `DELETE` | `/api/productos/:id/imagen` | Comercio dueño | Cambia o quita la foto |
+| `GET` | `/imagenes/<nombre>` | Público | El archivo. Va fuera de `/api` |
+
+- **Dónde se guardan.** En el disco del backend, en `IMAGENES_CARPETA` (por defecto
+  `backend/uploads`, que no se sube al repo). La base guarda solo el nombre del archivo, en
+  `comercios.logo` y `productos.imagen`, y las respuestas lo devuelven tal cual. `null` es
+  "sin imagen", y el front muestra el ícono del rubro. Se descartaron tres opciones:
+  - guardarlas en MySQL como BLOB: el `my.ini` de XAMPP trae `max_allowed_packet=1M`, así
+    que una foto de más de 1 MB no entra, y cada imagen pasaría por Node y por la base;
+  - Cloudinary: pide una cuenta y depende de internet el día de la presentación;
+  - pegar un link: un comercio no tiene sus fotos subidas en ningún lado, y los links se
+    rompen.
+- **En el alta, el archivo viaja en el mismo pedido.** `POST /api/productos` y
+  `POST /api/registroComercio` aceptan `multipart/form-data`: así el producto nace con su
+  foto y con una sola fila `INSERT` de auditoría, y el comercio nace con su logo. Siguen
+  aceptando JSON, porque multer deja pasar todo lo que no es multipart. Con multipart los
+  campos llegan como texto (`precio: "1500"`), y las validaciones ya los aceptaban.
+- **El tipo se reconoce por los primeros bytes** del archivo (la firma de JPEG, PNG o
+  WebP), no por la extensión ni por el `Content-Type`, que los escribe quien lo manda. Un
+  texto renombrado a `.png` da `400`. SVG no se acepta: es texto y puede llevar scripts.
+- **Tope de tamaño:** `IMAGENES_MAX_MB` (2 MB). Pasarse da `413`. multer recibe el archivo en
+  memoria y no en disco, así que un pedido con datos inválidos no deja nada escrito.
+- **Nombre al azar:** `comercio-<uuid>.png`, `producto-<uuid>.webp`. Dos comercios no se
+  pisan el `logo.png`, un nombre como `../../src/app.js` no puede escribir fuera de la
+  carpeta y, como cambiar la foto cambia la URL, el navegador las guarda con
+  `Cache-Control: immutable`.
+- **Fuera de `/api`**, por dos motivos: no gastan el `limitadorGeneral` (una grilla de 24
+  productos son 24 pedidos), y salen con `Cross-Origin-Resource-Policy: cross-origin`.
+  `helmet` lo pone en `same-origin` para toda la API, y con ese valor el navegador no deja
+  que el front, que corre en otro puerto, muestre un `<img>` servido por el backend. Va
+  también en el 404 de una imagen que no está: con `same-origin`, la consola del navegador
+  mostraba un bloqueo de CORP que parecía un error de configuración.
+- **El archivo y la fila no se desencuentran.** El archivo nuevo se escribe antes de abrir
+  la transacción y, si la transacción no se confirma (contraseña incorrecta, comercio ya
+  registrado), el `finally` lo borra. El viejo se borra recién después del commit, y se
+  espera: cuando llega la respuesta, la imagen vieja ya no se sirve. Si un archivo no se
+  puede borrar, queda suelto en la carpeta, pero la respuesta no falla.
+- **Eliminar una cuenta** (`DELETE /api/perfil` o `DELETE /api/admin/usuarios/:id`) también
+  borra el logo y las fotos de sus productos, que el `CASCADE` no saca del disco.
+- **El front achica la imagen antes de subirla:** lado mayor de 800 px, en WebP. Volver a
+  codificarla borra además el EXIF, donde puede estar la ubicación GPS de la foto.
+- Las imágenes viven en el disco de cada compu, igual que los datos de la base de cada uno:
+  si importás la base de otro integrante, sus productos aparecen con el ícono del rubro. Si
+  reimportás `aTuPuerta.sql`, los archivos de `uploads/` quedan sueltos y se pueden borrar.
+
+Los casos de prueba de cada endpoint están en `postman/backend-imagenes.js`.
 
 ### Carrito — CU05, CU06 (rol `cliente`)
 
@@ -959,7 +1034,9 @@ y desde cualquier estado no terminal -> cancelado
 | `PATCH` | `/api/perfil` | Cualquier sesión | `nombre`, `telefono` y, si es cliente, `direccion_entrega` |
 | `PATCH` | `/api/perfil/contrasena` | Cualquier sesión | `{ contrasena_actual, contrasena_nueva }` |
 | `DELETE` | `/api/perfil` | Cualquier sesión | Eliminación definitiva de la cuenta, perfiles y pedidos propios. Body: `{ contrasena }` |
-| `GET` / `PATCH` | `/api/comercio/perfil` | Comercio | `nombre`, `categoria`, `direccion`, `horario_atencion` |
+| `GET` / `PATCH` | `/api/comercio/perfil` | Comercio | `nombre`, `categoria`, `direccion`, `horario_atencion`. El `GET` trae también `logo` |
+| `PUT` | `/api/comercio/logo` | Comercio | Cambia el logo. `multipart/form-data`, campo `imagen` |
+| `DELETE` | `/api/comercio/logo` | Comercio | Quita el logo |
 | `GET` / `PATCH` | `/api/repartidor/perfil` | Repartidor | `tipo_vehiculo`, `patente`, `numero_licencia` |
 
 - El usuario sale siempre del token: no hay forma de pedir ni de tocar el perfil de otro.
@@ -1109,6 +1186,8 @@ pendiente -> en_revision -> resuelto
   estricto y un recorte silencioso en XAMPP), formato de teléfono, contraseñas nuevas de 8
   a 72 caracteres (bcrypt solo mira los primeros 72 bytes), fechas que existan, y filtros
   de query string que tienen que ser texto: `?buscar[]=x` llegaba como array y daba `500`.
+- **Imágenes**: tipo real por los primeros bytes, tope de tamaño, nombres al azar y sin SVG.
+  Ver [Imágenes](#imágenes--logo-del-comercio-y-fotos-de-los-productos).
 - **SQL**: todos los valores van con placeholders. Donde el SQL se arma dinámicamente
   (filtros, columnas de un `UPDATE` parcial), los fragmentos salen de listas fijas del
   código, nunca del request.

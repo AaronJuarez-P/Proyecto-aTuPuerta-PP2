@@ -164,8 +164,10 @@ const obtenerMiPedido = async (req, res) => {
             return responderError(res, 403, "Ese pedido no es tuyo");
         }
 
+        // imagen es la foto de hoy del producto, no la del momento de la compra: el pedido
+        // guarda el precio, pero una foto no cambia lo que se compro
         const [items] = await database.query(
-            `SELECT ip.producto_id, p.nombre, ip.cantidad, ip.precio_unit, ip.subtotal
+            `SELECT ip.producto_id, p.nombre, p.imagen, ip.cantidad, ip.precio_unit, ip.subtotal
              FROM items_pedido ip
              INNER JOIN productos p ON p.id = ip.producto_id
              WHERE ip.pedido_id = ?

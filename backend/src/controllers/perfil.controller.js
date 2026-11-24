@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const database = require('../database/database');
 const { geocodificarDireccion } = require('../services/maps.service');
+const { borrarImagenes } = require('../services/imagen.service');
 const {
     buscarCuenta,
     buscarPedidosEnCurso,
@@ -248,13 +249,16 @@ const darDeBajaPerfil = async (req, res) => {
             return responderError(res, 409, describirPedidosEnCurso(pedidosEnCurso));
         }
 
-        const { pedidosCancelados, pedidosEliminados } = await eliminarCuentaDefinitivamente(connection, {
+        const { pedidosCancelados, pedidosEliminados, imagenes } = await eliminarCuentaDefinitivamente(connection, {
             usuarioId: req.usuario.id,
             actorUsuarioId: req.usuario.id,
             motivo: "El cliente elimino su cuenta"
         });
 
         await connection.commit();
+
+        // El logo y las fotos de sus productos, que el CASCADE no borra del disco
+        await borrarImagenes(imagenes);
 
         return res.status(200).json({
             codigo: 200,

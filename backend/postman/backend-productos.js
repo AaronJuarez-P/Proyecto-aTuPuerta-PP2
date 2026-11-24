@@ -189,6 +189,7 @@
 //        "comercio_id": 1,
 //        "nombre": "Taladro percutor 650W",
 //        "descripcion": "Taladro percutor con maletín y accesorios",
+//        "imagen": null,
 //        "categoria": "Herramientas",
 //        "precio": "32000.00",
 //        "stock": 10,
@@ -285,6 +286,8 @@
 //}
 //```
 //> `descripcion` y `stock` son opcionales (`stock` arranca en 0 si no se manda).
+//> También acepta `multipart/form-data` con una foto en el campo `imagen`: ver
+//> `backend-imagenes.js`. `imagen` es el nombre del archivo de la foto, o `null`.
 //> El `comercio_id` **no** se manda: sale del token. Si lo incluís en el body, se ignora.
 //
 //### Caso 1 — Alta exitosa
@@ -301,6 +304,7 @@
 //      "comercio_id": 1,
 //      "nombre": "Destornillador Phillips",
 //      "descripcion": "Destornillador punta cruz mango ergonómico",
+//      "imagen": null,
 //      "categoria": "Herramientas",
 //      "precio": "3200.00",
 //      "stock": 15,

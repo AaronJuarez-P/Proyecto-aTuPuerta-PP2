@@ -2,7 +2,7 @@
 
 Para vender en ATuPuerta, el comercio se crea sobre una cuenta que ya existe: si todavía no tenés cuenta, primero registrate como cliente. Después entrá a "Sumá tu comercio", con el enlace "¿Tenés un comercio? Registralo" del registro o "Registralo acá" del inicio de sesión.
 
-El formulario pide el correo y la contraseña de tu cuenta, y los datos del comercio: nombre, CUIL o CUIT (11 dígitos, sin guiones), rubro, dirección del local, horario de atención y teléfono de contacto. La app revisa que el CUIL o CUIT esté bien escrito: si te dice que no es válido, comparalo dígito por dígito con tu constancia. Al tocar "Registrar mi comercio" quedás con la sesión de comercio abierta, listo para cargar tus productos.
+El formulario pide el correo y la contraseña de tu cuenta, y los datos del comercio: nombre, CUIL o CUIT (11 dígitos, sin guiones), rubro, dirección del local, horario de atención y teléfono de contacto. Si querés, también podés subir el logo con "Elegir imagen": es opcional y lo podés poner o cambiar después desde tu perfil. La app revisa que el CUIL o CUIT esté bien escrito: si te dice que no es válido, comparalo dígito por dígito con tu constancia. Al tocar "Registrar mi comercio" quedás con la sesión de comercio abierta, listo para cargar tus productos.
 
 ## ¿Cómo entro como comercio?
 
@@ -12,7 +12,7 @@ Tu cuenta tiene una sola sesión abierta a la vez: si entrás como comercio, se 
 
 ## ¿Cómo cargo un producto nuevo?
 
-Como comercio, entrá a "Productos" en el menú y tocá "+ Nuevo producto". El formulario pide nombre, categoría, precio en pesos (mayor a cero) y stock inicial (un número entero, cero o más). La descripción es opcional.
+Como comercio, entrá a "Productos" en el menú y tocá "+ Nuevo producto". El formulario pide nombre, categoría, precio en pesos (mayor a cero) y stock inicial (un número entero, cero o más). La descripción y la foto son opcionales: para la foto, tocá "Elegir imagen" arriba del formulario.
 
 Al tocar "Cargar producto", el producto queda a la venta enseguida: aparece en la página de tu comercio y los clientes lo pueden agregar al carrito. Desde la misma lista lo podés modificar después con el botón "Editar".
 
@@ -45,3 +45,9 @@ Para la app, una venta es un pedido pagado: los que todavía esperan el pago no 
 Como comercio, entrá a tu perfil (tu nombre, en la barra de arriba) y buscá la sección "Mi comercio". Ahí podés cambiar el nombre del comercio, el rubro, la dirección del local y el horario de atención, y guardar con "Guardar cambios". Si cambiás la dirección, el local se vuelve a ubicar en el mapa.
 
 El horario de atención es el de tu comercio, y los clientes lo ven en la página del comercio. El CUIL o CUIT no se cambia, porque es con lo que entrás como comercio.
+
+## ¿Cómo cambio el logo de mi comercio o la foto de un producto?
+
+Como comercio, el logo se cambia desde tu perfil (tu nombre, en la barra de arriba), en la sección "Logo del comercio": tocá "Cambiar imagen", o "Elegir imagen" si todavía no tiene, y elegí el archivo. Se guarda en el momento, sin otro botón. Con "Quitar imagen" lo sacás. Los clientes lo ven en el listado de comercios y en la página de tu comercio.
+
+Para la foto de un producto, entrá a "Productos", tocá "Editar" en la fila del producto y usá "Cambiar imagen" o "Quitar imagen", arriba del formulario. El cambio se guarda con "Guardar cambios" y queda en el "Historial" del producto. Sirven imágenes JPG, PNG o WebP, y la app las achica antes de subirlas. Lo que no tiene imagen se muestra con el ícono de su rubro.

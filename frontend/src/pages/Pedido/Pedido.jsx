@@ -24,6 +24,7 @@ import {
   formatearMinutos,
   formatearPrecio,
 } from '../../utils/formato'
+import { urlImagen } from '../../utils/imagenes'
 import './Pedido.css'
 
 // Estados en los que el endpoint de seguimiento tiene algo para mostrar en el mapa
@@ -374,7 +375,7 @@ export default function Pedido() {
             <div className="pedido-products">
               {pedido.items.map((item) => (
                 <div className="pedido-product" key={item.producto_id}>
-                  <MiniaturaRubro porDefecto={Package} className="product-icon miniatura-chica" />
+                  <MiniaturaRubro porDefecto={Package} src={urlImagen(item.imagen)} className="product-icon miniatura-chica" />
                   <div className="product-info">
                     <strong>{item.nombre}</strong>
                     <span>{item.cantidad} × {formatearPrecio(item.precio_unit)}</span>

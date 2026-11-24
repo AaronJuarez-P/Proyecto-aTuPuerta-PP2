@@ -9,6 +9,7 @@ const {
 const { cambiarEstadoPedido } = require('../services/pedido.service');
 const { emitirEstadoDePedido } = require('../services/tiemporeal.service');
 const { geocodificarDireccion } = require('../services/maps.service');
+const { guardarImagen, borrarImagen } = require('../services/imagen.service');
 const { enviarNotificaciones, enviarNotificacionRepartidores } = require('./notificaciones.controller');
 
 // Estados que el comercio ve como ventas (CU17): todos menos pago_espera. Un pedido sin
@@ -59,8 +60,9 @@ const listarComercios = async (req, res) => {
             parametros
         );
 
+        // logo: el nombre del archivo, que se sirve en /imagenes/<logo>, o null
         const [comercios] = await database.query(
-            `SELECT id, nombre, categoria, direccion, horario_atencion
+            `SELECT id, nombre, categoria, direccion, horario_atencion, logo
             FROM comercios
             ${where}
             ORDER BY nombre ASC
@@ -97,7 +99,7 @@ const obtenerComercio = async (req, res) => {
         }
 
         const [comercios] = await database.query(
-            `SELECT id, nombre, categoria, direccion, horario_atencion
+            `SELECT id, nombre, categoria, direccion, horario_atencion, logo
             FROM comercios
             WHERE id = ? AND activo = TRUE`,
             [id]
@@ -173,7 +175,7 @@ const listarProductosDeComercio = async (req, res) => {
         );
 
         const [productos] = await database.query(
-            `SELECT id, comercio_id, nombre, descripcion, categoria, precio, stock
+            `SELECT id, comercio_id, nombre, descripcion, imagen, categoria, precio, stock
             FROM productos
             ${where}
             ORDER BY nombre ASC
@@ -324,7 +326,7 @@ const subirPedido = async (req, res) => {
 const buscarPerfilComercio = async (conexion, comercioId) => {
     const [comercios] = await conexion.query(
         `SELECT c.id, c.nombre, c.cuit_cuil, c.categoria, c.direccion, c.latitud, c.longitud,
-                c.horario_atencion, c.activo,
+                c.horario_atencion, c.logo, c.activo,
                 u.id AS usuario_id, u.email, u.telefono
          FROM comercios c
          INNER JOIN usuarios u ON u.id = c.usuario_id
@@ -425,6 +427,141 @@ const actualizarPerfilComercio = async (req, res) => {
             estado: "error",
             datos: { mensaje: "Error interno del servidor" }
         });
+    }
+};
+
+// ---------------------------------------------------------------------------
+// Logo del comercio (ver imagen.service.js)
+// ---------------------------------------------------------------------------
+
+// PUT /api/comercio/logo
+// multipart/form-data con el archivo en el campo imagen (ver recibirImagen)
+//
+// El archivo nuevo se escribe antes de abrir la transaccion, como cualquier cosa que no
+// es de la base, y el viejo se borra recien despues del commit. Si la transaccion no se
+// confirma, el finally borra el nuevo: la base nunca apunta a un archivo que no existe.
+const subirLogo = async (req, res) => {
+    let connection;
+    let nuevo = null;
+    let confirmado = false;
+
+    try {
+        if (!req.file) {
+            return responderError(res, 400, "Falta la imagen: mandala en el campo imagen, como multipart/form-data");
+        }
+
+        nuevo = await guardarImagen(req.file, 'comercio');
+
+        connection = await database.getConnection();
+        await connection.beginTransaction();
+
+        // Con lock: dos subidas a la vez leerian el mismo logo viejo, y el archivo de una
+        // de las dos quedaria suelto
+        const [comercios] = await connection.query(
+            `SELECT logo FROM comercios WHERE id = ? FOR UPDATE`,
+            [req.comercioId]
+        );
+
+        await connection.query(
+            `UPDATE comercios SET logo = ? WHERE id = ?`,
+            [nuevo, req.comercioId]
+        );
+
+        await connection.commit();
+        confirmado = true;
+
+        await borrarImagen(comercios[0]?.logo);
+
+        const comercio = await buscarPerfilComercio(database, req.comercioId);
+
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                mensaje: "Logo del comercio actualizado",
+                comercio
+            }
+        });
+
+    } catch (error) {
+        if (connection && !confirmado) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+            }
+        }
+
+        if (error.codigoHttp) {
+            return responderError(res, error.codigoHttp, error.message);
+        }
+
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    } finally {
+        if (!confirmado) {
+            await borrarImagen(nuevo);
+        }
+        if (connection) connection.release();
+    }
+};
+
+// DELETE /api/comercio/logo
+// Sin logo, el front vuelve a mostrar el icono del rubro
+const quitarLogo = async (req, res) => {
+    let connection;
+    try {
+        connection = await database.getConnection();
+        await connection.beginTransaction();
+
+        const [comercios] = await connection.query(
+            `SELECT logo FROM comercios WHERE id = ? FOR UPDATE`,
+            [req.comercioId]
+        );
+        const logo = comercios[0]?.logo;
+
+        if (!logo) {
+            await connection.rollback();
+            return responderError(res, 400, "Tu comercio no tiene logo");
+        }
+
+        await connection.query(
+            `UPDATE comercios SET logo = NULL WHERE id = ?`,
+            [req.comercioId]
+        );
+
+        await connection.commit();
+
+        await borrarImagen(logo);
+
+        const comercio = await buscarPerfilComercio(database, req.comercioId);
+
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                mensaje: "Quitaste el logo del comercio",
+                comercio
+            }
+        });
+
+    } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+            }
+        }
+
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    } finally {
+        if (connection) connection.release();
     }
 };
 
@@ -625,6 +762,8 @@ module.exports = {
     subirPedido,
     obtenerPerfilComercio,
     actualizarPerfilComercio,
+    subirLogo,
+    quitarLogo,
     listarVentas,
     obtenerVenta
 };

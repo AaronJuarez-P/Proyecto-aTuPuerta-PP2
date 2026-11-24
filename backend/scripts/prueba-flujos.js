@@ -44,15 +44,19 @@ const verificar = (descripcion, condicion, detalle) => {
 };
 
 // Hace el request y devuelve { status, json, headers }. token va crudo en Authorization,
-// que es la convencion del proyecto; crudo manda el body tal cual, sin JSON.stringify.
-const llamar = async (metodo, ruta, { token, body, crudo } = {}) => {
+// que es la convencion del proyecto; crudo manda el body tal cual, sin JSON.stringify, y
+// formulario manda un FormData como multipart/form-data (lo que usan las imagenes).
+const llamar = async (metodo, ruta, { token, body, crudo, formulario } = {}) => {
     const opciones = { method: metodo, headers: {} };
 
     if (token) {
         opciones.headers.Authorization = token;
     }
 
-    if (crudo !== undefined || body !== undefined) {
+    // Sin Content-Type a mano: fetch lo arma con el boundary que separa las partes
+    if (formulario !== undefined) {
+        opciones.body = formulario;
+    } else if (crudo !== undefined || body !== undefined) {
         opciones.headers["Content-Type"] = "application/json";
         opciones.body = crudo !== undefined ? crudo : JSON.stringify(body);
     }
@@ -68,6 +72,26 @@ const llamar = async (metodo, ruta, { token, body, crudo } = {}) => {
 
     return { status: respuesta.status, json, headers: respuesta.headers };
 };
+
+// Un multipart/form-data como el que manda el front: los campos como texto y el archivo
+// en el campo "imagen". imagen: { datos: Buffer, tipo, nombre }
+const formularioCon = (campos = {}, imagen) => {
+    const formulario = new FormData();
+
+    for (const [clave, valor] of Object.entries(campos)) {
+        formulario.append(clave, String(valor));
+    }
+
+    if (imagen) {
+        formulario.append("imagen", new Blob([imagen.datos], { type: imagen.tipo }), imagen.nombre);
+    }
+
+    return formulario;
+};
+
+// true si el servidor ya no sirve ese archivo. Un nombre vacio da false: sin el, pedir
+// /imagenes/undefined daria 404 y la verificacion pasaria sin probar nada.
+const yaNoSeSirve = async (nombre) => Boolean(nombre) && (await fetch(`${RAIZ}/imagenes/${nombre}`)).status === 404;
 
 // Llama y verifica el codigo HTTP y, opcionalmente, una condicion sobre el JSON
 const esperar = async (descripcion, metodo, ruta, opciones, codigoEsperado, condicion) => {
@@ -559,6 +583,159 @@ const main = async () => {
     verificar("vuelta de MercadoPago: JSON, o redirección al pedido en el front",
         retorno.status === 200 || (retorno.status === 302 && destinoRetorno.endsWith("/pedidos/8?pago=rejected")),
         `obtuvo ${retorno.status} ${destinoRetorno}`);
+
+    // -----------------------------------------------------------------------
+    seccion("Imágenes: logo y fotos");
+    // -----------------------------------------------------------------------
+    // Va antes del limite de intentos: registrar dos veces el mismo comercio es un
+    // intento fallido para limitadorAutenticacion. Sofia es una cuenta nueva, asi que no
+    // cambia nada de lo de arriba, y al final se elimina con sus archivos.
+    //
+    // El backend reconoce el tipo por los primeros bytes, no por el nombre ni por el
+    // Content-Type: por eso alcanza con la firma del JPEG, y el texto con extension .png
+    // se rechaza.
+    const PNG = {
+        datos: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64"),
+        tipo: "image/png",
+        nombre: "logo.png"
+    };
+    const JPEG = { datos: Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(60)]), tipo: "image/jpeg", nombre: "foto.jpg" };
+    const TEXTO = { datos: Buffer.from("no soy una imagen: soy un texto con otra extension"), tipo: "image/png", nombre: "trucho.png" };
+    const GRANDE = { datos: Buffer.concat([PNG.datos.subarray(0, 8), Buffer.alloc(3 * 1024 * 1024)]), tipo: "image/png", nombre: "grande.png" };
+
+    const datosSofia = { nombre: "Sofía Imágenes", email: "sofia.imagenes@test.com", contrasena: "Clave12345", telefono: "3421000011", direccion_entrega: "Mitre 200, Santo Tomé" };
+    const credencialesSofia = { email: datosSofia.email, contrasena: datosSofia.contrasena };
+    const codigoSofia = await registrar("registro de Sofía", datosSofia);
+
+    if (codigoSofia !== null) {
+        await esperar("Sofía verifica su correo", "POST", "/registro/verificar",
+            { body: { ...credencialesSofia, codigo: codigoSofia } }, 201);
+    }
+
+    const vivero = {
+        ...credencialesSofia,
+        nombre: "Vivero Las Flores",
+        telefono: "3421000011",
+        cuit_cuil: "20123456786",
+        categoria: "Vivero",
+        direccion: "San Martín 1500, Santo Tomé",
+        horario_atencion: "Lun a Sáb 09:00-19:00"
+    };
+    await esperar("registrar el comercio con su logo (multipart)", "POST", "/registroComercio",
+        { formulario: formularioCon(vivero, PNG) }, 201);
+    await esperar("registrarlo otra vez no deja el logo suelto", "POST", "/registroComercio",
+        { formulario: formularioCon(vivero, PNG) }, 400,
+        (datos) => datos.mensaje === "El comercio ya está registrado");
+
+    const sofia = await login("/inicioSesionComercio", { ...credencialesSofia, cuil: vivero.cuit_cuil });
+    const perfilVivero = await esperar("el perfil trae el logo", "GET", "/comercio/perfil", { token: sofia }, 200,
+        (datos) => /^comercio-[0-9a-f-]{36}\.png$/.test(datos.comercio.logo));
+    const viveroId = perfilVivero.json?.datos?.comercio?.id;
+    const sofiaUsuarioId = perfilVivero.json?.datos?.comercio?.usuario_id;
+    let logo = perfilVivero.json?.datos?.comercio?.logo;
+
+    const imagenLogo = await fetch(`${RAIZ}/imagenes/${logo}`);
+    verificar("GET /imagenes/<logo> -> 200 image/png",
+        Boolean(logo) && imagenLogo.status === 200 && imagenLogo.headers.get("content-type") === "image/png",
+        `obtuvo ${imagenLogo.status} ${imagenLogo.headers.get("content-type")}`);
+    verificar("se puede mostrar desde el front, que es otro origen (CORP cross-origin)",
+        imagenLogo.headers.get("cross-origin-resource-policy") === "cross-origin",
+        `cross-origin-resource-policy: ${imagenLogo.headers.get("cross-origin-resource-policy")}`);
+    verificar("el navegador la guarda sin vencimiento (immutable)",
+        (imagenLogo.headers.get("cache-control") || "").includes("immutable"),
+        `cache-control: ${imagenLogo.headers.get("cache-control")}`);
+
+    await esperar("el detalle público trae el logo", "GET", `/comercios/${viveroId}`, {}, 200,
+        (datos) => Boolean(logo) && datos.comercio.logo === logo);
+    await esperar("el listado trae el logo", "GET", "/comercios", {}, 200,
+        (datos) => Boolean(logo) && datos.comercios.find((comercio) => comercio.id === viveroId)?.logo === logo);
+
+    await esperar("subir el logo sin archivo", "PUT", "/comercio/logo", { token: sofia, body: {} }, 400,
+        (datos) => datos.mensaje.includes("campo imagen"));
+    await esperar("un texto con extensión .png no pasa por imagen", "PUT", "/comercio/logo",
+        { token: sofia, formulario: formularioCon({}, TEXTO) }, 400,
+        (datos) => datos.mensaje.includes("JPG, PNG o WebP"));
+    await esperar("una imagen de más de 2 MB", "PUT", "/comercio/logo",
+        { token: sofia, formulario: formularioCon({}, GRANDE) }, 413,
+        (datos) => datos.mensaje.includes("2 MB"));
+    await esperar("un cliente no sube logos", "PUT", "/comercio/logo",
+        { token: juan, formulario: formularioCon({}, PNG) }, 403);
+
+    const conLogoNuevo = await esperar("cambiar el logo por un JPEG", "PUT", "/comercio/logo",
+        { token: sofia, formulario: formularioCon({}, JPEG) }, 200,
+        (datos) => /^comercio-[0-9a-f-]{36}\.jpg$/.test(datos.comercio.logo) && datos.comercio.logo !== logo);
+    verificar("el logo viejo ya no se sirve", await yaNoSeSirve(logo));
+    logo = conLogoNuevo.json?.datos?.comercio?.logo;
+
+    await esperar("quitar el logo", "DELETE", "/comercio/logo", { token: sofia }, 200,
+        (datos) => datos.comercio.logo === null);
+    verificar("y su archivo se borra", await yaNoSeSirve(logo));
+
+    // El 404 de una imagen que no esta tambien tiene que permitir otro origen: con el
+    // same-origin de helmet el navegador la bloquea (ERR_BLOCKED_BY_RESPONSE) en vez de
+    // avisar un 404, y en la consola parece un problema de configuracion
+    const imagenQueNoEsta = await fetch(`${RAIZ}/imagenes/${logo}`);
+    verificar("una imagen que no está da 404, también con CORP cross-origin",
+        Boolean(logo) && imagenQueNoEsta.status === 404 &&
+        imagenQueNoEsta.headers.get("cross-origin-resource-policy") === "cross-origin",
+        `obtuvo ${imagenQueNoEsta.status}, cross-origin-resource-policy: ${imagenQueNoEsta.headers.get("cross-origin-resource-policy")}`);
+    await esperar("quitar un logo que no hay", "DELETE", "/comercio/logo", { token: sofia }, 400);
+
+    const maceta = await esperar("producto con foto (multipart: precio y stock llegan como texto)", "POST", "/productos",
+        {
+            token: sofia,
+            formulario: formularioCon({ nombre: "Maceta de barro", descripcion: "Maceta N° 14", categoria: "Macetas", precio: "1500", stock: "7" }, PNG)
+        }, 201,
+        (datos) => /^producto-[0-9a-f-]{36}\.png$/.test(datos.producto.imagen) &&
+                   Number(datos.producto.precio) === 1500 && datos.producto.stock === 7);
+    const macetaId = maceta.json?.datos?.producto?.id;
+    let foto = maceta.json?.datos?.producto?.imagen;
+
+    await esperar("producto sin foto, por JSON como siempre", "POST", "/productos",
+        { token: sofia, body: { nombre: "Tierra fértil 5 kg", categoria: "Tierra", precio: 2300, stock: 12 } }, 201,
+        (datos) => datos.producto.imagen === null);
+    await esperar("los productos del comercio traen la foto", "GET", `/comercios/${viveroId}/productos`, {}, 200,
+        (datos) => Boolean(foto) && datos.productos.find((producto) => producto.id === macetaId)?.imagen === foto);
+    await esperar("la búsqueda trae la foto", "GET", "/productos?buscar=Maceta", {}, 200,
+        (datos) => Boolean(foto) && datos.productos.find((producto) => producto.id === macetaId)?.imagen === foto);
+
+    await esperar("la foto de un producto ajeno", "PUT", `/productos/${macetaId}/imagen`,
+        { token: ferreteria, formulario: formularioCon({}, JPEG) }, 403);
+    await esperar("un cliente no cambia fotos", "PUT", `/productos/${macetaId}/imagen`,
+        { token: maria, formulario: formularioCon({}, JPEG) }, 403);
+    await esperar("la foto de un producto que no existe", "PUT", "/productos/999999/imagen",
+        { token: sofia, formulario: formularioCon({}, JPEG) }, 404,
+        (datos) => datos.mensaje === "Producto no encontrado");
+
+    const conFotoNueva = await esperar("cambiar la foto", "PUT", `/productos/${macetaId}/imagen`,
+        { token: sofia, formulario: formularioCon({}, JPEG) }, 200,
+        (datos) => /^producto-[0-9a-f-]{36}\.jpg$/.test(datos.producto.imagen));
+    verificar("la foto vieja ya no se sirve", await yaNoSeSirve(foto));
+    foto = conFotoNueva.json?.datos?.producto?.imagen;
+    await esperar("el cambio de foto queda auditado", "GET", `/productos/${macetaId}/auditoria`, { token: sofia }, 200,
+        (datos) => datos.auditoria.map((registro) => registro.accion).join(",") === "UPDATE,INSERT");
+
+    await esperar("María agrega la maceta", "POST", "/carrito/agregar", { token: maria, body: { id_producto: macetaId, cantidad: 1 } }, 201);
+    await esperar("el carrito trae la foto", "GET", "/carrito/listar", { token: maria }, 200,
+        (datos) => Boolean(foto) && datos.comercios.flatMap((grupo) => grupo.items).find((item) => item.producto_id === macetaId)?.imagen === foto);
+    await esperar("y la saca", "DELETE", `/carrito/${macetaId}`, { token: maria }, 200);
+    await esperar("el detalle del pedido trae la imagen de cada item", "GET", "/pedidos/5", { token: maria }, 200,
+        (datos) => datos.pedido.items.length > 0 && datos.pedido.items.every((item) => "imagen" in item));
+
+    await esperar("quitar la foto", "DELETE", `/productos/${macetaId}/imagen`, { token: sofia }, 200,
+        (datos) => datos.producto.imagen === null);
+    verificar("y su archivo se borra", await yaNoSeSirve(foto));
+    await esperar("quitar una foto que no hay", "DELETE", `/productos/${macetaId}/imagen`, { token: sofia }, 400);
+
+    // Eliminar la cuenta se lleva sus archivos: si no, el logo de un comercio que ya no
+    // existe se seguiria sirviendo en /imagenes
+    const ultimoLogo = await esperar("vuelve a subir el logo", "PUT", "/comercio/logo",
+        { token: sofia, formulario: formularioCon({}, PNG) }, 200);
+    const ultimaFoto = await esperar("y la foto", "PUT", `/productos/${macetaId}/imagen`,
+        { token: sofia, formulario: formularioCon({}, PNG) }, 200);
+    await esperar("el admin elimina la cuenta de Sofía", "DELETE", `/admin/usuarios/${sofiaUsuarioId}`, { token: admin }, 200);
+    verificar("con la cuenta se borran su logo y sus fotos",
+        await yaNoSeSirve(ultimoLogo.json?.datos?.comercio?.logo) && await yaNoSeSirve(ultimaFoto.json?.datos?.producto?.imagen));
 
     // -----------------------------------------------------------------------
     seccion("Semana 14 - Limite de intentos (va ultimo: bloquea los logins un rato)");

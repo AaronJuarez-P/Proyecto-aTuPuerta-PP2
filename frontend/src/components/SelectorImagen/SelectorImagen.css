@@ -1,0 +1,58 @@
+/* Elegir, cambiar o quitar el logo del comercio o la foto de un producto. Lo usan el
+   registro del comercio, el perfil y el formulario de producto. */
+
+.selector-imagen {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* La vista previa: el mismo recuadro que el catálogo (MiniaturaRubro), a 120 px */
+.selector-imagen .selector-imagen-vista {
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+  border: 1px solid var(--border);
+}
+
+.selector-imagen .selector-imagen-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.selector-imagen .selector-imagen-titulo {
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.selector-imagen small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.selector-imagen .selector-imagen-botones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.selector-imagen .selector-imagen-estado {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.selector-imagen .aviso-form {
+  margin: 4px 0 0;
+}
+
+@media (max-width: 480px) {
+  .selector-imagen {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

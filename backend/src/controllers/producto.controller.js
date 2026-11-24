@@ -1,13 +1,15 @@
 const database = require('../database/database');
 const { registrarAuditoriaProducto } = require('../services/auditoria.service');
+const { guardarImagen, borrarImagen } = require('../services/imagen.service');
 const { obtenerPaginacion } = require('../utils/paginacion');
 const { obtenerIdValido, obtenerTextoQuery, obtenerBooleanoQuery } = require('../utils/validacion');
 
 // La columna precio es DECIMAL(10,2), o sea que no entra un valor mas grande que este
 const PRECIO_MAXIMO = 99999999.99;
 
-// Columnas que se devuelven al cliente en todas las respuestas de producto
-const COLUMNAS_PRODUCTO = `id, comercio_id, nombre, descripcion, categoria, precio, stock, activo, created_at, updated_at`;
+// Columnas que se devuelven al cliente en todas las respuestas de producto. imagen es el
+// nombre del archivo de la foto, que se sirve en /imagenes/<imagen>, o null.
+const COLUMNAS_PRODUCTO = `id, comercio_id, nombre, descripcion, imagen, categoria, precio, stock, activo, created_at, updated_at`;
 
 // ---------------------------------------------------------------------------
 // Validaciones. Devuelven el mensaje de error o null si el valor esta bien
@@ -173,7 +175,7 @@ const buscarProductos = async (req, res) => {
         );
 
         const [productos] = await database.query(
-            `SELECT p.id, p.comercio_id, p.nombre, p.descripcion, p.categoria, p.precio, p.stock,
+            `SELECT p.id, p.comercio_id, p.nombre, p.descripcion, p.imagen, p.categoria, p.precio, p.stock,
                     c.nombre AS comercio_nombre, c.categoria AS comercio_categoria
             FROM productos p
             INNER JOIN comercios c ON p.comercio_id = c.id
@@ -215,7 +217,7 @@ const obtenerProducto = async (req, res) => {
         }
 
         const [productos] = await database.query(
-            `SELECT p.id, p.comercio_id, p.nombre, p.descripcion, p.categoria, p.precio, p.stock,
+            `SELECT p.id, p.comercio_id, p.nombre, p.descripcion, p.imagen, p.categoria, p.precio, p.stock,
                     c.nombre AS comercio_nombre, c.direccion AS comercio_direccion,
                     c.horario_atencion AS comercio_horario
             FROM productos p
@@ -253,9 +255,15 @@ const obtenerProducto = async (req, res) => {
 // ---------------------------------------------------------------------------
 
 // POST /api/productos
+//
+// Acepta JSON o multipart/form-data. Con multipart la foto es opcional y va en el campo
+// imagen (ver recibirImagen), y precio y stock llegan como texto: las validaciones de
+// abajo ya aceptan numeros escritos como texto.
 const crearProducto = async (req, res) => {
 
     const connection = await database.getConnection();
+    let imagen = null;
+    let confirmado = false;
 
     try {
         const { nombre, descripcion, categoria, precio } = req.body;
@@ -288,15 +296,24 @@ const crearProducto = async (req, res) => {
             });
         }
 
+        // La foto se escribe recien aca, con todo lo demas validado, y antes de la
+        // transaccion. Si el alta no se confirma, el finally la borra.
+        if (req.file) {
+            imagen = await guardarImagen(req.file, 'producto');
+        }
+
         await connection.beginTransaction();
 
+        // Con la foto en el mismo INSERT, el producto nace con ella y su auditoria es una
+        // sola fila INSERT, en vez de un alta seguida de una modificacion
         const [resultado] = await connection.query(
-            `INSERT INTO productos (comercio_id, nombre, descripcion, categoria, precio, stock)
-            VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO productos (comercio_id, nombre, descripcion, imagen, categoria, precio, stock)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 req.comercioId,
                 nombre.trim(),
                 descripcion ? descripcion.trim() : null,
+                imagen,
                 categoria.trim(),
                 Number(precio),
                 Number(stock)
@@ -310,6 +327,7 @@ const crearProducto = async (req, res) => {
         });
 
         await connection.commit();
+        confirmado = true;
 
         const [productoCreado] = await connection.query(
             `SELECT ${COLUMNAS_PRODUCTO} FROM productos WHERE id = ?`,
@@ -331,12 +349,24 @@ const crearProducto = async (req, res) => {
         } catch (rollbackError) {
         }
 
+        // Un archivo que no es una imagen (ver guardarImagen)
+        if (error.codigoHttp) {
+            return res.status(error.codigoHttp).json({
+                codigo: error.codigoHttp,
+                estado: "error",
+                datos: { mensaje: error.message }
+            });
+        }
+
         return res.status(500).json({
             codigo: 500,
             estado: "error",
             datos: { mensaje: "Error interno del servidor" }
         });
     } finally {
+        if (!confirmado) {
+            await borrarImagen(imagen);
+        }
         connection.release();
     }
 };
@@ -720,6 +750,209 @@ const eliminarProducto = async (req, res) => {
     }
 };
 
+// ---------------------------------------------------------------------------
+// Foto del producto (ver imagen.service.js)
+// ---------------------------------------------------------------------------
+
+// PUT /api/productos/:id/imagen
+// multipart/form-data con el archivo en el campo imagen (ver recibirImagen)
+//
+// El mismo camino que el logo del comercio (subirLogo en comercio.controller.js): el
+// archivo nuevo se escribe antes de la transaccion y el viejo se borra despues del commit.
+// El cambio se audita como cualquier escritura sobre productos.
+const subirImagenProducto = async (req, res) => {
+
+    const connection = await database.getConnection();
+    let nueva = null;
+    let confirmado = false;
+
+    try {
+        const id = obtenerIdValido(req.params.id);
+
+        if (id === null) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El id del producto debe ser un número válido" }
+            });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "Falta la imagen: mandala en el campo imagen, como multipart/form-data" }
+            });
+        }
+
+        // Que el producto sea de este comercio, antes de escribir nada en el disco
+        const { error } = await buscarProductoDelComercio(connection, id, req.comercioId);
+        if (error) {
+            return res.status(error.codigo).json({
+                codigo: error.codigo,
+                estado: "error",
+                datos: { mensaje: error.mensaje }
+            });
+        }
+
+        nueva = await guardarImagen(req.file, 'producto');
+
+        await connection.beginTransaction();
+
+        // Con lock: dos cambios de foto a la vez leerian la misma foto vieja, y el
+        // archivo de uno de los dos quedaria suelto
+        const [productos] = await connection.query(
+            `SELECT imagen FROM productos WHERE id = ? FOR UPDATE`,
+            [id]
+        );
+
+        await connection.query(
+            `UPDATE productos SET imagen = ? WHERE id = ?`,
+            [nueva, id]
+        );
+
+        await registrarAuditoriaProducto(connection, {
+            productoId: id,
+            usuarioId: req.usuario.id,
+            accion: 'UPDATE'
+        });
+
+        await connection.commit();
+        confirmado = true;
+
+        await borrarImagen(productos[0]?.imagen);
+
+        const [productoActualizado] = await connection.query(
+            `SELECT ${COLUMNAS_PRODUCTO} FROM productos WHERE id = ?`,
+            [id]
+        );
+
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                mensaje: "Imagen del producto actualizada",
+                producto: productoActualizado[0]
+            }
+        });
+
+    } catch (error) {
+        if (!confirmado) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+            }
+        }
+
+        if (error.codigoHttp) {
+            return res.status(error.codigoHttp).json({
+                codigo: error.codigoHttp,
+                estado: "error",
+                datos: { mensaje: error.message }
+            });
+        }
+
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    } finally {
+        if (!confirmado) {
+            await borrarImagen(nueva);
+        }
+        connection.release();
+    }
+};
+
+// DELETE /api/productos/:id/imagen
+// Sin foto, el front vuelve a mostrar el icono del rubro
+const quitarImagenProducto = async (req, res) => {
+
+    const connection = await database.getConnection();
+
+    try {
+        const id = obtenerIdValido(req.params.id);
+
+        if (id === null) {
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El id del producto debe ser un número válido" }
+            });
+        }
+
+        const { error } = await buscarProductoDelComercio(connection, id, req.comercioId);
+        if (error) {
+            return res.status(error.codigo).json({
+                codigo: error.codigo,
+                estado: "error",
+                datos: { mensaje: error.mensaje }
+            });
+        }
+
+        await connection.beginTransaction();
+
+        const [productos] = await connection.query(
+            `SELECT imagen FROM productos WHERE id = ? FOR UPDATE`,
+            [id]
+        );
+        const imagen = productos[0]?.imagen;
+
+        if (!imagen) {
+            await connection.rollback();
+            return res.status(400).json({
+                codigo: 400,
+                estado: "error",
+                datos: { mensaje: "El producto no tiene imagen" }
+            });
+        }
+
+        await connection.query(
+            `UPDATE productos SET imagen = NULL WHERE id = ?`,
+            [id]
+        );
+
+        await registrarAuditoriaProducto(connection, {
+            productoId: id,
+            usuarioId: req.usuario.id,
+            accion: 'UPDATE'
+        });
+
+        await connection.commit();
+
+        await borrarImagen(imagen);
+
+        const [productoActualizado] = await connection.query(
+            `SELECT ${COLUMNAS_PRODUCTO} FROM productos WHERE id = ?`,
+            [id]
+        );
+
+        return res.status(200).json({
+            codigo: 200,
+            estado: "exito",
+            datos: {
+                mensaje: "Quitaste la imagen del producto",
+                producto: productoActualizado[0]
+            }
+        });
+
+    } catch (error) {
+        try {
+            await connection.rollback();
+        } catch (rollbackError) {
+        }
+
+        return res.status(500).json({
+            codigo: 500,
+            estado: "error",
+            datos: { mensaje: "Error interno del servidor" }
+        });
+    } finally {
+        connection.release();
+    }
+};
+
 // Trazabilidad de un producto propio.
 // GET /api/productos/:id/auditoria
 const obtenerAuditoriaProducto = async (req, res) => {
@@ -877,5 +1110,7 @@ module.exports = {
     actualizarStock,
     actualizarPrecio,
     eliminarProducto,
+    subirImagenProducto,
+    quitarImagenProducto,
     obtenerAuditoriaProducto
 };

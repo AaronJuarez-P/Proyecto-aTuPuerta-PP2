@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { registrarComercio } from '../../api/auth'
+import SelectorImagen from '../../components/SelectorImagen/SelectorImagen'
 import { useAvisos } from '../../context/avisos'
 import { useSesion } from '../../context/sesion'
 import { CATEGORIAS_COMERCIO } from '../../utils/categorias'
@@ -26,6 +27,9 @@ export default function RegistroComercio() {
     horario_atencion: '',
     telefono: '',
   })
+  // El logo va aparte de formulario: es opcional y no es texto, así que no entra en el
+  // control de campos vacíos. { blob, previa } o null (ver prepararImagen)
+  const [logo, setLogo] = useState(null)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
 
@@ -58,7 +62,8 @@ export default function RegistroComercio() {
         Object.entries(formulario).map(([campo, valor]) => [campo, campo === 'contrasena' ? valor : valor.trim()])
       )
 
-      await registrarComercio(datos)
+      // Con logo, el comercio nace con él en el mismo pedido
+      await registrarComercio(datos, logo?.blob)
       olvidarSesion()
       await entrar('comercio', { email: datos.email, contrasena: datos.contrasena, cuil: datos.cuit_cuil })
       avisar('¡Listo! Tu comercio ya está en ATuPuerta. Cargá tus productos para empezar a vender.')
@@ -119,6 +124,17 @@ export default function RegistroComercio() {
               onChange={cambiar('nombre')}
               placeholder="Ej. Librería del Centro"
               maxLength={100}
+            />
+          </div>
+
+          <div className="campo">
+            <SelectorImagen
+              titulo="Logo del comercio (opcional)"
+              src={logo?.previa ?? null}
+              categoria={formulario.categoria}
+              logo
+              alElegir={setLogo}
+              alQuitar={() => setLogo(null)}
             />
           </div>
 

@@ -67,6 +67,13 @@ MariaDB (XAMPP).
 
 En Windows, si PowerShell bloquea `npm`, usar `npm.cmd`.
 
+**Al traer cambios con una base que ya tiene datos**, en vez de reimportarla se corren las
+migraciones nuevas de `backend/scripts/migraciones/` en phpMyAdmin. La del 24/11
+(`20261124_logo_e_imagenes.sql`) agrega el logo del comercio y la foto de los productos, y
+además pide un `npm install` en `backend/`, porque suma `multer`. Los logos y las fotos que
+suben los comercios quedan en `backend/uploads/`, que no se sube al repo: cada uno tiene las
+suyas, como pasa con los datos de la base. Si reimportás la base, podés vaciar esa carpeta.
+
 ### Cuentas de prueba
 
 La semilla trae cuentas de cada rol, todas con la contraseña `Test1234!`. En el login del
@@ -109,6 +116,8 @@ Con el `.env.example` tal cual, nada depende de cuentas externas:
 - Las notificaciones push del navegador necesitan `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY`
   (`npx web-push generate-vapid-keys`). Sin ellas, las notificaciones se ven igual en la
   campanita del front.
+- Los logos y las fotos de los productos se guardan en el disco del backend
+  (`backend/uploads/`), así que andan sin internet y sin ninguna cuenta.
 
 Cómo funciona el front por dentro (estructura, rutas, sesión) está en
 [`frontend/README.md`](frontend/README.md).

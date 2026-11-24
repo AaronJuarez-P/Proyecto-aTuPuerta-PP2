@@ -7,11 +7,14 @@ const {
     subirPedido,
     obtenerPerfilComercio,
     actualizarPerfilComercio,
+    subirLogo,
+    quitarLogo,
     listarVentas,
     obtenerVenta
 } = require('../controllers/comercio.controller');
 const { verificarToken, verificarRol } = require('../middlewares/autenticacion.middleware');
 const { resolverComercio } = require('../middlewares/comercio.middleware');
+const { recibirImagen } = require('../middlewares/imagen.middleware');
 
 // Cadena de middlewares: token valido -> rol comercio -> req.comercioId resuelto contra
 // la base. Misma forma que en producto.routes.js.
@@ -32,6 +35,11 @@ router.patch('/comercios/pedidos/:id/subir', soloComercio, subirPedido);
 // Semana 3 (CU12) - Perfil del comercio
 router.get('/comercio/perfil', soloComercio, obtenerPerfilComercio);
 router.patch('/comercio/perfil', soloComercio, actualizarPerfilComercio);
+
+// Logo del comercio. El archivo viaja como multipart/form-data en el campo imagen, y
+// recibirImagen va despues de soloComercio: sin sesion valida no se lee ningun archivo.
+router.put('/comercio/logo', soloComercio, recibirImagen, subirLogo);
+router.delete('/comercio/logo', soloComercio, quitarLogo);
 
 // Semana 12 (CU17) - Historial de ventas
 router.get('/comercio/ventas', soloComercio, listarVentas);

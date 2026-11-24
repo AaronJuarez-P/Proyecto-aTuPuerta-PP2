@@ -156,6 +156,11 @@
     border-radius: 0;
     height: 130px;
   }
+
+  /* Con logo, la franja es blanca como la tarjeta: la línea la separa de los datos */
+  .comercio-icon.miniatura-logo {
+    border-bottom: 1px solid var(--border);
+  }
   
   .comercio-info {
     display: flex;

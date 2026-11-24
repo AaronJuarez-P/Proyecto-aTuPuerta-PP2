@@ -1,4 +1,5 @@
 import { pedir } from './cliente'
+import { aFormulario } from '../utils/imagenes'
 
 // Los cuatro logins del backend contestan cosas distintas: el de comercio devuelve
 // datos.comercio (la fila del comercio, con usuario_id y email) y los otros tres
@@ -87,8 +88,10 @@ export const reenviarCodigo = ({ email, contrasena }) =>
 
 // Sobre una cuenta que ya existe: email y contrasena son los de esa cuenta.
 // { nombre, email, contrasena, telefono, cuit_cuil, categoria, direccion, horario_atencion }
-export const registrarComercio = (datos) =>
-  pedir('/registroComercio', { metodo: 'POST', body: datos, token: null })
+// logo es opcional: un Blob ya achicado por prepararImagen. Con logo viaja como
+// multipart/form-data y el comercio nace con él; sin logo, como JSON.
+export const registrarComercio = (datos, logo) =>
+  pedir('/registroComercio', { metodo: 'POST', body: logo ? aFormulario(datos, logo) : datos, token: null })
 
 // { nombre, email, contrasena, telefono, dni, tipo_vehiculo, patente, numero_licencia }
 export const registrarRepartidor = (datos) =>

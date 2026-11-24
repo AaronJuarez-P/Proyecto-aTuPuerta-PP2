@@ -93,6 +93,7 @@ Cuentas de la semilla, todas con contraseña `Test1234!`: `maria.gomez@test.com`
 - Los contadores de rate limit (`middlewares/limites.middleware.js`) viven en memoria: reiniciar el backend los resetea.
 - CUIT (dígito verificador), DNI (7 u 8 dígitos) y licencia (igual al DNI salvo con bicicleta) se validan al registrar y al editar el vehículo, nunca al iniciar sesión. Los CUIL y las licencias de la semilla son inventados y no pasan esas reglas. Las reglas del CUIT y el DNI están repetidas en `frontend/src/utils/documentos.js`.
 - En el SQL, los valores van siempre con placeholders. Los fragmentos dinámicos (filtros, columnas de un `UPDATE` parcial) salen de listas fijas del código, nunca del request.
+- Imágenes (logo del comercio y foto de cada producto): los archivos van a `IMAGENES_CARPETA` (`backend/uploads`, fuera del repo) y la base guarda solo el nombre (`comercios.logo`, `productos.imagen`). `services/imagen.service.js` es el único que sabe dónde y con qué nombre. Se sirven en `/imagenes/<nombre>`, fuera de `/api` (no gastan el limitador) y con `Cross-Origin-Resource-Policy: cross-origin`, también en el 404: con el `same-origin` de helmet, el front, que está en otro puerto, no las puede mostrar. El archivo viaja como multipart en el campo `imagen` (`recibirImagen`); multer deja pasar los JSON, así que las altas aceptan los dos.
 
 **Base de datos.** `backend/scripts/aTuPuerta.sql` tiene el esquema completo y la semilla. Un cambio de esquema va ahí y además como migración en `backend/scripts/migraciones/AAAAMMDD_descripcion.sql`, para las bases que ya tienen datos. Cada migración lleva un encabezado que explica qué hace.
 
@@ -108,6 +109,7 @@ Cuentas de la semilla, todas con contraseña `Test1234!`: `maria.gomez@test.com`
 - Cada página tiene su CSS, acotado a su clase raíz (`.pedido-page ...`). Lo compartido está en `components/Comunes/Comunes.css`. Colores y tipografías son variables de `index.css` (`--brand`, `--ink`, ...), no valores escritos a mano.
 - Los íconos son de `lucide-react`. Un botón que solo tiene un ícono lleva `aria-label`.
 - `VITE_API_URL` vale por defecto `http://localhost:4000/api`, y el socket usa el mismo servidor sin el `/api`. El `CORS_ORIGEN` del backend tiene que incluir el origen del front.
+- Las imágenes se muestran con `MiniaturaRubro src={urlImagen(nombre)}` (`utils/imagenes.js`), que vuelve al ícono del rubro si no hay imagen o no carga, y se eligen con `components/SelectorImagen`, que las achica con `prepararImagen` antes de subirlas. `pedir()` acepta un `FormData` como body y no le pone `Content-Type`.
 
 ## El Portero (`backend/rag`)
 

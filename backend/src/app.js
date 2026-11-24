@@ -6,6 +6,7 @@ const cors                    = require("cors");
 const helmet                  = require("helmet");
 const pool                    = require("./database/database");
 const { limitadorGeneral }    = require("./middlewares/limites.middleware");
+const { CARPETA_IMAGENES }    = require("./services/imagen.service");
 const registroRoutes          = require("./routes/registro.routes");
 const registroComercioRoutes  = require("./routes/registroComercio.routes");
 const registroRepartidorRoutes= require("./routes/registroRepartidor.routes");
@@ -85,6 +86,27 @@ app.get("/health", async (req, res) => {
     }
   });
 });
+
+// Logos y fotos de productos (ver imagen.service.js). Van fuera de /api para no gastar el
+// limitadorGeneral: una grilla de 24 productos son 24 pedidos.
+//
+// helmet manda Cross-Origin-Resource-Policy: same-origin, y con eso el navegador no deja
+// que el front, que es otro origen (otro puerto), muestre un <img> servido desde aca. Las
+// imagenes son publicas, asi que se habilitan para cualquier origen. Va antes de
+// express.static y no en su setHeaders para cubrir tambien el 404 de una imagen que no
+// esta: con same-origin el navegador lo bloquea en vez de avisar el 404, y en la consola
+// parece un problema de configuracion.
+//
+// Cada nombre es unico y no se reusa (cambiar la foto cambia la URL), asi que el
+// navegador las guarda sin volver a preguntar: immutable.
+app.use("/imagenes", (req, res, next) => {
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
+}, express.static(CARPETA_IMAGENES, {
+  index: false,
+  maxAge: "30d",
+  immutable: true
+}));
 
 app.use("/api", limitadorGeneral);
 

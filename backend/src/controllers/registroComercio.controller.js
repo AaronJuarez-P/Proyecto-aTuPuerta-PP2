@@ -2,12 +2,19 @@ const database = require('../database/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { geocodificarDireccion } = require('../services/maps.service');
+const { guardarImagen, borrarImagen } = require('../services/imagen.service');
 const { esEmailValido, esCuitValido } = require('../utils/validacion');
 
 // Registra el perfil de comercio para un usuario que YA existe como cliente.
 // Requiere email + contraseña real del usuario para autorizar la operación.
+//
+// Acepta JSON o multipart/form-data. Con multipart, el logo es opcional y va en el campo
+// imagen (ver recibirImagen); los demas campos llegan como texto, que es lo que se
+// valida abajo.
 const registroComercio = async (req, res) => {
     let connection;
+    let logo = null;
+    let confirmado = false;
     try {
         const {
             nombre,
@@ -88,6 +95,13 @@ const registroComercio = async (req, res) => {
             }
         }
 
+        // El logo se escribe antes de la transaccion, como la geocodificacion: no es de
+        // la base. Si el registro no se confirma (contraseña incorrecta, comercio ya
+        // registrado), el finally lo borra y no queda un archivo suelto.
+        if (req.file) {
+            logo = await guardarImagen(req.file, 'comercio');
+        }
+
         // Geocodificacion ANTES de abrir la transaccion (semana 9): es una llamada de
         // red y no puede quedar adentro. Solo necesita el string del body, que ya esta
         // validado arriba.
@@ -157,11 +171,11 @@ const registroComercio = async (req, res) => {
         // Ajustá las columnas de este INSERT a tu esquema real de "comercios".
         await connection.query(
             `INSERT INTO comercios
-             (usuario_id, nombre, cuit_cuil, categoria, direccion, horario_atencion, latitud, longitud)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+             (usuario_id, nombre, cuit_cuil, categoria, direccion, horario_atencion, latitud, longitud, logo)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 usuarios[0].id, nombre.trim(), cuit_cuil, categoria.trim(), direccion.trim(),
-                horario_atencion.trim(), punto?.latitud ?? null, punto?.longitud ?? null
+                horario_atencion.trim(), punto?.latitud ?? null, punto?.longitud ?? null, logo
             ]
         );
 
@@ -171,6 +185,7 @@ const registroComercio = async (req, res) => {
         );
 
         await connection.commit();
+        confirmado = true;
 
         return res.status(201).json({
             codigo: 201,
@@ -181,6 +196,14 @@ const registroComercio = async (req, res) => {
     } catch (error) {
         if (connection) {
             await connection.rollback();
+        }
+        // Un archivo que no es una imagen (ver guardarImagen)
+        if (error.codigoHttp) {
+            return res.status(error.codigoHttp).json({
+                codigo: error.codigoHttp,
+                estado: "error",
+                datos: { mensaje: error.message }
+            });
         }
         if (error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({
@@ -195,6 +218,9 @@ const registroComercio = async (req, res) => {
             datos: { mensaje: "Error interno del servidor" }
         });
     } finally {
+        if (!confirmado) {
+            await borrarImagen(logo);
+        }
         if (connection) {
             connection.release();
         }
