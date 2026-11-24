@@ -138,6 +138,7 @@ al correo. La cuenta se crea recién con el código.
 - **Correo (`EMAIL_MODO=mock`)**: el backend no manda correos y devuelve el código en la
   respuesta, así que el paso "Verificá tu correo" lo muestra en un recuadro de modo de
   prueba. Con `off` ese paso no aparece: el registro entra directo. Con `smtp` el código
-  llega por correo y no se muestra.
+  llega por correo y no se muestra. Con `consola` tampoco se muestra: el código sale solo
+  por la consola del backend y la pantalla se ve igual que con correo real.
 - **Push**: el botón para activar las notificaciones del navegador aparece solo si el backend
   tiene `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY`. Las ventanas de incógnito no las permiten.

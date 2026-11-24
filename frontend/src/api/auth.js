@@ -57,7 +57,7 @@ export async function cerrarSesionEnServidor(rol) {
 
 // { nombre, email, contrasena, telefono, direccion_entrega }
 //
-// Con la verificación del correo prendida en el backend (EMAIL_MODO=mock o smtp) todavía
+// Con la verificación del correo prendida en el backend (EMAIL_MODO=mock, consola o smtp) todavía
 // no crea la cuenta: contesta { verificacion_pendiente: true, email, minutos_vigencia,
 // segundos_reenvio, codigo_mock? } y falta verificarCorreo(). Con EMAIL_MODO=off la crea
 // directo y la respuesta no trae verificacion_pendiente. El front no se configura: mira

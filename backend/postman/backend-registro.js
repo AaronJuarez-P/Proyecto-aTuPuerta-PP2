@@ -30,6 +30,7 @@
 //| Modo | Qué hace | Respuesta |
 //|---|---|---|
 //| `mock` (por defecto) | Guarda el registro en `registros_pendientes` y genera un código de 6 dígitos. No manda ningún correo: el código vuelve en `codigo_mock` y sale por la consola del backend | `202` |
+//| `consola` | Lo mismo, pero el código sale solo por la consola del backend y **no** viaja en la respuesta. Esta guía no se puede seguir de punta a punta en este modo: usar `mock` | `202` |
 //| `smtp` | Lo mismo, pero el código sale por correo y **no** viaja en la respuesta | `202` |
 //| `off` | Crea la cuenta directo, sin código, como antes de que existiera la verificación | `201` |
 //

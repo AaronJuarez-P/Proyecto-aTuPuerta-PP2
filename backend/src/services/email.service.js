@@ -7,18 +7,22 @@
 // Igual que pago.service.js, este service NO recibe una conexion: no escribe en la
 // base, solo habla con el servidor de correo.
 //
-// Tres modos, segun EMAIL_MODO en el .env:
+// Cuatro modos, segun EMAIL_MODO en el .env:
 //   off  -> el registro no verifica el correo: crea la cuenta directo, como antes de
 //           que existiera la verificacion. Sirve para cargar usuarios de prueba rapido.
 //   mock -> se pide el codigo, pero no se manda ningun correo (el valor por defecto).
 //           El codigo sale por la consola y viaja en la respuesta del registro como
 //           codigo_mock. Alcanza para probar y demostrar el flujo completo con correos
 //           inventados, sin ninguna cuenta.
+//   consola -> como mock, pero el codigo NO viaja en la respuesta: sale solo por la
+//           consola del backend. Es la "bandeja de entrada" de una demo sin cuenta de
+//           correo: la pantalla se ve igual que con correos de verdad y el front no
+//           tiene ningun codigo que mostrar.
 //   smtp -> manda el codigo de verdad, con las variables SMTP_*.
 
 const nodemailer = require('nodemailer');
 
-const MODOS = ['off', 'mock', 'smtp'];
+const MODOS = ['off', 'mock', 'consola', 'smtp'];
 
 // Se lee una sola vez, al arrancar: un valor mal escrito se avisa una vez en el log y no
 // en cada registro. Ante la duda queda en mock y no en off: los dos dejan de mandar
@@ -27,7 +31,7 @@ const leerModo = () => {
     const valor = (process.env.EMAIL_MODO || '').trim().toLowerCase() || 'mock';
 
     if (!MODOS.includes(valor)) {
-        console.warn(`[email] EMAIL_MODO="${process.env.EMAIL_MODO}" no es off, mock ni smtp: queda en mock.`);
+        console.warn(`[email] EMAIL_MODO="${process.env.EMAIL_MODO}" no es off, mock, consola ni smtp: queda en mock.`);
         return 'mock';
     }
 
@@ -40,14 +44,21 @@ if (MODO === 'off') {
     console.warn("[email] EMAIL_MODO=off: el registro crea la cuenta SIN verificar el correo. Sirve para cargar usuarios de prueba, no para un despliegue.");
 } else if (MODO === 'mock') {
     console.log("[email] EMAIL_MODO=mock: no se mandan correos. El código de verificación sale por esta consola y en la respuesta del registro (codigo_mock).");
+} else if (MODO === 'consola') {
+    console.log("[email] EMAIL_MODO=consola: no se mandan correos y el código NO viaja en la respuesta ni se ve en la pantalla: sale solo por esta consola.");
 }
 
-// true si registrarse pide el codigo (mock y smtp)
+// true si registrarse pide el codigo (mock, consola y smtp)
 const verificacionActiva = () => MODO !== 'off';
 
-// true si los correos salen de verdad. Cuando es false, el codigo se le puede mostrar a
-// quien se registra, porque no hay ninguna casilla que proteger.
+// true si los correos salen de verdad (solo smtp).
 const enviaCorreos = () => MODO === 'smtp';
+
+// true si el codigo de verificacion puede viajar en la respuesta del registro
+// (codigo_mock). Solo en mock: deja completar el flujo desde el front, Postman y
+// scripts/prueba-flujos.js sin leer la consola. En consola sale unicamente por la
+// consola del backend, y en smtp por el correo.
+const exponeCodigo = () => MODO === 'mock';
 
 // El transporte se arma la primera vez que se lo necesita y no al importar el modulo:
 // asi el servidor arranca igual en modo mock u off aunque no haya nada de SMTP en el .env.
@@ -119,7 +130,12 @@ const armarCorreo = ({ codigo, minutos }) => {
 // las de Mapbox y MercadoPago.
 const enviarCodigoVerificacion = async ({ email, codigo, minutos }) => {
     if (!enviaCorreos()) {
-        console.log(`[email ${MODO}] Código de verificación para ${email}: ${codigo}`);
+        if (MODO === 'consola') {
+            // Es la "bandeja de entrada" de la demo: tiene que leerse de lejos
+            console.log(`\n[email consola] Código de verificación para ${email} (vale ${minutos} min):\n\n        ${codigo}\n`);
+        } else {
+            console.log(`[email ${MODO}] Código de verificación para ${email}: ${codigo}`);
+        }
         return;
     }
 
@@ -137,4 +153,4 @@ const enviarCodigoVerificacion = async ({ email, codigo, minutos }) => {
     });
 };
 
-module.exports = { verificacionActiva, enviaCorreos, enviarCodigoVerificacion };
+module.exports = { verificacionActiva, enviaCorreos, exponeCodigo, enviarCodigoVerificacion };

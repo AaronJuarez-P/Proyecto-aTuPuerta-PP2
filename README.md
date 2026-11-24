@@ -101,7 +101,9 @@ Con el `.env.example` tal cual, nada depende de cuentas externas:
 - `EMAIL_MODO=mock`: al registrarse se pide el código de verificación del correo, pero no
   se manda ningún correo: el código aparece en la misma pantalla y en la consola del
   backend, así que sirve cualquier correo inventado. Con `EMAIL_MODO=off` el registro entra
-  directo, sin código, para cargar usuarios de prueba rápido. Con `smtp` lo manda de verdad
+  directo, sin código, para cargar usuarios de prueba rápido. Con `EMAIL_MODO=consola` el
+  código sale solo por la consola del backend y no se ve en la pantalla: sirve para exponer
+  sin cuenta de correo, con la terminal a la vista. Con `smtp` lo manda de verdad
   (cómo configurarlo con Gmail está en [`backend/readme.md`](backend/readme.md),
   "Variables de la verificación del correo").
 - Las notificaciones push del navegador necesitan `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY`

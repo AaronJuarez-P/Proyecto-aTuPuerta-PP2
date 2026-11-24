@@ -62,11 +62,14 @@ const leerRangoFechas = (query) => {
 
 // GET /api/admin/estadisticas
 // El promedio mensual se expresa como pedidos por día transcurrido del mes actual.
+// Cada query() resuelve a [filas, campos]: las dos primeras traen una sola fila, por eso
+// [[mesActual]] y [[resumenPedidos]]. Con un solo corchete quedaba el arreglo de filas y
+// todos los campos daban undefined (NaN, y null en el JSON).
 const obtenerEstadisticasAdmin = async (req, res) => {
     try {
         const [
-            [mesActual],
-            [resumenPedidos],
+            [[mesActual]],
+            [[resumenPedidos]],
             [comercios],
             [clientes],
             [repartidores]

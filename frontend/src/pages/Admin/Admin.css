@@ -139,10 +139,6 @@
       width: 100%;
     }
 
-    .admin-page .admin-estadisticas-top {
-      grid-template-columns: 1fr;
-    }
-
   }
   
   @media (max-width: 500px) {
@@ -153,10 +149,6 @@
   
     .admin-page .admin-section-title {
       align-items: center;
-    }
-
-    .admin-page .admin-porcentajes {
-      grid-template-columns: 1fr;
     }
 
   }
@@ -396,6 +388,12 @@
     align-items: start;
   }
 
+  /* Las tarjetas son hermanas: sin esto .tarjeta + .tarjeta (Comunes.css) baja 18px a la
+     segunda y a la tercera. Es el mismo reset que tiene .grilla-dos */
+  .admin-page .admin-estadisticas-top > .tarjeta + .tarjeta {
+    margin-top: 0;
+  }
+
   .admin-page .admin-ranking {
     display: flex;
     flex-direction: column;
@@ -454,4 +452,26 @@
 
   .admin-page button.tablero-dato.activo {
     box-shadow: inset 0 0 0 1px var(--brand);
+  }
+
+  /* =========================
+     RESPONSIVE DE ESTADÍSTICAS
+  ========================= */
+
+  /* Va al final a propósito: las reglas base de arriba tienen la misma especificidad que
+     estas, y si los @media estuvieran antes en el archivo ganarían ellas en todos los anchos */
+  @media (max-width: 700px) {
+
+    .admin-page .admin-estadisticas-top {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+  }
+
+  @media (max-width: 500px) {
+
+    .admin-page .admin-porcentajes {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
   }

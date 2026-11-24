@@ -103,13 +103,14 @@ const login = async (ruta, body) => {
 // la cuenta ya quedo creada (EMAIL_MODO=off).
 //
 // Con EMAIL_MODO=mock el codigo viaja en la respuesta (codigo_mock). Con smtp sale por
-// correo: no hay forma de leerlo desde aca, asi que la prueba se corta y dice por que.
+// correo y con consola por la terminal del backend: no hay forma de leerlo desde aca,
+// asi que la prueba se corta y dice por que.
 const registrar = async (descripcion, body) => {
     const respuesta = await llamar("POST", "/registro", { body });
     const datos = respuesta.json?.datos ?? {};
 
     if (respuesta.status === 202 && datos.verificacion_pendiente && !datos.codigo_mock) {
-        throw new Error("el backend está en EMAIL_MODO=smtp y esta prueba necesita EMAIL_MODO=mock u off");
+        throw new Error("el backend está en EMAIL_MODO=smtp o consola (el código no viaja en la respuesta) y esta prueba necesita EMAIL_MODO=mock u off");
     }
 
     const esperaCodigo = respuesta.status === 202 && /^\d{6}$/.test(datos.codigo_mock);

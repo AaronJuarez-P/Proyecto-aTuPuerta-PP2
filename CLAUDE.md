@@ -34,7 +34,7 @@ El backend necesita `backend/.env` (copiar `.env.example`). Sin `JWT_SECRET` o `
 
 No hay framework de tests (ni Jest ni Vitest), así que no se puede correr un test suelto.
 
-- **Prueba de punta a punta:** `node scripts/prueba-flujos.js` desde `backend/`, con el servidor levantado. Termina con código distinto de 0 si algo falla. Necesita la base **recién importada** (espera los ids de la semilla), `MP_MODO=mock`, `MAPS_MODO=mock` y `EMAIL_MODO=mock` u `off` (con `smtp` no puede leer el código de verificación). El último bloque agota a propósito el límite de logins fallidos: después los logins dan `429` hasta reiniciar el backend. Para otra URL: `BASE_URL=http://localhost:4100/api`.
+- **Prueba de punta a punta:** `node scripts/prueba-flujos.js` desde `backend/`, con el servidor levantado. Termina con código distinto de 0 si algo falla. Necesita la base **recién importada** (espera los ids de la semilla), `MP_MODO=mock`, `MAPS_MODO=mock` y `EMAIL_MODO=mock` u `off` (con `smtp` o `consola` no puede leer el código de verificación). El último bloque agota a propósito el límite de logins fallidos: después los logins dan `429` hasta reiniciar el backend. Para otra URL: `BASE_URL=http://localhost:4100/api`.
 - **Postman:** `backend/postman/ATuPuerta.postman_collection.json` tiene todos los endpoints (correr primero "00 · Sesiones", que guarda los tokens). Las guías `backend/postman/backend-<módulo>.js` explican caso por caso y asumen la base recién importada.
 - **Tiempo real:** `node scripts/cliente-seguimiento.js <token> <pedidoId>`. Postman no habla Socket.IO.
 
@@ -72,7 +72,7 @@ Cuentas de la semilla, todas con contraseña `Test1234!`: `maria.gomez@test.com`
 |---|---|---|
 | `services/pago.service.js` (MercadoPago) | `MP_MODO=mock\|sandbox` | `POST /api/pagos/simular` aprueba o rechaza |
 | `services/maps.service.js` (Mapbox) | `MAPS_MODO=mock\|real` | Geocodifica de forma determinística y mide con Haversine |
-| `services/email.service.js` (Nodemailer) | `EMAIL_MODO=off\|mock\|smtp` | `mock` por defecto: no manda correos, el código de verificación viaja en la respuesta (`codigo_mock`) y sale por consola. `off` saltea la verificación |
+| `services/email.service.js` (Nodemailer) | `EMAIL_MODO=off\|mock\|consola\|smtp` | `mock` por defecto: no manda correos, el código de verificación viaja en la respuesta (`codigo_mock`) y sale por consola. `consola`: igual, pero el código sale solo por la consola y no viaja en la respuesta (sirve para exponer sin cuenta de correo). `off` saltea la verificación |
 | `config/webPush.js` | `VAPID_*` | Sin claves el push se apaga; las notificaciones se ven igual en la campanita |
 | `services/ayuda.service.js` (El Portero) | `AYUDA_MODO=off\|faq\|rag` | `off` por defecto: no carga nada de `backend/rag` |
 

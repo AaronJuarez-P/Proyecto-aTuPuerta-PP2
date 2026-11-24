@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const database = require('../database/database');
 const { geocodificarDireccion } = require('../services/maps.service');
 const { crearCuentaCliente } = require('../services/usuario.service');
-const { verificacionActiva, enviaCorreos, enviarCodigoVerificacion } = require('../services/email.service');
+const { verificacionActiva, exponeCodigo, enviarCodigoVerificacion } = require('../services/email.service');
 const {
     MINUTOS_VIGENCIA,
     INTENTOS_MAXIMOS,
@@ -18,7 +18,7 @@ const { esEmailValido, esTelefonoValido, esContrasenaValida } = require('../util
 // ---------------------------------------------------------------------------
 // Verificacion del correo al registrarse
 //
-// Con EMAIL_MODO=mock o smtp, POST /api/registro no crea la cuenta: guarda los datos
+// Con EMAIL_MODO=mock, consola o smtp, POST /api/registro no crea la cuenta: guarda los datos
 // en registros_pendientes y manda un codigo de 6 digitos. La cuenta (usuarios +
 // clientes) se crea recien en POST /api/registro/verificar, cuando el codigo es
 // correcto. Asi usuarios solo tiene cuentas con el correo verificado, y los logins, los
@@ -52,15 +52,16 @@ const avisarSiFaltaLaTabla = (error) => {
 
 // Lo que el front necesita para mostrar el paso del codigo.
 //
-// codigo_mock viaja solo cuando NO se mandan correos de verdad (EMAIL_MODO=mock): no hay
-// ninguna casilla que proteger, y es lo que deja completar el flujo desde el front,
-// Postman y scripts/prueba-flujos.js sin leer la consola del backend. Con smtp no viaja
-// nunca: ahi el codigo es justamente lo que prueba que la persona lee ese correo.
+// codigo_mock viaja solo con EMAIL_MODO=mock: no hay ninguna casilla que proteger, y es lo
+// que deja completar el flujo desde el front, Postman y scripts/prueba-flujos.js sin leer
+// la consola del backend. Con smtp no viaja nunca: ahi el codigo es justamente lo que
+// prueba que la persona lee ese correo. Con consola tampoco: sale solo por la terminal
+// del backend, que en una demo hace de bandeja de entrada.
 const datosDelCodigo = (email, codigoVerificacion) => ({
     email,
     minutos_vigencia: MINUTOS_VIGENCIA,
     segundos_reenvio: SEGUNDOS_REENVIO,
-    ...(enviaCorreos() ? {} : { codigo_mock: codigoVerificacion })
+    ...(exponeCodigo() ? { codigo_mock: codigoVerificacion } : {})
 });
 
 // 429 con los segundos que faltan para poder pedirle otro codigo a ese correo
@@ -273,7 +274,7 @@ const registro = async (req, res) => {
         // haria que despues el login no lo encuentre
         const emailLimpio = email.trim();
 
-        // Verificacion del correo: con EMAIL_MODO=mock o smtp la cuenta no se crea aca,
+        // Verificacion del correo: con EMAIL_MODO=mock, consola o smtp la cuenta no se crea aca,
         // sino cuando la persona ingresa el codigo (verificarRegistro)
         if (verificacionActiva()) {
             return await registrarPendiente(res, { nombre, email: emailLimpio, contrasena, telefono, direccion_entrega });

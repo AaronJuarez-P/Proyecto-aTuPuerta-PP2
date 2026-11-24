@@ -75,7 +75,7 @@ backend/
 │   │   ├── pedido.service.js       <- máquina de estados, stock, cancelación, asignación, entrega y comisión
 │   │   ├── pago.service.js         <- adaptador de MercadoPago
 │   │   ├── maps.service.js         <- adaptador de Mapbox (Directions + Geocoding)
-│   │   ├── email.service.js        <- adaptador del correo (Nodemailer): EMAIL_MODO off, mock o smtp
+│   │   ├── email.service.js        <- adaptador del correo (Nodemailer): EMAIL_MODO off, mock, consola o smtp
 │   │   ├── verificacion.service.js <- código de verificación del registro: generarlo, hashearlo y compararlo
 │   │   ├── ubicacion.service.js    <- posiciones del repartidor y coordenadas guardadas
 │   │   ├── repartidor.service.js   <- disponibilidad del repartidor
@@ -280,7 +280,7 @@ demás funciona igual: las notificaciones se guardan en la base y se leen con
 
 | Variable | Para qué sirve |
 |---|---|
-| `EMAIL_MODO` | `off` no verifica nada: `POST /api/registro` crea la cuenta directo. `mock` (el valor por defecto) pide el código pero no manda ningún correo: el código sale por la consola del backend y en la respuesta del registro (`codigo_mock`). `smtp` lo manda de verdad |
+| `EMAIL_MODO` | `off` no verifica nada: `POST /api/registro` crea la cuenta directo. `mock` (el valor por defecto) pide el código pero no manda ningún correo: el código sale por la consola del backend y en la respuesta del registro (`codigo_mock`). `consola` es igual, pero el código sale solo por la consola del backend y no viaja en la respuesta. `smtp` lo manda de verdad |
 | `SMTP_HOST` / `SMTP_PORT` | Servidor de correo saliente. Solo con `EMAIL_MODO=smtp`. Con el puerto `465` la conexión va cifrada desde el arranque; con `587` se usa STARTTLS |
 | `SMTP_USER` / `SMTP_PASS` | La cuenta que manda los correos. Con Gmail, `SMTP_PASS` es una contraseña de aplicación, no la de la cuenta |
 | `EMAIL_REMITENTE` | Remitente que ve la persona. Vacío = `ATuPuerta <SMTP_USER>` |
@@ -294,10 +294,16 @@ Igual que con los pagos y los mapas, para desarrollo y para la defensa alcanza c
 el backend queda en `mock`, y las `SMTP_*` recién se leen con `EMAIL_MODO=smtp` (si falta
 el servidor, el usuario o la contraseña, el registro contesta `503` y la consola lo avisa).
 
+Para exponer sin cuenta de correo está `EMAIL_MODO=consola`: el paso del código se ve
+igual que con correos de verdad (sin el recuadro de modo de prueba) y el código sale solo
+por la consola del backend, que hace de bandeja de entrada. Conviene dejar la terminal a
+la vista y aclarar que el correo está simulado.
+
 | Modo | Qué hace `POST /api/registro` | Para qué |
 |---|---|---|
 | `off` | Crea la cuenta directo (`201`), como antes de que existiera la verificación | Cargar muchos usuarios de prueba rápido |
 | `mock` | Pide el código (`202`) y lo devuelve en `codigo_mock`. No sale ningún correo | Desarrollo, demo y pruebas |
+| `consola` | Pide el código (`202`) y lo imprime solo en la consola del backend. `codigo_mock` no viaja nunca, así que la pantalla se ve como con correo real | Demo y exposición sin cuenta de correo |
 | `smtp` | Pide el código (`202`) y lo manda por correo. `codigo_mock` no viaja nunca | Uso real |
 
 Cambiar de modo es cambiar la variable y reiniciar el backend. El front no se configura:
@@ -344,7 +350,7 @@ sirve como prueba de regresión antes de entregar o de mergear. Otra URL:
 `BASE_URL=http://localhost:4100/api node scripts/prueba-flujos.js`.
 
 > Funciona con `EMAIL_MODO=mock` (lee el código de la respuesta del registro) y con `off`
-> (saltea los pasos del código: quedan 183 verificaciones). Con `smtp` no tiene forma de
+> (saltea los pasos del código: quedan 183 verificaciones). Con `smtp` o `consola` no tiene forma de
 > leer el código, así que corta en el primer registro y pide cambiar de modo.
 
 > El último bloque agota a propósito el límite de logins fallidos, así que por
@@ -428,7 +434,7 @@ la cuenta (`usuarios` + `clientes`) y borra el pendiente → inicia sesión con
 
 | Endpoint | Respuestas |
 |---|---|
-| `POST /api/registro` | `202` `{ mensaje, verificacion_pendiente: true, email, minutos_vigencia, segundos_reenvio }`, más `codigo_mock` si el backend no manda correos. `400` validaciones y "Usuario ya registrado". `429` con `segundos_restantes` si a ese correo ya se le mandó un código hace menos de un minuto. `503` si el correo no salió. Con `EMAIL_MODO=off`, `201` y la cuenta creada |
+| `POST /api/registro` | `202` `{ mensaje, verificacion_pendiente: true, email, minutos_vigencia, segundos_reenvio }`, más `codigo_mock` solo con `EMAIL_MODO=mock` (con `consola` y `smtp` no viaja). `400` validaciones y "Usuario ya registrado". `429` con `segundos_restantes` si a ese correo ya se le mandó un código hace menos de un minuto. `503` si el correo no salió. Con `EMAIL_MODO=off`, `201` y la cuenta creada |
 | `POST /api/registro/verificar` | `201` cuenta creada. `400` código incorrecto (con `intentos_restantes`) o vencido. `401` "Email o contraseña incorrectos" si no hay un registro pendiente o la contraseña no es la de ese registro. `429` intentos agotados: hay que pedir otro código |
 | `POST /api/registro/reenviar` | `200` con los mismos datos del `202` del registro. `401` genérico. `429` con `segundos_restantes` si no pasó el minuto. `503` si el correo no salió |
 | `POST /api/inicioSesion` | Sin cuenta pero con un registro pendiente y esa contraseña: `403` con `verificacion_pendiente: true`, para que el front muestre el paso del código. Todo lo demás, igual que antes |
@@ -1089,7 +1095,7 @@ pendiente -> en_revision -> resuelto
     que mandan un correo. Cubre lo que la espera de 60 segundos no cubre, porque esa es
     por dirección: un script que cambia de correo en cada pedido, que gastaría el cupo de
     envíos de la cuenta y le llenaría la casilla a gente que nunca se registró. Solo
-    corre con `EMAIL_MODO=smtp`: en `mock` y en `off` no sale ningún correo.
+    corre con `EMAIL_MODO=smtp`: en `mock`, `consola` y `off` no sale ningún correo.
   - Los tres contestan `429` con el formato de siempre.
 - **Código de verificación del registro**: guardado como HMAC, con vencimiento, tope de
   intentos y comparación en tiempo constante. Ver

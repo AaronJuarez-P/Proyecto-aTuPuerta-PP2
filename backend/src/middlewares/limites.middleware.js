@@ -75,7 +75,7 @@ const limitadorAyuda = rateLimit({
 // que cambia de correo en cada pedido. Eso gasta el cupo diario de envios de la cuenta
 // y le llena la casilla de codigos a gente que nunca se registro.
 //
-// Solo corre con EMAIL_MODO=smtp. En mock y en off no sale ningun correo: no hay nada
+// Solo corre con EMAIL_MODO=smtp. En mock, consola y off no sale ningun correo: no hay nada
 // que cuidar, y frenaria justamente la carga de usuarios de prueba.
 const limitadorEnvioCodigos = rateLimit({
     windowMs: ventanaMs(),
